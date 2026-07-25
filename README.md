@@ -63,7 +63,7 @@ Files under `config/` are copied back to `/etc` (UFW rules, fail2ban jails, sysc
 `./install.sh --with-amnesia` provisions a Tails-inspired `anon` account:
 
 - **RAM-only home** — `/home/anon` is a `tmpfs` mount (`home-anon.mount`). Everything the user does is wiped on reboot. A pristine skeleton in `/var/lib/anon-skel` is re-copied at each boot by `anon-home-populate.service`.
-- **Forced Tor with kill-switch** — an nftables table (`assets/amnesia/anon-tor.nft`, UID-scoped to `anon`) transparently redirects all of `anon`'s TCP through Tor's `TransPort` (9040) and DNS through `DNSPort` (9053). Anything that cannot be Tor-routed is dropped, and **all IPv6 from `anon` is blocked**, so there are no clearnet leaks. Only `anon` is affected; your normal account is untouched.
+- **Forced Tor with kill-switch** — an nftables table (`assets/amnesia/anon-tor.nft`, UID-scoped to `anon`) transparently redirects all of `anon`'s TCP through Tor's `TransPort` (9040) and DNS through `DNSPort` (9053). Anything that cannot be Tor-routed is dropped, and **all IPv6 from `anon` is blocked**, so there are no clearnet leaks. Only `anon` is affected; your normal account is untouched. Tor directives are written into `/etc/tor/torrc` (the `system_tor` AppArmor profile blocks `torrc.d` drop-ins on stock Ubuntu).
 - **Unprivileged by design** — `anon` is not in `sudo`/`adm`; that is what makes the UID firewall meaningful.
 
 Usage: log in as `anon` (default password `anon`, forced change on first login). Use **Firefox** or plain `curl`/`wget` — they are transparently torified. Do **not** run Tor Browser as `anon` (it would be Tor-over-Tor). Verify at https://check.torproject.org.
@@ -83,10 +83,11 @@ For end-to-end anonymity guarantees, use Tails or Whonix.
 ```bash
 sudo systemctl disable --now home-anon.mount anon-home-populate.service nftables
 sudo rm -f /etc/systemd/system/home-anon.mount /etc/systemd/system/anon-home-populate.service
-sudo rm -f /etc/nftables.d/anon-tor.nft /etc/tor/torrc.d/torrc-anon.conf
+sudo rm -f /etc/nftables.d/anon-tor.nft
+sudo sed -i '/### X47 AMNESIA TOR BEGIN ###/,/### X47 AMNESIA TOR END ###/d' /etc/tor/torrc
 sudo rm -rf /var/lib/anon-skel
 sudo deluser --remove-home anon
-sudo systemctl daemon-reload && sudo systemctl restart tor nftables
+sudo systemctl daemon-reload && sudo systemctl restart tor@default nftables
 ```
 
 ## Capturing / updating the snapshot (maintainers)

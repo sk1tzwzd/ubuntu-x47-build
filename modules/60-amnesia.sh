@@ -73,15 +73,27 @@ module_amnesia() {
   run_sudo systemctl start anon-home-populate.service || warn "skeleton populate deferred to reboot"
 
   # --- Tor transparent proxy config ---
-  log "configuring Tor transparent proxy"
-  run_sudo mkdir -p /etc/tor/torrc.d
-  run_sudo install -m 0644 "$AM_ASSETS/torrc-anon.conf" /etc/tor/torrc.d/torrc-anon.conf
-  # Ensure main torrc includes the drop-in dir.
-  if ! run_sudo grep -qE '^\s*%include\s+/etc/tor/torrc\.d' /etc/tor/torrc 2>/dev/null; then
-    echo '%include /etc/tor/torrc.d/*.conf' | run_sudo tee -a /etc/tor/torrc >/dev/null
-  fi
+  # NOTE: the default `system_tor` AppArmor profile denies reading anything
+  # under /etc/tor/torrc.d/, which makes a %include drop-in fail with
+  # "Permission denied". Tor IS allowed to read /etc/tor/torrc itself, so we
+  # append our directives there directly, between markers, for portability.
+  log "configuring Tor transparent proxy (inline in /etc/tor/torrc)"
+  local torrc=/etc/tor/torrc
+  # Drop any include we may have added before, and any stale marked block.
+  run_sudo sed -i '\#^%include /etc/tor/torrc.d/#d' "$torrc"
+  run_sudo sed -i '/### X47 AMNESIA TOR BEGIN ###/,/### X47 AMNESIA TOR END ###/d' "$torrc"
+  # Append a fresh block sourced from the asset (strip comments/blank lines).
+  {
+    echo ''
+    echo '### X47 AMNESIA TOR BEGIN ###'
+    grep -vE '^[[:space:]]*(#|$)' "$AM_ASSETS/torrc-anon.conf"
+    echo '### X47 AMNESIA TOR END ###'
+  } | run_sudo tee -a "$torrc" >/dev/null
   run_sudo systemctl enable tor >/dev/null 2>&1 || true
-  run_sudo systemctl restart tor || warn "tor restart failed — check 'journalctl -u tor'"
+  run_sudo systemctl reset-failed tor@default.service >/dev/null 2>&1 || true
+  run_sudo systemctl restart tor@default.service 2>/dev/null \
+    || run_sudo systemctl restart tor \
+    || warn "tor restart failed — check 'journalctl -u tor@default'"
 
   # --- nftables kill-switch (UID-substituted) ---
   log "installing nftables transparent-Tor kill-switch (anon uid=$anon_uid, tor uid=$tor_uid)"

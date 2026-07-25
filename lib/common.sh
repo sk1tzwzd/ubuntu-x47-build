@@ -18,11 +18,13 @@ die()  { fail "$*"; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # Prefer sudo when available and needed; no-op if already root.
+# Routed through `env` so leading VAR=value assignments (e.g.
+# DEBIAN_FRONTEND=noninteractive) work whether we are root or using sudo.
 run_sudo() {
   if [[ "$(id -u)" -eq 0 ]]; then
-    "$@"
+    env "$@"
   elif have sudo; then
-    sudo "$@"
+    sudo env "$@"
   else
     die "sudo required for: $*"
   fi
