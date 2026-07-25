@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Tor status check
+Comment=Confirm this session is routed through Tor
+Exec=bash -lc 'for i in $(seq 1 20); do if curl -s --max-time 5 https://check.torproject.org/api/ip | grep -q "\"IsTor\":true"; then notify-send "Amnesia mode" "You are connected through Tor." 2>/dev/null || true; exit 0; fi; sleep 3; done; notify-send -u critical "Amnesia mode" "WARNING: Tor route not confirmed. Traffic is blocked by the kill-switch until Tor is up." 2>/dev/null || true'
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

@@ -1,0 +1,18 @@
+# RAM-backed home for the amnesia user. Wiped automatically on every reboot.
+# Unit file name MUST match the mount point: /home/anon -> home-anon.mount
+[Unit]
+Description=Amnesia tmpfs home for anon (RAM-only, wiped on reboot)
+Before=local-fs.target
+DefaultDependencies=no
+Conflicts=umount.target
+Before=umount.target
+
+[Mount]
+What=tmpfs
+Where=/home/anon
+Type=tmpfs
+# size caps RAM usage; mode/uid/gid set on the tmpfs root so anon owns its home
+Options=rw,nosuid,nodev,mode=0700,uid=anon,gid=anon,size=50%
+
+[Install]
+WantedBy=local-fs.target

@@ -10,6 +10,7 @@
 #   ./install.sh --user-only      # skip apt + hardening (tools/icons/terminal only)
 #   ./install.sh --skip-apt       # skip apt repos/packages
 #   ./install.sh --skip-hardening # skip ufw/fail2ban/sysctl restore
+#   ./install.sh --with-amnesia   # also create the amnesiac Tor-forced 'anon' user
 #   ./install.sh --only 10-terminal,30-icons
 #
 set -euo pipefail
@@ -21,10 +22,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 X47_SKIP_APT=0
 X47_SKIP_HARDENING=0
 X47_USER_ONLY=0
+X47_WITH_AMNESIA=0
 X47_ONLY=""
 
 usage() {
-  sed -n '2,16p' "$0" | sed 's/^# \?//'
+  sed -n '2,17p' "$0" | sed 's/^# \?//'
   exit 0
 }
 
@@ -33,12 +35,14 @@ while [[ $# -gt 0 ]]; do
     --skip-apt) X47_SKIP_APT=1; shift ;;
     --skip-hardening) X47_SKIP_HARDENING=1; shift ;;
     --user-only) X47_USER_ONLY=1; X47_SKIP_APT=1; X47_SKIP_HARDENING=1; shift ;;
+    --with-amnesia) X47_WITH_AMNESIA=1; shift ;;
+    --skip-amnesia) X47_WITH_AMNESIA=0; shift ;;
     --only) X47_ONLY="${2:-}"; shift 2 ;;
     -h|--help) usage ;;
     *) die "unknown flag: $1 (try --help)" ;;
   esac
 done
-export X47_SKIP_APT X47_SKIP_HARDENING X47_USER_ONLY
+export X47_SKIP_APT X47_SKIP_HARDENING X47_USER_ONLY X47_WITH_AMNESIA
 
 MODULES=(
   00-apt.sh
@@ -52,6 +56,7 @@ MODULES=(
   31-launchers.sh
   40-hardening.sh
   50-gnome.sh
+  60-amnesia.sh
 )
 
 should_run() {

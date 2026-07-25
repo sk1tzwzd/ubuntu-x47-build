@@ -1,0 +1,18 @@
+# Repopulate the freshly-mounted (empty) tmpfs home from the pristine skeleton.
+# Runs at every boot after the tmpfs is mounted, before any login is possible.
+[Unit]
+Description=Populate anon amnesia home from pristine skeleton
+Requires=home-anon.mount
+After=home-anon.mount
+Before=display-manager.service gdm.service
+ConditionPathIsMountPoint=/home/anon
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/rsync -a --delete /var/lib/anon-skel/ /home/anon/
+ExecStart=/bin/chown -R anon:anon /home/anon
+ExecStart=/bin/chmod 0700 /home/anon
+
+[Install]
+WantedBy=multi-user.target

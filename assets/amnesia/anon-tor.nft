@@ -1,0 +1,60 @@
+#!/usr/sbin/nft -f
+# X47 amnesia mode — UID-scoped transparent Tor proxy + kill-switch for "anon".
+#
+# Everything the anon user sends is redirected into Tor's TransPort/DNSPort.
+# Anything that cannot go through Tor is dropped (kill-switch), and ALL IPv6
+# from anon is dropped to prevent clearnet leaks. Other users are untouched.
+#
+# Placeholders __ANON_UID__ and __TOR_UID__ are substituted by 60-amnesia.sh
+# at install time (nft needs numeric UIDs, not names).
+
+table inet x47_anon {
+    # -------- NAT: redirect anon traffic into Tor --------
+    chain nat_output {
+        type nat hook output priority -100; policy accept;
+
+        # Tor's own traffic must pass through untouched, or we loop.
+        meta skuid __TOR_UID__ return
+
+        # Only touch the anon user.
+        meta skuid != __ANON_UID__ return
+
+        # anon DNS -> Tor DNSPort
+        meta l4proto udp udp dport 53 redirect to :9053
+        meta l4proto tcp tcp dport 53 redirect to :9053
+
+        # Don't redirect traffic already aimed at loopback (Tor ports, etc.)
+        ip daddr 127.0.0.0/8 return
+
+        # Everything else TCP from anon -> Tor TransPort
+        meta l4proto tcp redirect to :9040
+    }
+
+    # -------- FILTER: kill-switch for anon --------
+    chain filter_output {
+        type filter hook output priority 0; policy accept;
+
+        # Let Tor itself reach the real network.
+        meta skuid __TOR_UID__ accept
+
+        # Only police the anon user.
+        meta skuid != __ANON_UID__ accept
+
+        # Drop ALL IPv6 from anon (Tor transparent proxy here is IPv4-only).
+        meta nfproto ipv6 reject
+
+        # Allow anon loopback (to reach Tor's Trans/DNS/SOCKS ports).
+        oifname "lo" accept
+        ip daddr 127.0.0.0/8 accept
+
+        # Allow the redirected flows to Tor's ports.
+        meta l4proto tcp tcp dport { 9040, 9050, 9053 } accept
+        meta l4proto udp udp dport 9053 accept
+
+        # Allow established/related (return traffic for torified connections).
+        ct state established,related accept
+
+        # Anything else from anon would be a clearnet leak -> block it.
+        reject with icmpx type admin-prohibited
+    }
+}
