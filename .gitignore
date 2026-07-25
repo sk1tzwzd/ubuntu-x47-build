@@ -1,0 +1,28 @@
+# Secrets — never commit
+**/.ssh/
+**/.gnupg/
+**/.msf4/
+**/.BurpSuite/
+**/Keys/
+**/.config/mullvad/
+**/.gitconfig
+**/.bash_history
+**/*.pem
+**/*.key
+**/*id_rsa*
+**/*id_ed25519*
+**/.env
+**/credentials*
+**/secrets*
+
+# Build / cache noise
+*.AppImage
+*.deb
+*.tar.gz
+*.zip
+.cache/
+tmp/
+*.log
+
+# Large extracted WezTerm (downloaded at install time)
+assets/wezterm/squashfs-root/

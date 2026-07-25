@@ -1,0 +1,21 @@
+amass|github.com/owasp-amass/amass/v4/...@master
+assetfinder|github.com/tomnomnom/assetfinder@latest
+chisel|github.com/jpillora/chisel@latest
+dalfox|github.com/hahwul/dalfox/v2@latest
+dnsx|github.com/projectdiscovery/dnsx/cmd/dnsx@latest
+gau|github.com/lc/gau/v2/cmd/gau@latest
+gowitness|github.com/sensepost/gowitness@latest
+httpx|github.com/projectdiscovery/httpx/cmd/httpx@latest
+interactsh-client|github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest
+katana|github.com/projectdiscovery/katana/cmd/katana@latest
+kerbrute|github.com/ropnop/kerbrute@latest
+lazygit|github.com/jesseduffield/lazygit@latest
+naabu|github.com/projectdiscovery/naabu/v2/cmd/naabu@latest
+nuclei|github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+subfinder|github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+tlsx|github.com/projectdiscovery/tlsx/cmd/tlsx@latest
+waybackurls|github.com/tomnomnom/waybackurls@latest
+yq|github.com/mikefarah/yq/v4@latest
+# ligolo handled specially (proxy+agent rename)
+# ligolo-proxy|github.com/nicocha30/ligolo-ng/cmd/proxy@latest
+# ligolo-agent|github.com/nicocha30/ligolo-ng/cmd/agent@latest

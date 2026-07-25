@@ -1,0 +1,6 @@
+icon-theme='Yaru-blue-dark'
+gtk-theme='Yaru-blue-dark'
+color-scheme='prefer-dark'
+picture-uri-dark='file:///usr/share/backgrounds/mendhak-Red_Acer.jpg'
+picture-uri='file:///usr/share/backgrounds/mendhak-Red_Acer.jpg'
+terminal-exec='/home/wzd/.local/bin/wezterm'

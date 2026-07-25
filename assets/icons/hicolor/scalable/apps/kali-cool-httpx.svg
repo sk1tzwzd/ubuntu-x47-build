@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="168" fill="#0c2b30"/>
+  <circle cx="256" cy="256" r="168" fill="none" stroke="#22d3ee" stroke-width="18"/>
+  <g fill="none" stroke="#22d3ee" stroke-width="12" opacity="0.9">
+    <ellipse cx="256" cy="256" rx="70" ry="168"/>
+    <line x1="88" y1="256" x2="424" y2="256"/>
+    <path d="M120 170 H392" opacity="0.7"/>
+    <path d="M120 342 H392" opacity="0.7"/>
+  </g>
+  <!-- probe arrow -->
+  <g>
+    <path d="M150 360 L330 200" stroke="#ff4da6" stroke-width="26" stroke-linecap="round"/>
+    <path d="M300 188 L346 186 L340 232 Z" fill="#ff4da6"/>
+  </g>
+</svg>

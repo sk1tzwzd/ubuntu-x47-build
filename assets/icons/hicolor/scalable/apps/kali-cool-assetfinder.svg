@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <g stroke="#1de9b6" stroke-width="10" opacity="0.7">
+    <line x1="150" y1="150" x2="256" y2="230"/>
+    <line x1="380" y1="140" x2="256" y2="230"/>
+    <line x1="120" y1="300" x2="256" y2="230"/>
+    <line x1="360" y1="330" x2="256" y2="230"/>
+  </g>
+  <g fill="#00e5a8">
+    <circle cx="150" cy="150" r="26"/>
+    <circle cx="380" cy="140" r="22"/>
+    <circle cx="120" cy="300" r="20"/>
+    <circle cx="256" cy="230" r="30"/>
+  </g>
+  <!-- magnifier over a node -->
+  <g>
+    <circle cx="360" cy="330" r="60" fill="#0b2e3a"/>
+    <circle cx="360" cy="330" r="60" fill="none" stroke="#38bdf8" stroke-width="18"/>
+    <circle cx="360" cy="330" r="20" fill="#38bdf8"/>
+    <path d="M404 374 L456 426" stroke="#38bdf8" stroke-width="26" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=chisel
+Comment=chisel (terminal)
+Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class chisel -- bash -lc "chisel; exec bash"
+Icon=kali-chisel
+Terminal=false
+Type=Application
+Categories=Network;Security;
+Keywords=pentest;security;hacking;chisel;
+StartupWMClass=chisel

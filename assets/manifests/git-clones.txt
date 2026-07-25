@@ -1,0 +1,2 @@
+WhatWeb|https://github.com/urbanadventurer/WhatWeb
+Responder|https://github.com/lgandx/Responder

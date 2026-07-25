@@ -1,0 +1,20 @@
+# X47 baseline UFW IPv4 rules
+# Reference machine had UFW enabled/active, openssh-server NOT installed.
+# Default: deny incoming, allow outgoing. Re-snapshot with sudo to replace
+# with exact live rules if they differ.
+#
+# Rules that require privilege to read (/etc/ufw/user.rules) were not
+# readable without an interactive sudo password during packaging.
+
+*filter
+:ufw-user-input - [0:0]
+:ufw-user-output - [0:0]
+:ufw-user-forward - [0:0]
+:ufw-user-limit - [0:0]
+:ufw-user-limit-accept - [0:0]
+### RULES ###
+
+### END RULES ###
+
+# don't delete the 'COMMIT' line or these rules won't be processed
+COMMIT

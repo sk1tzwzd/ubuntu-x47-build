@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Nuclei
+Comment=Nuclei (terminal)
+Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class nuclei -- bash -lc "nuclei; exec bash"
+Icon=kali-nuclei
+Terminal=false
+Type=Application
+Categories=Network;Security;
+Keywords=pentest;security;hacking;nuclei;
+StartupWMClass=nuclei

@@ -1,0 +1,4 @@
+bat
+feroxbuster
+rustdoc
+rustfmt

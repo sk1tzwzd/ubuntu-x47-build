@@ -1,0 +1,31 @@
+[/]
+folder-children=['System', 'Utilities', 'YaST', 'Pardus', 'DevTools', 'PentestTools']
+
+[folders/DevTools]
+apps=['code.desktop', 'cursor.desktop', 'launcher-bat.desktop', 'launcher-eza.desktop', 'launcher-fd.desktop', 'launcher-zoxide.desktop', 'launcher-lazygit.desktop', 'launcher-delta.desktop', 'launcher-uv.desktop', 'launcher-yq.desktop', 'launcher-http.desktop']
+name='Dev Tools'
+
+[folders/Pardus]
+categories=['X-Pardus-Apps']
+name='X-Pardus-Apps.directory'
+translate=true
+
+[folders/PentestTools]
+apps=['launcher-aircrack-ng.desktop', 'launcher-assetfinder.desktop', 'launcher-bettercap.desktop', 'launcher-binwalk.desktop', 'launcher-dirb.desktop', 'launcher-exiftool.desktop', 'launcher-feroxbuster.desktop', 'launcher-ffuf.desktop', 'launcher-gobuster.desktop', 'launcher-hashcat.desktop', 'launcher-httpx.desktop', 'launcher-hydra.desktop', 'launcher-john.desktop', 'launcher-katana.desktop', 'launcher-masscan.desktop', 'launcher-msfconsole.desktop', 'launcher-naabu.desktop', 'launcher-nikto.desktop', 'launcher-nmap.desktop', 'launcher-nuclei.desktop', 'launcher-sqlmap.desktop', 'launcher-subfinder.desktop', 'launcher-vulnscape.desktop', 'launcher-waybackurls.desktop', 'install4j_i8akt-BurpSuite.desktop', 'org.wireshark.Wireshark.desktop', 'launcher-amass.desktop', 'launcher-dnsx.desktop', 'launcher-tlsx.desktop', 'launcher-gau.desktop', 'launcher-dalfox.desktop', 'launcher-arjun.desktop', 'launcher-gowitness.desktop', 'launcher-whatweb.desktop', 'launcher-wafw00f.desktop', 'launcher-gitleaks.desktop', 'launcher-trufflehog.desktop', 'launcher-rustscan.desktop', 'launcher-interactsh-client.desktop', 'launcher-kerbrute.desktop', 'launcher-responder.desktop', 'launcher-bloodhound-python.desktop', 'launcher-smbmap.desktop', 'launcher-enum4linux-ng.desktop', 'launcher-chisel.desktop', 'launcher-ligolo-proxy.desktop', 'launcher-smbserver.py.desktop', 'launcher-nxc.desktop']
+name='Pentesting'
+translate=false
+
+[folders/System]
+apps=['nm-connection-editor.desktop', 'org.gnome.baobab.desktop', 'org.gnome.DiskUtility.desktop', 'im-config.desktop', 'org.gnome.Logs.desktop', 'org.gnome.Sysprof.desktop']
+name='X-GNOME-Shell-System.directory'
+translate=true
+
+[folders/Utilities]
+apps=['org.gnome.Papers.desktop', 'org.gnome.font-viewer.desktop', 'org.gnome.Loupe.desktop', 'org.gnome.seahorse.Application.desktop']
+name='X-GNOME-Shell-Utilities.directory'
+translate=true
+
+[folders/YaST]
+categories=['X-SuSE-YaST']
+name='suse-yast.directory'
+translate=true

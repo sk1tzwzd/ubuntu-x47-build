@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="168" fill="#2a1c05"/>
+  <!-- counterclockwise arc -->
+  <path d="M256 108 A148 148 0 1 0 388 188" fill="none" stroke="#f59e0b" stroke-width="26" stroke-linecap="round"/>
+  <path d="M236 96 L262 150 L206 156 Z" fill="#f59e0b"/>
+  <!-- clock face -->
+  <circle cx="256" cy="256" r="96" fill="#3a2708"/>
+  <circle cx="256" cy="256" r="96" fill="none" stroke="#fbbf24" stroke-width="12"/>
+  <!-- hands pointing back -->
+  <line x1="256" y1="256" x2="256" y2="192" stroke="#ffe7a3" stroke-width="14" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="198" y2="284" stroke="#ffe7a3" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="12" fill="#ffe7a3"/>
+</svg>

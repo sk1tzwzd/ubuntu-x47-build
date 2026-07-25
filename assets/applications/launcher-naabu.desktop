@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Naabu
+Comment=Naabu (terminal)
+Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class naabu -- bash -lc "naabu; exec bash"
+Icon=kali-cool-naabu
+Terminal=false
+Type=Application
+Categories=Network;Security;
+Keywords=pentest;security;hacking;naabu;
+StartupWMClass=naabu

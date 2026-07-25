@@ -1,0 +1,12 @@
+# X47 baseline UFW IPv6 rules (mirror of IPv4 baseline)
+*filter
+:ufw6-user-input - [0:0]
+:ufw6-user-output - [0:0]
+:ufw6-user-forward - [0:0]
+:ufw6-user-limit - [0:0]
+:ufw6-user-limit-accept - [0:0]
+### RULES ###
+
+### END RULES ###
+
+COMMIT

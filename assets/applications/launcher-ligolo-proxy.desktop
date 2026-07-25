@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Ligolo-ng Proxy
+Comment=Ligolo-ng Proxy (terminal)
+Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class ligolo-proxy -- bash -lc "ligolo-proxy; exec bash"
+Icon=kali-ligolo-proxy
+Terminal=false
+Type=Application
+Categories=Network;Security;
+Keywords=pentest;security;hacking;ligolo-proxy;
+StartupWMClass=ligolo-proxy

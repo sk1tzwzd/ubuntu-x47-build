@@ -1,0 +1,10 @@
+arjun
+wafw00f
+httpie
+uv
+impacket
+smbmap
+bloodhound
+# specials
+enum4linux-ng|git+https://github.com/cddmp/enum4linux-ng.git
+netexec|git+https://github.com/Pennyw0rth/NetExec

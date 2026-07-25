@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Masscan
+Comment=Masscan (terminal)
+Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class masscan -- bash -lc "masscan; exec bash"
+Icon=kali-masscan
+Terminal=false
+Type=Application
+Categories=Network;Security;
+Keywords=pentest;security;hacking;masscan;
+StartupWMClass=masscan

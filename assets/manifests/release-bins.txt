@@ -1,0 +1,7 @@
+gitleaks|gitleaks/gitleaks|linux_x64\.tar\.gz|gitleaks
+trufflehog|trufflesecurity/trufflehog|linux_amd64\.tar\.gz|trufflehog
+eza|eza-community/eza|x86_64-unknown-linux-gnu\.tar\.gz|eza
+zoxide|ajeetdsouza/zoxide|x86_64-unknown-linux-musl\.tar\.gz|zoxide
+delta|dandavison/delta|x86_64-unknown-linux-gnu\.tar\.gz|delta
+fd|sharkdp/fd|x86_64-unknown-linux-gnu\.tar\.gz|fd
+rustscan|bee-san/RustScan|x86_64-linux|rustscan

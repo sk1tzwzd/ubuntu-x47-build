@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=fd
+Comment=fd (terminal)
+Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class fd -- bash -lc "fd; exec bash"
+Icon=x47duster
+Terminal=false
+Type=Application
+Categories=Development;Utility;
+Keywords=pentest;security;hacking;fd;
+StartupWMClass=fd

@@ -1,0 +1,9 @@
+arjun
+bloodhound
+enum4linux-ng
+httpie
+impacket
+netexec
+smbmap
+uv
+wafw00f

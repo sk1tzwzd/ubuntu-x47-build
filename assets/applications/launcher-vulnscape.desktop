@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=VulnScape
+GenericName=Pentest Toolkit
+Comment=Guided pentest & bug-bounty toolkit
+Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class vulnscape -- bash -lc "$HOME/Projects/GW/vulnscape.sh; exec bash"
+Icon=kali-cool-vulnscape
+Terminal=false
+Categories=Network;Security;
+Keywords=pentest;security;vulnscape;bugbounty;
+StartupNotify=true
+StartupWMClass=vulnscape

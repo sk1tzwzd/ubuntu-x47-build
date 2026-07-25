@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=John the Ripper
+Comment=John the Ripper (terminal)
+Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class john -- bash -lc "john; exec bash"
+Icon=kali-john
+Terminal=false
+Type=Application
+Categories=Security;
+Keywords=pentest;security;hacking;john;
+StartupWMClass=john
