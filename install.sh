@@ -43,6 +43,7 @@ export X47_SKIP_APT X47_SKIP_HARDENING X47_USER_ONLY
 MODULES=(
   00-apt.sh
   10-terminal.sh
+  11-tor-browser.sh
   20-tools-go.sh
   21-tools-pipx.sh
   22-tools-cargo.sh

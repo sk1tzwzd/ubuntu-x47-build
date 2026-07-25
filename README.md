@@ -3,6 +3,7 @@
 Idempotent installer that reproduces a custom Ubuntu 24.04 / 26 desktop:
 
 - **WezTerm** as the default terminal, with a subtle grey **X47 ASCII watermark** on the right
+- **Mullvad VPN** (apt) and **Tor Browser** (latest from Tor Project, registered in the app menu)
 - Pentest + developer toolchain (apt, Go, pipx, cargo, GitHub release binaries, gems)
 - Custom **app-grid launchers** and icons (`kali-*` pack, custom `kali-cool-*`, `x47duster` fallback — no Kali dragon)
 - Hardened services snapshotted from the reference machine (UFW, fail2ban, AppArmor, auditd, unattended-upgrades, sysctl)
@@ -37,8 +38,12 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 - Config: `~/.config/wezterm/wezterm.lua` + watermark `~/.config/wzd/watermark.png`
 - Default terminal via `xdg-terminals.list` + GNOME gsettings
 
+### Privacy
+- **Mullvad VPN** via official apt repo (`mullvad-vpn` in the apt manifest)
+- **Tor Browser** latest linux-x86_64 build → `~/tools/tor-browser`, registered with `--register-app`, CLI symlink `~/.local/bin/tor-browser`
+
 ### Tools (high level)
-- **apt**: nmap, metasploit-framework, wireshark, hashcat, hydra, sqlmap, docker-ce, golang-go, ruby-dev, ufw, fail2ban, …
+- **apt**: nmap, metasploit-framework, wireshark, hashcat, hydra, sqlmap, docker-ce, golang-go, ruby-dev, mullvad-vpn, ufw, fail2ban, …
 - **Go**: amass, subfinder, httpx, nuclei, katana, naabu, dnsx, chisel, ligolo-ng, …
 - **pipx**: netexec, impacket, bloodhound-python, smbmap, enum4linux-ng, arjun, wafw00f, …
 - **cargo**: bat, feroxbuster
@@ -79,7 +84,8 @@ config/                    # captured /etc hardening files
 ## Notes
 
 - Log out / re-login after install so GNOME Shell refreshes launchers and icons.
-- Cursor / Mullvad / Metasploit may need their own installers or repos; apt installs them when available and skips gracefully otherwise.
+- Cursor / Metasploit may need their own installers or repos; apt installs them when available and skips gracefully otherwise.
+- Mullvad account login is not bundled (secrets stay off GitHub). Tor Browser downloads the latest release at install time.
 - Wallpaper path is `file:///usr/share/backgrounds/mendhak-Red_Acer.jpg` (Ubuntu wallpapers pack). If missing, the theme still applies.
 - No Kali dragon is shipped; tools without a specific icon use `x47duster`.
 
