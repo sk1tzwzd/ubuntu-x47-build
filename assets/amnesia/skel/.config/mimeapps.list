@@ -1,0 +1,11 @@
+[Default Applications]
+text/html=firefox-amnesia.desktop
+x-scheme-handler/http=firefox-amnesia.desktop
+x-scheme-handler/https=firefox-amnesia.desktop
+x-scheme-handler/about=firefox-amnesia.desktop
+x-scheme-handler/unknown=firefox-amnesia.desktop
+
+[Added Associations]
+text/html=firefox-amnesia.desktop;
+x-scheme-handler/http=firefox-amnesia.desktop;
+x-scheme-handler/https=firefox-amnesia.desktop;

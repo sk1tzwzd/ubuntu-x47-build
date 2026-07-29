@@ -66,7 +66,7 @@ Files under `config/` are copied back to `/etc` (UFW rules, fail2ban jails, sysc
 - **Forced Tor with kill-switch** — an nftables table (`assets/amnesia/anon-tor.nft`, UID-scoped to `anon`) transparently redirects all of `anon`'s TCP through Tor's `TransPort` (9040) and DNS through `DNSPort` (9053). Anything that cannot be Tor-routed is dropped, and **all IPv6 from `anon` is blocked**, so there are no clearnet leaks. Only `anon` is affected; your normal account is untouched. Tor directives are written into `/etc/tor/torrc` (the `system_tor` AppArmor profile blocks `torrc.d` drop-ins on stock Ubuntu).
 - **Unprivileged by design** — `anon` is not in `sudo`/`adm`; that is what makes the UID firewall meaningful.
 
-Usage: log in as `anon` (default password `anon`, forced change on first login). Use **Firefox** or plain `curl`/`wget` — they are transparently torified. Do **not** run Tor Browser as `anon` (it would be Tor-over-Tor). Verify at https://check.torproject.org.
+Usage: log in as `anon` (default password `anon`, forced change on first login). **Firefox (Amnesia / Safest)** is the default browser (auto-starts): JavaScript off, Tor Browser “Safest”-style hardening, `.onion` unblocked. Traffic is transparently torified — do **not** run Tor Browser as `anon` (Tor-over-Tor). Verify at https://check.torproject.org.
 
 ### Limitations (read `~/README-anon.txt` in the anon session)
 

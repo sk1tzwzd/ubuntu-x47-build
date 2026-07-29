@@ -1,8 +1,10 @@
 [Desktop Entry]
-Name=Firefox (Amnesia / Tor)
-Comment=Firefox with .onion enabled — traffic is transparently torified
+Name=Firefox (Amnesia / Safest)
+Comment=Hardened Firefox: JS off by default, .onion enabled, transparent Tor
 Exec=firefox -P amnesia --new-instance %u
 Icon=firefox
 Type=Application
 Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
 StartupNotify=true
+StartupWMClass=firefox

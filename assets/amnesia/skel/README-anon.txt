@@ -19,12 +19,16 @@ Only the "anon" user is affected. Your normal account is untouched.
 
 How to browse (important for .onion)
 ------------------------------------
-  * Use the "Firefox (Amnesia / Tor)" launcher (or plain Firefox).
-  * This Firefox profile has .onion unblocked. Stock Firefox and Chrome REFUSE
-    to open .onion links (RFC 7686) even when Tor is working.
-  * Do NOT enable a SOCKS proxy in Firefox and do NOT run Tor Browser here —
-    the system already torifies everything (Tor-over-Tor is bad).
-  * Verify Tor: https://check.torproject.org  (should say you are using Tor)
+  * Firefox (Amnesia / Safest) is the default browser and auto-starts on login.
+  * Defaults match Tor Browser "Safest": JavaScript OFF, WebGL/WebRTC off,
+    tracking protection, resist fingerprinting, clear-on-shutdown, HTTPS-only.
+  * Many sites will look broken until you temporarily enable JS for that tab
+    (Padlock / permissions, or about:config → javascript.enabled). Prefer
+    leaving JS off.
+  * .onion is unblocked. Stock Firefox/Chrome refuse onion links (RFC 7686).
+  * Do NOT enable a SOCKS proxy and do NOT run Tor Browser here — traffic is
+    already torified (Tor-over-Tor is bad).
+  * Verify Tor: https://check.torproject.org
   * Test onion: http://protonmailrmez3lotccipshtkleegetolb73fuirgj7r4o4vfu7ozyd.onion/
 
 What this is NOT

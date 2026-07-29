@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Firefox (Amnesia / Safest)
+Comment=Start hardened Firefox (JS off, Tor-transparent)
+Exec=firefox -P amnesia --new-instance
+Icon=firefox
+X-GNOME-Autostart-enabled=true
+NoDisplay=false
