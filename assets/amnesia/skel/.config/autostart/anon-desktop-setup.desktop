@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Amnesia desktop setup
+Comment=Dark Prussian-green theme, green accent, location off
+Exec=bash -lc '$HOME/.local/bin/anon-desktop-setup'
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

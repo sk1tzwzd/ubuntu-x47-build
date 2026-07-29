@@ -62,30 +62,40 @@ Files under `config/` are copied back to `/etc` (UFW rules, fail2ban jails, sysc
 
 `./install.sh --with-amnesia` provisions a Tails-inspired `anon` account:
 
-- **RAM-only home** — `/home/anon` is a `tmpfs` mount (`home-anon.mount`). Everything the user does is wiped on reboot. A pristine skeleton in `/var/lib/anon-skel` is re-copied at each boot by `anon-home-populate.service`.
-- **Forced Tor with kill-switch** — an nftables table (`assets/amnesia/anon-tor.nft`, UID-scoped to `anon`) transparently redirects all of `anon`'s TCP through Tor's `TransPort` (9040) and DNS through `DNSPort` (9053). Anything that cannot be Tor-routed is dropped, and **all IPv6 from `anon` is blocked**, so there are no clearnet leaks. Only `anon` is affected; your normal account is untouched. Tor directives are written into `/etc/tor/torrc` (the `system_tor` AppArmor profile blocks `torrc.d` drop-ins on stock Ubuntu).
-- **Unprivileged by design** — `anon` is not in `sudo`/`adm`; that is what makes the UID firewall meaningful.
+- **RAM-only home** — `/home/anon` is a `tmpfs` mount. Wiped every reboot; skeleton re-copied from `/var/lib/anon-skel`.
+- **Forced Tor + kill-switch** — UID-scoped nftables; IPv6 dropped for `anon`. Tor config is inlined in `/etc/tor/torrc` (AppArmor blocks `torrc.d`).
+- **Desktop** — dark `Yaru-prussiangreen-dark`, green accent, location off; Ubuntu first-run wizard skipped.
+- **Apps** — Firefox (Safest / JS off), Electrum (BTC), Feather (XMR), Kleopatra (PGP), KeePassXC.
+- **Unprivileged** — `anon` is not in `sudo`/`adm` (except a narrow sudoers rule for the persistent vault helper).
 
-Usage: log in as `anon` (default password `anon`, forced change on first login). **Firefox (Amnesia / Safest)** is the default browser (auto-starts): JavaScript off, Tor Browser “Safest”-style hardening, `.onion` unblocked. Traffic is transparently torified — do **not** run Tor Browser as `anon` (Tor-over-Tor). Verify at https://check.torproject.org.
+### Persistent Storage (optional)
 
-### Limitations (read `~/README-anon.txt` in the anon session)
+By default wallets/PGP/passwords die with the tmpfs home. To keep selected secrets across reboots (Tails-style):
 
-This is host-level amnesia, **not** a full amnesiac OS:
+1. **Create** once (app menu → *Create Persistent Storage*) — picks size (default 4G) + passphrase; writes LUKS2 image to `/var/lib/x47-amnesia/persistent.img`.
+2. **Unlock** each session you need secrets — mounts the vault and bind-mounts into the amnesia home:
+   - `~/.gnupg`, `~/.electrum`, `~/.config/feather`
+   - `~/Persistent/keepassxc`, `~/Persistent/Documents`
+3. **Lock** (or reboot) — closes the vault. Without unlock, the session stays fully amnesiac.
 
-- The base OS, kernel, installed packages, and system logs (`journald`, `/var/log`) still persist on disk. This profile does not wipe them.
-- Transparent Tor protects network traffic but does not provide Tor Browser's application-layer anti-fingerprinting.
-- If swap is active, RAM pages (including the tmpfs home) may hit disk. The installer warns you; disable swap or use encrypted zram for real amnesia.
+The vault has its **own passphrase** on top of full-disk encryption. See `~/README-anon.txt` in the anon session.
 
-For end-to-end anonymity guarantees, use Tails or Whonix.
+Usage: log in as `anon` (default password `anon`, change on first login). Do **not** run Tor Browser as `anon` (Tor-over-Tor). Verify Tor at https://check.torproject.org.
+
+### Limitations
+
+Host-level amnesia, not a full amnesiac OS: base OS, packages, and system logs still persist. Swap can page tmpfs to disk. For stronger guarantees use Tails or Whonix.
 
 ### Teardown
 
 ```bash
+sudo /usr/local/sbin/anon-persistent lock 2>/dev/null || true
 sudo systemctl disable --now home-anon.mount anon-home-populate.service nftables
 sudo rm -f /etc/systemd/system/home-anon.mount /etc/systemd/system/anon-home-populate.service
-sudo rm -f /etc/nftables.d/anon-tor.nft
+sudo rm -f /etc/nftables.d/anon-tor.nft /etc/sudoers.d/anon-persistent
+sudo rm -f /usr/local/sbin/anon-persistent /usr/local/bin/anon-persistent-gui
 sudo sed -i '/### X47 AMNESIA TOR BEGIN ###/,/### X47 AMNESIA TOR END ###/d' /etc/tor/torrc
-sudo rm -rf /var/lib/anon-skel
+sudo rm -rf /var/lib/anon-skel /var/lib/x47-amnesia /opt/x47-amnesia
 sudo deluser --remove-home anon
 sudo systemctl daemon-reload && sudo systemctl restart tor@default nftables
 ```

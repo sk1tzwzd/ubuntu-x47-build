@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Feather (XMR)
+Comment=Monero wallet — store wallet files in Persistent Storage
+Exec=feather-wallet
+Icon=feather-wallet
+Type=Application
+Categories=Office;Finance;Network;
+Terminal=false
+StartupNotify=true

@@ -3,45 +3,61 @@ AMNESIA MODE (anon user)
 
 What this is
 ------------
-This account is a Tails/Whonix-INSPIRED amnesiac profile for a normal, installed
-Ubuntu system. It gives you:
+A Tails-inspired amnesiac profile on a normal Ubuntu install:
 
-  * A home directory that lives entirely in RAM (tmpfs). Everything you create
-    here is GONE the moment you log out and the machine reboots. Nothing about
-    this session is written to disk under /home/anon.
+  * Home lives in RAM (tmpfs) — wiped every reboot.
+  * All traffic is forced through Tor (kill-switch; IPv6 blocked).
+  * Dark Prussian-green theme, green accent, location off.
+  * Firefox (Safest): JavaScript off by default, .onion unblocked.
 
-  * Forced Tor. Every TCP connection this user makes is transparently routed
-    through the local Tor daemon, and DNS is resolved through Tor. Anything that
-    cannot go through Tor is DROPPED by an nftables kill-switch (including all
-    IPv6), so there are no accidental clearnet leaks.
+Apps
+----
+  * Firefox (Amnesia / Safest) — default browser, auto-starts
+  * Electrum — Bitcoin
+  * Feather — Monero
+  * Kleopatra — PGP keys
+  * KeePassXC — password manager (same family as Tails)
 
-Only the "anon" user is affected. Your normal account is untouched.
+PERSISTENT STORAGE (optional, Tails-style)
+-----------------------------------------
+By default NOTHING survives reboot — including wallets and PGP keys.
 
-How to browse (important for .onion)
-------------------------------------
-  * Firefox (Amnesia / Safest) is the default browser and auto-starts on login.
-  * Defaults match Tor Browser "Safest": JavaScript OFF, WebGL/WebRTC off,
-    tracking protection, resist fingerprinting, clear-on-shutdown, HTTPS-only.
-  * Many sites will look broken until you temporarily enable JS for that tab
-    (Padlock / permissions, or about:config → javascript.enabled). Prefer
-    leaving JS off.
-  * .onion is unblocked. Stock Firefox/Chrome refuse onion links (RFC 7686).
-  * Do NOT enable a SOCKS proxy and do NOT run Tor Browser here — traffic is
-    already torified (Tor-over-Tor is bad).
-  * Verify Tor: https://check.torproject.org
-  * Test onion: http://protonmailrmez3lotccipshtkleegetolb73fuirgj7r4o4vfu7ozyd.onion/
+If you want selected secrets to survive:
+
+  1. First time only: open "Create Persistent Storage"
+     - Pick a size (default 4 GB) and a strong passphrase
+     - This creates an encrypted LUKS vault on disk
+       (/var/lib/x47-amnesia/persistent.img)
+     - Protected by full-disk encryption AND your vault passphrase
+
+  2. Each anon login when you need your secrets:
+     - Open "Unlock Persistent Storage" and enter the passphrase
+     - The vault is mounted and bound into your session:
+         ~/.gnupg                 → Kleopatra / GPG
+         ~/.electrum              → Electrum wallets
+         ~/.config/feather        → Feather wallets
+         ~/Persistent/keepassxc   → KeePassXC databases
+         ~/Persistent/Documents   → files you choose to keep
+
+  3. When finished (or just reboot):
+     - "Lock Persistent Storage" closes the vault
+     - Reboot also locks it (tmpfs home is wiped; LUKS stays closed)
+
+If you never unlock, the session stays fully amnesiac.
+
+IMPORTANT
+  * Save KeePassXC databases under ~/Persistent/keepassxc/ AFTER unlock.
+  * Create Electrum/Feather wallets only after unlock (so they land in the vault).
+  * Write down / back up seed phrases separately — encryption is not a backup.
+  * Wrong passphrase = no access. There is no recovery.
+
+Browsing
+--------
+  * Use Firefox (Amnesia / Safest), not Chrome, not Tor Browser.
+  * Do NOT set a SOCKS proxy in Firefox (already torified; Tor-over-Tor is bad).
+  * Verify: https://check.torproject.org
 
 What this is NOT
 ----------------
-This is host-level amnesia, not a full amnesiac operating system. Be aware:
-
-  * The base OS, the kernel, installed packages, and system logs (journald,
-    /var/log) still persist on disk across reboots. This profile does not wipe
-    those.
-  * Transparent Tor protects your network traffic, but it does not give you the
-    fingerprinting protections that the real Tor Browser does at the
-    application layer.
-  * If the system has active swap, RAM pages (including this home) could be
-    written to disk. Prefer no swap, or encrypted/zram swap.
-
-For real end-to-end anonymity guarantees, use Tails or Whonix.
+Host-level amnesia, not a full amnesiac OS. The base OS, packages, and system
+logs still persist. For stronger guarantees use Tails or Whonix.

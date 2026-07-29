@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# User-facing wrapper: collects passphrase as the desktop user, then elevates.
+set -euo pipefail
+
+CMD="${1:-status}"
+SIZE_GB="${2:-4}"
+HELPER=/usr/local/sbin/anon-persistent
+
+die() {
+  local msg="$1"
+  if command -v zenity >/dev/null 2>&1; then
+    zenity --error --title="Persistent Storage" --text="$msg" 2>/dev/null || true
+  else
+    echo "$msg" >&2
+  fi
+  exit 1
+}
+
+info() {
+  local msg="$1"
+  if command -v zenity >/dev/null 2>&1; then
+    zenity --info --title="Persistent Storage" --text="$msg" 2>/dev/null || true
+  else
+    echo "$msg"
+  fi
+}
+
+ask_pass() {
+  local prompt="$1"
+  if command -v zenity >/dev/null 2>&1; then
+    zenity --password --title="Persistent Storage" --text="$prompt" 2>/dev/null || true
+  else
+    local p
+    read -r -s -p "$prompt: " p
+    echo >&2
+    printf '%s' "$p"
+  fi
+}
+
+[[ -x "$HELPER" ]] || die "anon-persistent helper not installed.\nRe-run install.sh --with-amnesia"
+
+case "$CMD" in
+  create)
+    if command -v zenity >/dev/null 2>&1; then
+      SIZE_GB="$(zenity --entry --title="Create Persistent Storage" \
+        --text="Size in GB (1–64).\n\nThis encrypted vault keeps PGP keys, wallets, and KeePassXC across reboots.\nEverything else in the anon session stays amnesiac." \
+        --entry-text="4" 2>/dev/null || true)"
+      [[ -n "$SIZE_GB" ]] || exit 0
+    fi
+    p1="$(ask_pass "Choose a passphrase for Persistent Storage")"
+    [[ -n "$p1" ]] || exit 0
+    p2="$(ask_pass "Confirm passphrase")"
+    [[ "$p1" == "$p2" ]] || die "Passphrases do not match."
+    if X47_PERSISTENT_PASSPHRASE="$p1" sudo -n -E "$HELPER" create "$SIZE_GB"; then
+      info "Created and unlocked (${SIZE_GB}G).\n\nSave secrets now:\n• Kleopatra → keys go to Persistent GnuPG\n• KeePassXC → save DB under ~/Persistent/keepassxc/\n• Electrum / Feather → wallets auto-use Persistent dirs\n\nLock when done, or reboot (auto-locks)."
+    else
+      die "Create failed. If a vault already exists, use Unlock instead."
+    fi
+    ;;
+  unlock)
+    p="$(ask_pass "Passphrase for Persistent Storage")"
+    [[ -n "$p" ]] || exit 0
+    if X47_PERSISTENT_PASSPHRASE="$p" sudo -n -E "$HELPER" unlock; then
+      info "Unlocked for this session.\n\nBound:\n• ~/.gnupg\n• ~/.electrum\n• ~/.config/feather\n• ~/Persistent/keepassxc\n• ~/Persistent/Documents"
+    else
+      die "Unlock failed (wrong passphrase, or vault not created yet).\nUse Create Persistent Storage first."
+    fi
+    ;;
+  lock)
+    if sudo -n "$HELPER" lock; then
+      info "Locked. Secrets are inaccessible until you unlock again."
+    else
+      die "Lock failed — close Electrum / Feather / Kleopatra / KeePassXC and retry."
+    fi
+    ;;
+  status)
+    out="$(sudo -n "$HELPER" status 2>&1 || true)"
+    info "$out"
+    ;;
+  *)
+    die "usage: anon-persistent-gui {create|unlock|lock|status}"
+    ;;
+esac

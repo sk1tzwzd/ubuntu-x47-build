@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Apply amnesia desktop look + privacy defaults every login (tmpfs home).
+set -euo pipefail
+
+gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+gsettings set org.gnome.desktop.interface gtk-theme 'Yaru-prussiangreen-dark' 2>/dev/null || true
+gsettings set org.gnome.desktop.interface icon-theme 'Yaru-prussiangreen-dark' 2>/dev/null || true
+gsettings set org.gnome.desktop.interface accent-color 'green' 2>/dev/null || true
+gsettings set org.gnome.desktop.interface cursor-theme 'Yaru' 2>/dev/null || true
+gsettings set org.gnome.system.location enabled false 2>/dev/null || true
+gsettings set org.gnome.shell.ubuntu color-scheme 'prefer-dark' 2>/dev/null || true

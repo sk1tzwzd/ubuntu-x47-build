@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+# X47 amnesia persistent storage — LUKS2 container for selected secrets.
+# Intended to be run via sudo (see sudoers drop-in). Do not give anon full sudo.
+#
+# Usage: anon-persistent {create|unlock|lock|status} [sizeGB]
+set -euo pipefail
+
+IMG="${X47_PERSISTENT_IMG:-/var/lib/x47-amnesia/persistent.img}"
+MAPPER_NAME="${X47_PERSISTENT_MAPPER:-x47_persistent}"
+MAPPER="/dev/mapper/${MAPPER_NAME}"
+MNT="${X47_PERSISTENT_MNT:-/mnt/x47-persistent}"
+ANON_USER="${ANON_USER:-anon}"
+ANON_HOME="$(getent passwd "$ANON_USER" | cut -d: -f6)"
+ANON_UID="$(id -u "$ANON_USER")"
+ANON_GID="$(id -g "$ANON_USER")"
+DEFAULT_SIZE_GB="${X47_PERSISTENT_SIZE_GB:-4}"
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+log() { echo "[persistent] $*"; }
+
+need_root() {
+  [[ "$(id -u)" -eq 0 ]] || die "must run as root (via sudo)"
+}
+
+ask_pass() {
+  local prompt="$1" pass
+  if [[ -n "${X47_PERSISTENT_PASSPHRASE:-}" ]]; then
+    printf '%s' "$X47_PERSISTENT_PASSPHRASE"
+    return 0
+  fi
+  if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && command -v zenity >/dev/null 2>&1; then
+    pass="$(zenity --password --title="Persistent Storage" --text="$prompt" 2>/dev/null || true)"
+  else
+    read -r -s -p "$prompt: " pass
+    echo >&2
+  fi
+  [[ -n "$pass" ]] || die "empty passphrase"
+  printf '%s' "$pass"
+}
+
+ask_pass_confirm() {
+  local a b
+  a="$(ask_pass "Choose a passphrase for Persistent Storage")"
+  b="$(ask_pass "Confirm passphrase")"
+  [[ "$a" == "$b" ]] || die "passphrases do not match"
+  printf '%s' "$a"
+}
+
+seed_dirs() {
+  local root="$1"
+  mkdir -p "$root"/{gnupg,keepassxc,electrum,feather,Documents}
+  chmod 700 "$root/gnupg"
+  chown -R "${ANON_UID}:${ANON_GID}" "$root"
+}
+
+is_open() {
+  [[ -e "$MAPPER" ]] || cryptsetup status "$MAPPER_NAME" >/dev/null 2>&1
+}
+
+is_mounted() {
+  mountpoint -q "$MNT" 2>/dev/null
+}
+
+cmd_status() {
+  echo "image:   $IMG ($( [[ -f "$IMG" ]] && echo exists || echo missing ))"
+  echo "mapper:  $MAPPER_NAME ($( is_open && echo open || echo closed ))"
+  echo "mount:   $MNT ($( is_mounted && echo mounted || echo unmounted ))"
+  if is_mounted; then
+    df -h "$MNT" | tail -1
+  fi
+}
+
+cmd_create() {
+  need_root
+  local size_gb="${1:-$DEFAULT_SIZE_GB}"
+  [[ "$size_gb" =~ ^[0-9]+$ ]] || die "size must be an integer number of GB"
+  (( size_gb >= 1 && size_gb <= 64 )) || die "size must be between 1 and 64 GB"
+  [[ -f "$IMG" ]] && die "already exists: $IMG (delete it manually first if you want to recreate)"
+
+  mkdir -p "$(dirname "$IMG")" "$MNT"
+  chmod 750 "$(dirname "$IMG")"
+
+  log "allocating ${size_gb}G sparse image at $IMG"
+  truncate -s "${size_gb}G" "$IMG"
+  chmod 600 "$IMG"
+
+  local pass
+  pass="$(ask_pass_confirm)"
+  log "formatting LUKS2 (this may take a moment)"
+  printf '%s' "$pass" | cryptsetup luksFormat --type luks2 --batch-mode "$IMG" -
+
+  log "opening and creating filesystem"
+  printf '%s' "$pass" | cryptsetup open --key-file=- "$IMG" "$MAPPER_NAME"
+  mkfs.ext4 -q -L x47-persistent "$MAPPER"
+  mount "$MAPPER" "$MNT"
+  seed_dirs "$MNT"
+  # Leave it unlocked so the user can start using it immediately.
+  # Bind into anon home if that home exists (tmpfs session).
+  if [[ -d "$ANON_HOME" ]]; then
+    activate_binds
+  fi
+  log "created and unlocked. Use Lock Persistent Storage when finished."
+  notify_user "Persistent Storage created and unlocked (${size_gb}G)."
+}
+
+activate_binds() {
+  need_root
+  is_mounted || die "vault not mounted"
+  [[ -d "$ANON_HOME" ]] || die "anon home missing: $ANON_HOME"
+
+  mkdir -p "$ANON_HOME/Persistent"
+  chown "${ANON_UID}:${ANON_GID}" "$ANON_HOME/Persistent"
+
+  # Feature bind-mounts (Tails-style). Replace any ephemeral dirs first.
+  bind_one() {
+    local src="$1" dest="$2" mode="${3:-700}"
+    mkdir -p "$src"
+    # If dest is a non-empty real dir on tmpfs, move aside once (won't persist anyway).
+    if [[ -e "$dest" && ! -L "$dest" ]] && ! mountpoint -q "$dest" 2>/dev/null; then
+      rm -rf "$dest"
+    fi
+    mkdir -p "$dest"
+    chown "${ANON_UID}:${ANON_GID}" "$src" "$dest"
+    chmod "$mode" "$src" "$dest"
+    if ! mountpoint -q "$dest" 2>/dev/null; then
+      mount --bind "$src" "$dest"
+    fi
+    chown "${ANON_UID}:${ANON_GID}" "$dest"
+  }
+
+  bind_one "$MNT/gnupg"      "$ANON_HOME/.gnupg"          700
+  bind_one "$MNT/electrum"   "$ANON_HOME/.electrum"       700
+  bind_one "$MNT/feather"    "$ANON_HOME/.config/feather" 700
+  bind_one "$MNT/keepassxc"  "$ANON_HOME/Persistent/keepassxc" 700
+  bind_one "$MNT/Documents"  "$ANON_HOME/Persistent/Documents" 755
+
+  # Convenience symlink at top of Persistent
+  ln -sfn keepassxc "$ANON_HOME/Persistent/KeePassXC" 2>/dev/null || true
+  chown -R "${ANON_UID}:${ANON_GID}" "$ANON_HOME/Persistent" 2>/dev/null || true
+
+  # Marker for session scripts
+  touch "$ANON_HOME/Persistent/.unlocked"
+  chown "${ANON_UID}:${ANON_GID}" "$ANON_HOME/Persistent/.unlocked"
+}
+
+deactivate_binds() {
+  need_root
+  local dest
+  for dest in \
+    "$ANON_HOME/.gnupg" \
+    "$ANON_HOME/.electrum" \
+    "$ANON_HOME/.config/feather" \
+    "$ANON_HOME/Persistent/keepassxc" \
+    "$ANON_HOME/Persistent/Documents"
+  do
+    if mountpoint -q "$dest" 2>/dev/null; then
+      umount "$dest" 2>/dev/null || umount -l "$dest" 2>/dev/null || true
+    fi
+  done
+  rm -f "$ANON_HOME/Persistent/.unlocked" 2>/dev/null || true
+}
+
+cmd_unlock() {
+  need_root
+  [[ -f "$IMG" ]] || die "no persistent storage yet — run Create Persistent Storage first"
+  if is_mounted; then
+    log "already unlocked"
+    activate_binds
+    notify_user "Persistent Storage already unlocked."
+    return 0
+  fi
+
+  mkdir -p "$MNT"
+  if ! is_open; then
+    local pass
+    pass="$(ask_pass "Passphrase for Persistent Storage")"
+    printf '%s' "$pass" | cryptsetup open --key-file=- "$IMG" "$MAPPER_NAME" \
+      || die "unlock failed (wrong passphrase?)"
+  fi
+  mount "$MAPPER" "$MNT"
+  seed_dirs "$MNT"
+  activate_binds
+  log "unlocked and bound into $ANON_HOME"
+  notify_user "Persistent Storage unlocked for this session."
+}
+
+cmd_lock() {
+  need_root
+  deactivate_binds
+  if is_mounted; then
+    umount "$MNT" || umount -l "$MNT" || die "umount failed — close apps using Persistent first"
+  fi
+  if is_open; then
+    cryptsetup close "$MAPPER_NAME" || die "cryptsetup close failed"
+  fi
+  log "locked"
+  notify_user "Persistent Storage locked."
+}
+
+notify_user() {
+  local msg="$1"
+  if command -v sudo >/dev/null 2>&1 && id "$ANON_USER" >/dev/null 2>&1; then
+    local uid
+    uid="$(id -u "$ANON_USER")"
+    sudo -u "$ANON_USER" DISPLAY="${DISPLAY:-:0}" \
+      DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${uid}/bus" \
+      notify-send "Amnesia Persistent" "$msg" 2>/dev/null || true
+  fi
+}
+
+main() {
+  local cmd="${1:-status}"
+  shift || true
+  case "$cmd" in
+    create) cmd_create "${1:-}" ;;
+    unlock) cmd_unlock ;;
+    lock)   cmd_lock ;;
+    status) cmd_status ;;
+    *) die "usage: anon-persistent {create|unlock|lock|status} [sizeGB]" ;;
+  esac
+}
+
+main "$@"

@@ -1,0 +1,8 @@
+# Allow anon to manage ONLY the X47 persistent LUKS helper (no full sudo).
+Cmnd_Alias X47_PERSISTENT = /usr/local/sbin/anon-persistent create, \
+                            /usr/local/sbin/anon-persistent create *, \
+                            /usr/local/sbin/anon-persistent unlock, \
+                            /usr/local/sbin/anon-persistent lock, \
+                            /usr/local/sbin/anon-persistent status
+anon ALL=(root) NOPASSWD:SETENV: X47_PERSISTENT
+Defaults!X47_PERSISTENT env_keep += "DISPLAY WAYLAND_DISPLAY XAUTHORITY X47_PERSISTENT_PASSPHRASE"

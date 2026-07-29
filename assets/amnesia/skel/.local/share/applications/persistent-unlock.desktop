@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Unlock Persistent Storage
+Comment=Mount encrypted vault (PGP, wallets, KeePassXC) for this session
+Exec=anon-persistent-gui unlock
+Icon=drive-harddisk-encrypted
+Type=Application
+Categories=System;Security;
+Terminal=false
+StartupNotify=true

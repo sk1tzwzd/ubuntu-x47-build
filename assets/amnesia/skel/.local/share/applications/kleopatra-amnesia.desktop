@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Kleopatra (PGP)
+Comment=PGP certificates — unlock Persistent Storage to keep keys across reboots
+Exec=kleopatra
+Icon=kleopatra
+Type=Application
+Categories=Qt;Security;Encryption;
+Terminal=false
+StartupNotify=true

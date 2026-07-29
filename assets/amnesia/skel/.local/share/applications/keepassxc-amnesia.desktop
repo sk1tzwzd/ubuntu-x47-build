@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=KeePassXC
+Comment=Password manager — save the DB under Persistent Storage
+Exec=keepassxc
+Icon=keepassxc
+Type=Application
+Categories=Utility;Security;Qt;
+Terminal=false
+StartupNotify=true

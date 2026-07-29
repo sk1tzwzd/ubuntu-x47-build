@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Lock Persistent Storage
+Comment=Unmount and lock the encrypted vault
+Exec=anon-persistent-gui lock
+Icon=changes-prevent
+Type=Application
+Categories=System;Security;
+Terminal=false
+StartupNotify=true

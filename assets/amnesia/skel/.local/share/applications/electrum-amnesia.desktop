@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Electrum (BTC)
+Comment=Bitcoin wallet — store wallet files in Persistent Storage
+Exec=/opt/x47-amnesia/electrum %u
+Icon=electrum
+Type=Application
+Categories=Office;Finance;Network;
+Terminal=false
+StartupNotify=true
