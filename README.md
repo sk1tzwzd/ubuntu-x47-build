@@ -65,7 +65,7 @@ Files under `config/` are copied back to `/etc` (UFW rules, fail2ban jails, sysc
 - **RAM-only home** — `/home/anon` is a `tmpfs` mount. Wiped every reboot; skeleton re-copied from `/var/lib/anon-skel`.
 - **Forced Tor + kill-switch** — UID-scoped nftables; IPv6 dropped for `anon`. Tor config is inlined in `/etc/tor/torrc` (AppArmor blocks `torrc.d`).
 - **Desktop** — dark `Yaru-prussiangreen-dark`, green accent, location off; Ubuntu first-run wizard skipped.
-- **Apps** — Firefox (Safest / JS off), Electrum (BTC), Feather (XMR), Kleopatra (PGP), KeePassXC.
+- **Apps** — Firefox (Safest / JS off), Electrum (BTC), Feather (XMR), Kleopatra (PGP), KeePassXC, VulnScape (shared `/opt/x47-amnesia/vulnscape`, updated from GitHub / local checkout).
 - **Unprivileged** — `anon` is not in `sudo`/`adm` (except a narrow sudoers rule for the persistent vault helper).
 
 ### Persistent Storage (optional)

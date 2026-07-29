@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.1" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- terminal window body -->
+  <rect x="56" y="86" width="400" height="340" rx="46" fill="#0a0e0a"/>
+  <rect x="56" y="86" width="400" height="340" rx="46" fill="none" stroke="#1f7a34" stroke-width="8"/>
+
+  <!-- title bar -->
+  <path d="M56 132 v-0 a46 46 0 0 1 46-46 h308 a46 46 0 0 1 46 46 v26 h-400 z" fill="#12331a"/>
+  <g>
+    <circle cx="104" cy="119" r="12" fill="#2ee65f"/>
+    <circle cx="140" cy="119" r="12" fill="#1f9e3f"/>
+    <circle cx="176" cy="119" r="12" fill="#146b2b"/>
+  </g>
+
+  <!-- screen prompt: > VS  with trailing cursor -->
+  <g fill="#2ee65f" font-family="DejaVu Sans Mono, monospace" font-weight="700">
+    <text x="92" y="316" font-size="140">&gt;</text>
+    <text x="180" y="316" font-size="140">VS</text>
+  </g>
+  <!-- trailing cursor block, clear of the text -->
+  <rect x="360" y="228" width="40" height="80" rx="4" fill="#2ee65f" opacity="0.85"/>
+</svg>

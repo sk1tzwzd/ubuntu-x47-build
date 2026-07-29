@@ -10,6 +10,90 @@ ANON_USER="${ANON_USER:-anon}"
 ANON_DEFAULT_PASS="${ANON_DEFAULT_PASS:-anon}"
 AM_ASSETS="$X47_ROOT/assets/amnesia"
 
+install_wezterm_shared() {
+  # Anon cannot read /home/wzd — ship a world-usable wezterm wrapper.
+  local src_appimage="/home/wzd/tools/wezterm/wezterm.AppImage"
+  local src_apprun="/home/wzd/tools/wezterm/squashfs-root/AppRun"
+  local dest=/opt/x47-amnesia/wezterm
+  run_sudo mkdir -p "$dest"
+  if [[ -x "$src_apprun" ]]; then
+    if [[ ! -x "$dest/squashfs-root/AppRun" ]]; then
+      log "copying WezTerm into /opt/x47-amnesia for shared use"
+      run_sudo rm -rf "$dest/squashfs-root"
+      run_sudo cp -a /home/wzd/tools/wezterm/squashfs-root "$dest/"
+      [[ -f "$src_appimage" ]] && run_sudo cp -a "$src_appimage" "$dest/wezterm.AppImage" || true
+    fi
+  elif [[ -x "$src_appimage" ]]; then
+    run_sudo cp -a "$src_appimage" "$dest/wezterm.AppImage"
+    (cd "$dest" && run_sudo ./wezterm.AppImage --appimage-extract >/dev/null) || true
+  else
+    warn "WezTerm not found under /home/wzd/tools/wezterm — anon VulnScape launcher may fail"
+    return 1
+  fi
+  run_sudo tee /usr/local/bin/wezterm >/dev/null <<EOF
+#!/usr/bin/env bash
+exec /opt/x47-amnesia/wezterm/squashfs-root/AppRun "\$@"
+EOF
+  run_sudo chmod 0755 /usr/local/bin/wezterm
+  ok "shared wezterm -> /usr/local/bin/wezterm"
+}
+
+install_vulnscape() {
+  local dest=/opt/x47-amnesia/vulnscape
+  run_sudo mkdir -p /opt/x47-amnesia
+  if [[ -d "$dest/.git" ]]; then
+    log "updating VulnScape in $dest"
+    run_sudo git -C "$dest" fetch --tags origin 2>/dev/null || true
+    run_sudo git -C "$dest" pull --ff-only origin main 2>/dev/null \
+      || run_sudo git -C "$dest" pull --ff-only origin master 2>/dev/null \
+      || warn "VulnScape git pull failed — keeping existing checkout"
+  else
+    log "cloning VulnScape into $dest"
+    run_sudo rm -rf "$dest"
+    if ! run_sudo git clone --depth 1 https://github.com/sk1tzwzd/vulnscape.git "$dest"; then
+      # Fallback: copy from this machine's checkout if clone fails
+      if [[ -f /home/wzd/Projects/GW/vulnscape.sh ]]; then
+        warn "clone failed — copying local /home/wzd/Projects/GW"
+        run_sudo mkdir -p "$dest"
+        run_sudo cp -a /home/wzd/Projects/GW/vulnscape.sh /home/wzd/Projects/GW/README.md \
+          /home/wzd/Projects/GW/LICENSE /home/wzd/Projects/GW/CHANGELOG.md "$dest/" 2>/dev/null || true
+        run_sudo cp -a /home/wzd/Projects/GW/vulnscape.sh "$dest/vulnscape.sh"
+      else
+        warn "VulnScape not installed"
+        return 1
+      fi
+    fi
+  fi
+  # Prefer freshest local tree if it's ahead of the clone (same machine maintainers)
+  if [[ -f /home/wzd/Projects/GW/vulnscape.sh ]]; then
+    local local_mtime remote_mtime
+    local_mtime="$(stat -c %Y /home/wzd/Projects/GW/vulnscape.sh 2>/dev/null || echo 0)"
+    remote_mtime="$(stat -c %Y "$dest/vulnscape.sh" 2>/dev/null || echo 0)"
+    if [[ "$local_mtime" -gt "$remote_mtime" ]]; then
+      log "syncing newer local VulnScape into $dest"
+      run_sudo cp -a /home/wzd/Projects/GW/vulnscape.sh "$dest/vulnscape.sh"
+      [[ -f /home/wzd/Projects/GW/CHANGELOG.md ]] && run_sudo cp -a /home/wzd/Projects/GW/CHANGELOG.md "$dest/" || true
+      [[ -f /home/wzd/Projects/GW/README.md ]] && run_sudo cp -a /home/wzd/Projects/GW/README.md "$dest/" || true
+    fi
+  fi
+  run_sudo chmod 0755 "$dest/vulnscape.sh"
+  run_sudo tee /usr/local/bin/vulnscape >/dev/null <<EOF
+#!/usr/bin/env bash
+exec /opt/x47-amnesia/vulnscape/vulnscape.sh "\$@"
+EOF
+  run_sudo chmod 0755 /usr/local/bin/vulnscape
+  # Icon for all users
+  if [[ -f "$X47_ROOT/assets/icons/hicolor/scalable/apps/kali-cool-vulnscape.svg" ]]; then
+    run_sudo mkdir -p /usr/share/icons/hicolor/scalable/apps
+    run_sudo cp -a "$X47_ROOT/assets/icons/hicolor/scalable/apps/kali-cool-vulnscape.svg" \
+      /usr/share/icons/hicolor/scalable/apps/
+    run_sudo gtk-update-icon-cache -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
+  fi
+  local ver
+  ver="$(grep -m1 -E '^\s*VERSION=|VulnScape v|1\.[0-9]+\.[0-9]+' "$dest/vulnscape.sh" 2>/dev/null | head -1 || true)"
+  ok "VulnScape -> /usr/local/bin/vulnscape (${ver:-installed})"
+}
+
 install_electrum() {
   local dest=/opt/x47-amnesia
   run_sudo mkdir -p "$dest"
@@ -79,6 +163,8 @@ module_amnesia() {
     feather-wallet keepassxc-full kleopatra \
     >/dev/null || die "failed to install amnesia packages"
 
+  install_wezterm_shared || warn "shared WezTerm skipped"
+  install_vulnscape || warn "VulnScape install skipped"
   install_electrum || warn "Electrum install skipped (manual install later)"
   install_persistent_helper
 
@@ -171,7 +257,7 @@ module_amnesia() {
 
   ok "amnesia mode installed"
   log "Log in as '$ANON_USER'. Dark green theme + Safest Firefox auto-apply."
-  log "Apps: Electrum, Feather, Kleopatra, KeePassXC."
+  log "Apps: Electrum, Feather, Kleopatra, KeePassXC, VulnScape."
   log "Persistent vault: Create once, Unlock each session you need secrets. See ~/README-anon.txt"
 }
 

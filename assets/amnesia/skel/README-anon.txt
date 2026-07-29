@@ -17,6 +17,7 @@ Apps
   * Feather — Monero
   * Kleopatra — PGP keys
   * KeePassXC — password manager (same family as Tails)
+  * VulnScape — guided pentest / bug-bounty toolkit (shared install, always latest from GitHub on reinstall)
 
 PERSISTENT STORAGE (optional, Tails-style)
 -----------------------------------------
