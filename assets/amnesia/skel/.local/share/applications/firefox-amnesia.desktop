@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Firefox (Amnesia / Tor)
+Comment=Firefox with .onion enabled — traffic is transparently torified
+Exec=firefox -P amnesia --new-instance %u
+Icon=firefox
+Type=Application
+Categories=Network;WebBrowser;
+StartupNotify=true
