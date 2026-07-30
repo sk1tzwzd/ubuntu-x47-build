@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Mirror docs/ to the VPS nginx root. Canonical site is GitHub Pages.
+# Mirror docs/ to the VPS web root (Caddy serves http://IP). Canonical = GitHub Pages.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOST="${X47_DOCS_HOST:-159.198.42.100}"
