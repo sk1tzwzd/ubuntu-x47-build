@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+# Tails-style MAC randomization for the amnesia session.
+# apply        — set a random locally-administered MAC on each physical NIC
+# restore      — put hardware / saved MACs back (also on anon logout)
+# boot-cleanup — clear any leftover NM cloned-mac overrides after abrupt reboot
+# status       — show current MACs
+set -euo pipefail
+
+STATE_DIR="${X47_MAC_STATE_DIR:-/run/x47-amnesia}"
+STATE_FILE="$STATE_DIR/original-macs"
+UUID_FILE="${X47_MAC_UUID_FILE:-/var/lib/x47-amnesia/mac-cloned-uuids}"
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+log() { echo "[mac-spoof] $*"; }
+
+need_root() { [[ "$(id -u)" -eq 0 ]] || die "must run as root"; }
+
+is_physical() {
+  local ifc="$1"
+  [[ -d "/sys/class/net/$ifc/device" ]] || return 1
+  case "$ifc" in
+    lo|docker*|br-*|veth*|virbr*|tun*|tap*|wg*|nym*|zt*|tailscale*) return 1 ;;
+  esac
+  return 0
+}
+
+random_mac() {
+  # Locally administered, unicast (Tails-style)
+  printf '02:%02x:%02x:%02x:%02x:%02x\n' \
+    $((RANDOM % 256)) $((RANDOM % 256)) $((RANDOM % 256)) \
+    $((RANDOM % 256)) $((RANDOM % 256))
+}
+
+current_mac() {
+  cat "/sys/class/net/$1/address" 2>/dev/null || echo ""
+}
+
+track_uuid() {
+  local u="$1"
+  mkdir -p "$(dirname "$UUID_FILE")"
+  touch "$UUID_FILE"
+  grep -qxF "$u" "$UUID_FILE" 2>/dev/null || echo "$u" >> "$UUID_FILE"
+}
+
+clear_cloned_mac_uuid() {
+  local u="$1" ty
+  ty="$(nmcli -t -f connection.type connection show "$u" 2>/dev/null || true)"
+  case "$ty" in
+    *wireless*|802-11-wireless)
+      nmcli connection modify "$u" 802-11-wireless.cloned-mac-address "" >/dev/null 2>&1 || true
+      ;;
+    *ethernet*|802-3-ethernet)
+      nmcli connection modify "$u" 802-3-ethernet.cloned-mac-address "" >/dev/null 2>&1 || true
+      ;;
+  esac
+}
+
+set_mac() {
+  local ifc="$1" mac="$2" nm_state=""
+  nm_state="$(nmcli -t -f DEVICE,STATE device status 2>/dev/null | awk -F: -v d="$ifc" '$1==d{print $2}')"
+  if command -v nmcli >/dev/null 2>&1 && [[ "$nm_state" == "connected" ]]; then
+    nmcli device disconnect "$ifc" >/dev/null 2>&1 || true
+  fi
+  ip link set dev "$ifc" down 2>/dev/null || true
+  ip link set dev "$ifc" address "$mac"
+  ip link set dev "$ifc" up 2>/dev/null || true
+  if command -v nmcli >/dev/null 2>&1; then
+    # Prefer NM cloned-mac so reconnects keep the spoofed address this session
+    local cons
+    cons="$(nmcli -t -f UUID,DEVICE connection show --active 2>/dev/null | awk -F: -v d="$ifc" '$2==d{print $1}')"
+    if [[ -z "$cons" ]]; then
+      cons="$(nmcli -t -f UUID,TYPE,DEVICE connection show 2>/dev/null | awk -F: -v d="$ifc" '$3==d{print $1}')"
+    fi
+    local u
+    for u in $cons; do
+      local ty
+      ty="$(nmcli -t -f connection.type connection show "$u" 2>/dev/null || true)"
+      case "$ty" in
+        *wireless*|802-11-wireless)
+          nmcli connection modify "$u" 802-11-wireless.cloned-mac-address "$mac" >/dev/null 2>&1 || true
+          track_uuid "$u"
+          ;;
+        *ethernet*|802-3-ethernet)
+          nmcli connection modify "$u" 802-3-ethernet.cloned-mac-address "$mac" >/dev/null 2>&1 || true
+          track_uuid "$u"
+          ;;
+      esac
+    done
+    nmcli device connect "$ifc" >/dev/null 2>&1 || true
+  fi
+}
+
+cmd_apply() {
+  need_root
+  mkdir -p "$STATE_DIR"
+  chmod 700 "$STATE_DIR"
+  : > "$STATE_FILE"
+
+  # Randomize Wi-Fi probe MACs for this boot (NM global, harmless)
+  mkdir -p /etc/NetworkManager/conf.d
+  if [[ ! -f /etc/NetworkManager/conf.d/90-x47-scan-rand-mac.conf ]]; then
+    cat > /etc/NetworkManager/conf.d/90-x47-scan-rand-mac.conf <<'EOF'
+[device]
+wifi.scan-rand-mac-address=yes
+EOF
+    systemctl reload NetworkManager >/dev/null 2>&1 || true
+  fi
+
+  local ifc mac new
+  for ifc in /sys/class/net/*; do
+    ifc="$(basename "$ifc")"
+    is_physical "$ifc" || continue
+    mac="$(current_mac "$ifc")"
+    [[ -n "$mac" && "$mac" != "00:00:00:00:00:00" ]] || continue
+    new="$(random_mac)"
+    echo "$ifc $mac" >> "$STATE_FILE"
+    log "$ifc: $mac -> $new"
+    set_mac "$ifc" "$new" || warn_set "$ifc"
+  done
+  log "MAC randomization applied (restores on logout / reboot cleanup)"
+}
+
+warn_set() { log "WARN: failed to spoof $1"; }
+
+cmd_restore() {
+  need_root
+  if [[ -f "$STATE_FILE" ]]; then
+    local ifc mac
+    while read -r ifc mac; do
+      [[ -n "$ifc" && -n "$mac" ]] || continue
+      [[ -d "/sys/class/net/$ifc" ]] || continue
+      log "$ifc: restoring $mac"
+      set_mac "$ifc" "$mac" || true
+    done < "$STATE_FILE"
+    rm -f "$STATE_FILE"
+  else
+    log "nothing to restore (no session state)"
+  fi
+  cmd_boot_cleanup
+  log "MAC addresses restored"
+}
+
+cmd_boot_cleanup() {
+  need_root
+  # Clear persistent NM cloned-mac overrides left if anon logged out uncleanly
+  if [[ -f "$UUID_FILE" ]] && command -v nmcli >/dev/null 2>&1; then
+    local u
+    while read -r u; do
+      [[ -n "$u" ]] || continue
+      clear_cloned_mac_uuid "$u"
+      log "cleared NM cloned-mac on $u"
+    done < "$UUID_FILE"
+    rm -f "$UUID_FILE"
+  fi
+  # Drop any leftover session state after reboot (/run is empty anyway)
+  rm -f "$STATE_FILE" 2>/dev/null || true
+}
+
+cmd_status() {
+  local ifc mac
+  for ifc in /sys/class/net/*; do
+    ifc="$(basename "$ifc")"
+    is_physical "$ifc" || continue
+    mac="$(current_mac "$ifc")"
+    echo "$ifc $mac"
+  done
+  if [[ -f "$STATE_FILE" ]]; then
+    echo "(spoof active; originals saved in $STATE_FILE)"
+  else
+    echo "(no spoof state file)"
+  fi
+}
+
+case "${1:-status}" in
+  apply)        cmd_apply ;;
+  restore)      cmd_restore ;;
+  boot-cleanup) cmd_boot_cleanup ;;
+  status)       cmd_status ;;
+  *) die "usage: anon-mac-spoof {apply|restore|boot-cleanup|status}" ;;
+esac

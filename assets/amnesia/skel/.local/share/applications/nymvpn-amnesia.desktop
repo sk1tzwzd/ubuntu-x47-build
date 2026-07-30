@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=NymVPN
+Comment=Nym mixnet / VPN — connect after login for extra anonymity under Tor
+Exec=nymvpn-amnesia
+Icon=network-vpn
+Type=Application
+Categories=Network;Security;
+Terminal=false
+StartupNotify=true

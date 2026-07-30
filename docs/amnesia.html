@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Amnesia mode — Ubuntu X47 Build</title>
+  <meta name="description" content="Tails-inspired anon session: RAM home, Tor kill-switch, random MAC, NymVPN, persistent vault." />
+  <link rel="stylesheet" href="css/site.css" />
+</head>
+<body>
+  <div class="wrap">
+    <nav class="site-nav" aria-label="Primary">
+      <a class="brand" href="index.html">Ubuntu <span>X47</span> Build</a>
+      <ul class="nav-links">
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="install.html">Install</a></li>
+        <li><a href="amnesia.html" aria-current="page">Amnesia</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="https://github.com/sk1tzwzd/ubuntu-x47-build">GitHub</a></li>
+      </ul>
+    </nav>
+
+    <main>
+      <h1 class="page-title">Amnesia mode</h1>
+      <p class="section-lead">
+        Opt-in with <code>./install.sh --with-amnesia</code>. Creates an unprivileged
+        <code>anon</code> account inspired by Tails — not a full amnesiac OS.
+      </p>
+
+      <section>
+        <h2>Session design</h2>
+        <ul class="clean">
+          <li><strong>RAM-only home</strong> — <code>/home/anon</code> is tmpfs; wiped on reboot; skeleton from <code>/var/lib/anon-skel</code></li>
+          <li><strong>Forced Tor + kill-switch</strong> — UID-scoped nftables; IPv6 dropped for anon; Tor config inlined in <code>/etc/tor/torrc</code></li>
+          <li><strong>Desktop</strong> — dark Yaru Prussian green, green accent, location off; first-run wizard skipped</li>
+          <li><strong>Apps</strong> — Firefox Safest (JS off), Electrum, Feather, Kleopatra, KeePassXC, VulnScape, NymVPN</li>
+          <li><strong>Random MAC</strong> — spoofed on anon login (Tails-style), restored on logout; boot cleanup clears leftover NM cloned-MAC</li>
+          <li><strong>NymVPN</strong> — daemon + GUI installed; sign in and connect in the app (no auto-login). Path while connected: apps → Tor → Nym → Internet</li>
+        </ul>
+        <div class="gallery two" style="margin-top:1.5rem">
+          <figure class="shot-placeholder">
+            <div class="ph-body">Screenshot placeholder</div>
+            <figcaption>Screenshot placeholder — anon dark desktop</figcaption>
+          </figure>
+          <figure class="shot-placeholder">
+            <div class="ph-body">Screenshot placeholder</div>
+            <figcaption>Screenshot placeholder — NymVPN / persistent vault</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section>
+        <h2>Persistent storage</h2>
+        <p class="section-lead">
+          Optional LUKS vault for secrets that should survive reboot (wallets, GnuPG, KeePassXC).
+        </p>
+        <ul class="clean">
+          <li><strong>Create</strong> once from the app menu — size + passphrase → <code>/var/lib/x47-amnesia/persistent.img</code></li>
+          <li><strong>Unlock</strong> each session you need secrets — bind-mounts into the amnesia home</li>
+          <li><strong>Lock</strong> (or reboot) — closes the vault; without unlock the session stays fully amnesiac</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Limitations</h2>
+        <div class="aside">
+          <strong>Host-level amnesia, not a live OS.</strong>
+          The base system, packages, and logs still persist. Active swap can page
+          tmpfs to disk. For stronger guarantees use Tails or Whonix.
+          Do not run Tor Browser as <code>anon</code> (Tor-over-Tor).
+          MAC spoof is interface-wide while the anon privacy session is active.
+        </div>
+      </section>
+
+      <section>
+        <h2>Default login</h2>
+        <p class="section-lead">
+          User <code>anon</code>, initial password <code>anon</code> (expired — change on first login).
+          Details also in <code>~/README-anon.txt</code> inside the session.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="foot-row">
+        <p>Ubuntu X47 Build — free software. Donations optional.</p>
+        <div class="foot-links">
+          <a href="https://github.com/sk1tzwzd/ubuntu-x47-build">GitHub</a>
+          <a href="https://buymeacoffee.com/sk1tzwzd">Buy me a coffee</a>
+          <a href="install.html">Install</a>
+          <a href="support.html">Support</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

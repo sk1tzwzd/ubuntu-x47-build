@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ubuntu X47 Build</title>
+  <meta name="description" content="Free open-source Ubuntu desktop installer: WezTerm, pentest toolchain, hardening, and optional amnesia Tor session." />
+  <link rel="stylesheet" href="css/site.css" />
+</head>
+<body>
+  <div class="wrap">
+    <nav class="site-nav" aria-label="Primary">
+      <a class="brand" href="index.html">Ubuntu <span>X47</span> Build</a>
+      <ul class="nav-links">
+        <li><a href="index.html" aria-current="page">Overview</a></li>
+        <li><a href="install.html">Install</a></li>
+        <li><a href="amnesia.html">Amnesia</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="https://github.com/sk1tzwzd/ubuntu-x47-build">GitHub</a></li>
+      </ul>
+    </nav>
+
+    <header class="hero">
+      <p class="free-note">Free and open source — no paid tier, no license fee</p>
+      <h1 class="hero-brand">Ubuntu <em>X47</em> Build</h1>
+      <p class="hero-lead">
+        An idempotent installer that reproduces a hardened Ubuntu desktop:
+        WezTerm, Mullvad and Tor Browser, a full pentest toolchain, and an
+        optional amnesiac <code>anon</code> session with forced Tor.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/sk1tzwzd/ubuntu-x47-build">Download on GitHub</a>
+        <a class="btn btn-ghost" href="install.html">Install guide</a>
+        <a class="btn btn-ghost" href="https://buymeacoffee.com/sk1tzwzd">Buy me a coffee</a>
+      </div>
+      <figure class="shot">
+        <img src="images/vulnscape-desktop.png" alt="Ubuntu X47 desktop with VulnScape toolkit in the terminal" width="1600" height="1000" />
+        <figcaption>X47 desktop with VulnScape — part of the cybersecurity suite bundled for amnesia and the main session.</figcaption>
+      </figure>
+    </header>
+
+    <main>
+      <section>
+        <h2>What this is</h2>
+        <p class="section-lead">
+          A reproducible build for Ubuntu 24.04 / 26 desktops. Clone the repo,
+          run <code>install.sh</code>, and get the same toolchain and hardening
+          used on the reference machine. Part of
+          <a href="https://vulnscape.net">VulnScape</a>.
+        </p>
+        <ul class="clean">
+          <li><strong>WezTerm</strong> as default terminal with an X47 watermark</li>
+          <li><strong>Privacy apps</strong> — Mullvad VPN (apt) and Tor Browser</li>
+          <li><strong>Pentest + dev tools</strong> via apt, Go, pipx, cargo, and release binaries</li>
+          <li><strong>Hardening</strong> restored from a snapshot (UFW, fail2ban, AppArmor, auditd, sysctl)</li>
+          <li><strong>Amnesia mode</strong> (opt-in) — RAM-only <code>anon</code> home, Tor kill-switch, random MAC, NymVPN</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Get the installer</h2>
+        <p class="section-lead">Source and releases live on GitHub. There is no separate store or paid download.</p>
+        <pre><code>git clone https://github.com/sk1tzwzd/ubuntu-x47-build.git
+cd ubuntu-x47-build
+chmod +x install.sh snapshot.sh modules/*.sh
+./install.sh</code></pre>
+        <p class="section-lead" style="margin-top:1rem">
+          Releases: <a href="https://github.com/sk1tzwzd/ubuntu-x47-build/releases">github.com/sk1tzwzd/ubuntu-x47-build/releases</a>
+        </p>
+      </section>
+
+      <section>
+        <h2>More screenshots</h2>
+        <p class="section-lead">Additional captures will be added here. Placeholders mark the slots.</p>
+        <div class="gallery two">
+          <figure class="shot-placeholder">
+            <div class="ph-body">Screenshot placeholder</div>
+            <figcaption>Screenshot placeholder — WezTerm / X47 watermark</figcaption>
+          </figure>
+          <figure class="shot-placeholder">
+            <div class="ph-body">Screenshot placeholder</div>
+            <figcaption>Screenshot placeholder — amnesia anon desktop</figcaption>
+          </figure>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="foot-row">
+        <p>Ubuntu X47 Build — free software. Donations optional.</p>
+        <div class="foot-links">
+          <a href="https://github.com/sk1tzwzd/ubuntu-x47-build">GitHub</a>
+          <a href="https://buymeacoffee.com/sk1tzwzd">Buy me a coffee</a>
+          <a href="https://vulnscape.net">VulnScape</a>
+          <a href="support.html">Support</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

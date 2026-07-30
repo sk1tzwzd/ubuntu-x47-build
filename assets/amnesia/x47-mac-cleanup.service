@@ -1,0 +1,13 @@
+[Unit]
+Description=Clear leftover X47 amnesia MAC spoof (NM cloned-mac)
+DefaultDependencies=no
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/anon-mac-spoof boot-cleanup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

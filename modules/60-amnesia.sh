@@ -128,20 +128,139 @@ EOF
 }
 
 install_persistent_helper() {
-  log "installing persistent storage helper"
+  log "installing persistent storage + MAC spoof helpers"
   run_sudo install -m 0755 "$AM_ASSETS/anon-persistent" /usr/local/sbin/anon-persistent
   run_sudo install -m 0755 "$AM_ASSETS/anon-persistent-gui" /usr/local/bin/anon-persistent-gui
+  run_sudo install -m 0755 "$AM_ASSETS/anon-mac-spoof" /usr/local/sbin/anon-mac-spoof
+  run_sudo install -m 0644 "$AM_ASSETS/x47-mac-cleanup.service" /etc/systemd/system/x47-mac-cleanup.service
   run_sudo install -m 0440 "$AM_ASSETS/sudoers-anon-persistent" /etc/sudoers.d/anon-persistent
-  # Validate sudoers fragment
   if run_sudo visudo -cf /etc/sudoers.d/anon-persistent >/dev/null 2>&1; then
     ok "sudoers drop-in OK"
   else
     run_sudo rm -f /etc/sudoers.d/anon-persistent
     die "invalid sudoers drop-in for anon-persistent"
   fi
-  run_sudo mkdir -p /var/lib/x47-amnesia /mnt/x47-persistent
+  run_sudo mkdir -p /var/lib/x47-amnesia /mnt/x47-persistent /run/x47-amnesia
   run_sudo chmod 750 /var/lib/x47-amnesia
   run_sudo chmod 755 /mnt/x47-persistent
+  run_sudo systemctl daemon-reload
+  run_sudo systemctl enable x47-mac-cleanup.service >/dev/null 2>&1 || true
+}
+
+install_nym() {
+  # NymVPN daemon (.deb) + GUI (AppImage). User must log in / connect in the GUI.
+  local dest=/opt/x47-amnesia/nym
+  run_sudo mkdir -p "$dest"
+  log "installing NymVPN (daemon + GUI)"
+
+  local api="https://api.github.com/repos/nymtech/nym-vpn-client/releases?per_page=20"
+  local json
+  json="$(mktemp)"
+  if ! download "$api" "$json"; then
+    warn "could not fetch NymVPN releases"
+    rm -f "$json"
+    return 1
+  fi
+
+  local vpnd_url app_url
+  # Prefer stable (no nightly/beta in tag), then fall back to newest prerelease.
+  vpnd_url="$(python3 - "$json" <<'PY'
+import json,sys
+rels=json.load(open(sys.argv[1]))
+def pick(stable_only):
+  for d in rels:
+    tag=d.get("tag_name","")
+    if stable_only and ("nightly" in tag or "beta" in tag or "rc" in tag):
+      continue
+    if (not stable_only) and "nightly" in tag:
+      continue
+    for a in d.get("assets",[]):
+      n=a["name"]
+      if n.startswith("nym-vpnd_") and n.endswith("_amd64.deb") and "sha" not in n:
+        return a["browser_download_url"]
+  return ""
+print(pick(True) or pick(False))
+PY
+)"
+  app_url="$(python3 - "$json" <<'PY'
+import json,sys
+rels=json.load(open(sys.argv[1]))
+def pick(stable_only):
+  for d in rels:
+    tag=d.get("tag_name","")
+    if stable_only and ("nightly" in tag or "beta" in tag or "rc" in tag):
+      continue
+    if (not stable_only) and "nightly" in tag:
+      continue
+    for a in d.get("assets",[]):
+      n=a["name"]
+      if n.startswith("NymVPN_") and n.endswith("_amd64.AppImage"):
+        return a["browser_download_url"]
+      if n.startswith("nym-vpn-app_") and n.endswith("_amd64.deb") and "sha" not in n:
+        return a["browser_download_url"]
+  return ""
+print(pick(True) or pick(False))
+PY
+)"
+  rm -f "$json"
+
+  if [[ -n "$vpnd_url" ]]; then
+    local deb
+    deb="$(mktemp --suffix=_nym-vpnd.deb)"
+    if download "$vpnd_url" "$deb"; then
+      run_sudo DEBIAN_FRONTEND=noninteractive dpkg -i "$deb" >/dev/null 2>&1 \
+        || run_sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -f -qq >/dev/null || true
+      rm -f "$deb"
+      run_sudo systemctl enable nym-vpnd.service >/dev/null 2>&1 || true
+      run_sudo systemctl start nym-vpnd.service >/dev/null 2>&1 || true
+      ok "nym-vpnd installed"
+    else
+      warn "nym-vpnd download failed"
+      rm -f "$deb"
+    fi
+  else
+    warn "no nym-vpnd amd64.deb found in releases"
+  fi
+
+  if [[ -n "$app_url" ]]; then
+    case "$app_url" in
+      *.AppImage)
+        local img
+        img="$(mktemp --suffix=_NymVPN.AppImage)"
+        if download "$app_url" "$img"; then
+          run_sudo install -m 0755 "$img" "$dest/NymVPN.AppImage"
+          rm -f "$img"
+          run_sudo tee /usr/local/bin/nymvpn-amnesia >/dev/null <<EOF
+#!/usr/bin/env bash
+exec /opt/x47-amnesia/nym/NymVPN.AppImage "\$@"
+EOF
+          run_sudo chmod 0755 /usr/local/bin/nymvpn-amnesia
+          ok "NymVPN AppImage -> $dest/NymVPN.AppImage"
+        else
+          warn "NymVPN AppImage download failed"
+          rm -f "$img"
+        fi
+        ;;
+      *.deb)
+        local adeb
+        adeb="$(mktemp --suffix=_nym-vpn-app.deb)"
+        if download "$app_url" "$adeb"; then
+          run_sudo DEBIAN_FRONTEND=noninteractive dpkg -i "$adeb" >/dev/null 2>&1 \
+            || run_sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -f -qq >/dev/null || true
+          rm -f "$adeb"
+          if [[ -x /usr/bin/nym-vpn-app ]]; then
+            run_sudo ln -sfn /usr/bin/nym-vpn-app /usr/local/bin/nymvpn-amnesia
+          fi
+          ok "nym-vpn-app deb installed"
+        else
+          warn "nym-vpn-app deb download failed"
+          rm -f "$adeb"
+        fi
+        ;;
+    esac
+  else
+    warn "no NymVPN GUI asset found"
+  fi
 }
 
 module_amnesia() {
@@ -167,6 +286,7 @@ module_amnesia() {
   install_vulnscape || warn "VulnScape install skipped"
   install_electrum || warn "Electrum install skipped (manual install later)"
   install_persistent_helper
+  install_nym || warn "NymVPN install skipped (manual install later)"
 
   # --- unprivileged anon user ---
   if id "$ANON_USER" >/dev/null 2>&1; then
@@ -196,7 +316,7 @@ module_amnesia() {
   run_sudo rm -rf /var/lib/anon-skel
   run_sudo mkdir -p /var/lib/anon-skel
   run_sudo cp -aT "$AM_ASSETS/skel" /var/lib/anon-skel
-  run_sudo chmod 0755 /var/lib/anon-skel/.local/bin/anon-desktop-setup 2>/dev/null || true
+  run_sudo chmod 0755 /var/lib/anon-skel/.local/bin/* 2>/dev/null || true
   run_sudo chown -R "$ANON_USER:$ANON_USER" /var/lib/anon-skel
   run_sudo chmod 0700 /var/lib/anon-skel
 
@@ -257,7 +377,8 @@ module_amnesia() {
 
   ok "amnesia mode installed"
   log "Log in as '$ANON_USER'. Dark green theme + Safest Firefox auto-apply."
-  log "Apps: Electrum, Feather, Kleopatra, KeePassXC, VulnScape."
+  log "Apps: Electrum, Feather, Kleopatra, KeePassXC, VulnScape, NymVPN."
+  log "Privacy: random MAC on anon login (restored on logout); NymVPN GUI for mixnet."
   log "Persistent vault: Create once, Unlock each session you need secrets. See ~/README-anon.txt"
 }
 

@@ -10,6 +10,9 @@ Idempotent installer that reproduces a custom Ubuntu 24.04 / 26 desktop:
 
 Part of the [VulnScape](https://vulnscape.net) cybersecurity suite.
 
+**Docs site (free):** [sk1tzwzd.github.io/ubuntu-x47-build](https://sk1tzwzd.github.io/ubuntu-x47-build/)  
+**Support (optional):** [buymeacoffee.com/sk1tzwzd](https://buymeacoffee.com/sk1tzwzd)
+
 ## Quick start (fresh machine)
 
 ```bash
@@ -65,8 +68,9 @@ Files under `config/` are copied back to `/etc` (UFW rules, fail2ban jails, sysc
 - **RAM-only home** — `/home/anon` is a `tmpfs` mount. Wiped every reboot; skeleton re-copied from `/var/lib/anon-skel`.
 - **Forced Tor + kill-switch** — UID-scoped nftables; IPv6 dropped for `anon`. Tor config is inlined in `/etc/tor/torrc` (AppArmor blocks `torrc.d`).
 - **Desktop** — dark `Yaru-prussiangreen-dark`, green accent, location off; Ubuntu first-run wizard skipped.
-- **Apps** — Firefox (Safest / JS off), Electrum (BTC), Feather (XMR), Kleopatra (PGP), KeePassXC, VulnScape (shared `/opt/x47-amnesia/vulnscape`, updated from GitHub / local checkout).
-- **Unprivileged** — `anon` is not in `sudo`/`adm` (except a narrow sudoers rule for the persistent vault helper).
+- **Apps** — Firefox (Safest / JS off), Electrum (BTC), Feather (XMR), Kleopatra (PGP), KeePassXC, VulnScape, **NymVPN** (daemon + GUI; connect after login).
+- **Random MAC** — Tails-style spoof on anon login, restored on logout (`anon-mac-spoof`).
+- **Unprivileged** — `anon` is not in `sudo`/`adm` (except narrow sudoers for persistent vault, MAC spoof, and starting `nym-vpnd`).
 
 ### Persistent Storage (optional)
 
@@ -131,6 +135,14 @@ config/                    # captured /etc hardening files
 - Mullvad account login is not bundled (secrets stay off GitHub). Tor Browser downloads the latest release at install time.
 - Wallpaper path is `file:///usr/share/backgrounds/mendhak-Red_Acer.jpg` (Ubuntu wallpapers pack). If missing, the theme still applies.
 - No Kali dragon is shipped; tools without a specific icon use `x47duster`.
+
+## Support
+
+This project is **free and open source**. Donations are optional and help cover maintenance and hosting:
+
+- [Buy Me a Coffee — sk1tzwzd](https://buymeacoffee.com/sk1tzwzd)
+- Docs: [GitHub Pages](https://sk1tzwzd.github.io/ubuntu-x47-build/) (canonical); VPS mirror `http://159.198.42.100` (optional)
+- Issues / PRs: [github.com/sk1tzwzd/ubuntu-x47-build](https://github.com/sk1tzwzd/ubuntu-x47-build)
 
 ## License
 

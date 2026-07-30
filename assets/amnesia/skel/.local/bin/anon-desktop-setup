@@ -9,3 +9,10 @@ gsettings set org.gnome.desktop.interface accent-color 'green' 2>/dev/null || tr
 gsettings set org.gnome.desktop.interface cursor-theme 'Yaru' 2>/dev/null || true
 gsettings set org.gnome.system.location enabled false 2>/dev/null || true
 gsettings set org.gnome.shell.ubuntu color-scheme 'prefer-dark' 2>/dev/null || true
+
+# Enable MAC spoof + Nym-ready session unit (apply on login, restore on logout)
+if command -v systemctl >/dev/null 2>&1; then
+  mkdir -p "$HOME/.config/systemd/user"
+  systemctl --user daemon-reload 2>/dev/null || true
+  systemctl --user enable --now anon-privacy-session.service 2>/dev/null || true
+fi
