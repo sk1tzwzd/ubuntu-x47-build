@@ -37,6 +37,7 @@
           <li><strong>Forced Tor + kill-switch</strong> — UID-scoped nftables; IPv6 dropped for anon; Tor config inlined in <code>/etc/tor/torrc</code></li>
           <li><strong>Desktop</strong> — dark Yaru Prussian green, green accent, location off; first-run wizard skipped</li>
           <li><strong>Apps</strong> — Firefox Safest (JS off), Electrum, Feather, Kleopatra, KeePassXC, VulnScape, NymVPN</li>
+          <li><strong>Anon Firefox</strong> — Safest / JS off, no SOCKS proxy (transparent Tor), and DoH hard-off (<code>network.trr.mode=5</code>) so DNS cannot bypass Tor</li>
           <li><strong>Random MAC</strong> — spoofed on anon login (Tails-style), restored on logout; boot cleanup clears leftover NM cloned-MAC</li>
           <li><strong>NymVPN</strong> — daemon + GUI installed; sign in and connect in the app (no auto-login). Path while connected: apps → Tor → Nym → Internet</li>
         </ul>

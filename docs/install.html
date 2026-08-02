@@ -53,6 +53,7 @@ chmod +x install.sh snapshot.sh modules/*.sh
             <tr><td><code>--user-only</code></td><td>Skip apt + hardening; terminal, tools, icons, launchers only</td></tr>
             <tr><td><code>--skip-apt</code></td><td>Skip third-party repos and apt packages</td></tr>
             <tr><td><code>--skip-hardening</code></td><td>Skip UFW / fail2ban / sysctl / auditd restore</td></tr>
+            <tr><td><code>--skip-debloat</code></td><td>Keep language packs and default desktop apps (no trimming)</td></tr>
             <tr><td><code>--with-amnesia</code></td><td>Create the amnesiac Tor-forced <code>anon</code> user</td></tr>
             <tr><td><code>--only 10-terminal,30-icons</code></td><td>Run a subset of modules</td></tr>
           </tbody>
@@ -67,6 +68,34 @@ chmod +x install.sh snapshot.sh modules/*.sh
           <li><strong>Tools</strong> — nmap, Metasploit, wireshark, hashcat, Go recon suite, pipx AD tools, cargo utilities, release binaries</li>
           <li><strong>Icons &amp; launchers</strong> — kali-* pack, custom cool icons, x47duster fallback (no Kali dragon)</li>
           <li><strong>Hardening</strong> — files under <code>config/</code> restored to <code>/etc</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Performance / debloat</h2>
+        <p class="section-lead">
+          Runs by default (opt out with <code>--skip-debloat</code>). Core desktop
+          and session packages and the pentest/dev toolchain are never touched, and
+          every removal is reversible with <code>sudo apt-get install &lt;pkg&gt;</code>.
+        </p>
+        <ul class="clean">
+          <li><strong>Language packs</strong> — removes non-English <code>language-pack-*</code>, LibreOffice l10n, and non-<code>en</code> spell dictionaries</li>
+          <li><strong>Default apps</strong> — GNOME games, Rhythmbox, Cheese, Thunderbird, LibreOffice, Transmission, Remmina, Shotwell, Maps/Weather/Contacts/Todo, Simple Scan, Totem, GNOME Music/Photos</li>
+          <li><strong>Cleanup</strong> — <code>apt autoremove --purge</code>, cache clean, journal vacuum to 200M, thumbnail cache</li>
+          <li><strong>Tweaks</strong> — <code>fstrim.timer</code>, <code>zram-config</code> compressed swap, <code>vm.swappiness=10</code>, file indexer (tracker/localsearch) masked</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Firefox hardening</h2>
+        <p class="section-lead">
+          A system-wide enterprise policy is installed to
+          <code>/etc/firefox/policies/policies.json</code> (honored by the Firefox
+          snap and deb).
+        </p>
+        <ul class="clean">
+          <li><strong>Main browser</strong> — telemetry, studies, Pocket and sponsored content off; tracking protection with cryptomining + fingerprinting blocking; HTTPS-only; DNS-over-HTTPS; no prefetch. JavaScript stays on.</li>
+          <li><strong>Anon browser</strong> — stays Tor Browser "Safest": JavaScript off, no SOCKS proxy (transparent Tor), and DoH hard-off (<code>network.trr.mode=5</code>) so DNS cannot bypass Tor.</li>
         </ul>
       </section>
 

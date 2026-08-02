@@ -14,6 +14,9 @@ user_pref("network.dns.disablePrefetch", true);
 user_pref("network.predictor.enabled", false);
 user_pref("network.http.speculative-parallel-limit", 0);
 user_pref("network.IDN_show_punycode", true);
+// DoH hard-off: DNS MUST resolve through Tor, never a direct HTTPS resolver.
+user_pref("network.trr.mode", 5);
+user_pref("network.trr.uri", "");
 
 // --- Safest: JavaScript OFF by default ---
 user_pref("javascript.enabled", false);
@@ -69,6 +72,13 @@ user_pref("dom.security.https_only_mode", true);
 user_pref("dom.security.https_only_mode_pbm", true);
 user_pref("security.mixed_content.block_active_content", true);
 user_pref("security.mixed_content.block_display_content", true);
+user_pref("security.ssl.require_safe_negotiation", true);
+
+// --- Extra leak / fingerprint surface reduction ---
+user_pref("beacon.enabled", false);
+user_pref("dom.battery.enabled", false);
+user_pref("network.http.referer.XOriginPolicy", 2);
+user_pref("network.http.referer.XOriginTrimmingPolicy", 2);
 
 // --- Telemetry / studies off ---
 user_pref("toolkit.telemetry.enabled", false);

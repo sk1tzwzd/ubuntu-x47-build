@@ -31,8 +31,25 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 | `--user-only` | Skip apt + hardening; install terminal, tools, icons, launchers only |
 | `--skip-apt` | Skip third-party repos and apt packages |
 | `--skip-hardening` | Skip UFW / fail2ban / sysctl / auditd restore |
+| `--skip-debloat` | Keep language packs and default desktop apps (no trimming) |
 | `--with-amnesia` | Also create the amnesiac, Tor-forced `anon` user (opt-in) |
 | `--only 10-terminal,30-icons` | Run a subset of modules |
+
+## Performance / debloat
+
+By default the installer trims the fat (opt out with `--skip-debloat`):
+
+- **Language packs** — removes every non-English `language-pack-*`, LibreOffice l10n, and non-`en` spell dictionaries.
+- **Default desktop apps** — removes GNOME games, Rhythmbox, Cheese, Thunderbird, LibreOffice, Transmission, Remmina, Shotwell, Maps/Weather/Contacts/Todo, Simple Scan, Totem, GNOME Music/Photos.
+- **Cleanup** — `apt-get autoremove --purge`, cache clean, `journalctl` vacuum to 200M, thumbnail cache.
+- **Tweaks** — `fstrim.timer`, `zram-config` compressed swap, `vm.swappiness=10`, and the desktop file indexer (tracker/localsearch) masked.
+
+Everything is reversible: `sudo apt-get install <pkg>`. Core desktop/session packages and the pentest/dev toolchain are never touched. Note: zram adds compressed swap; if you want *true* amnesia in the anon session, still disable swap (see below).
+
+## Firefox hardening
+
+- **Main browser** — a system-wide enterprise policy at `/etc/firefox/policies/policies.json` (honored by the Firefox snap and deb): telemetry/studies/Pocket/sponsored content off, tracking protection with cryptomining + fingerprinting blocking, HTTPS-only, DNS-over-HTTPS, no prefetch/speculative connections. JavaScript stays on for normal browsing.
+- **Anon browser** — stays Tor Browser "Safest": JavaScript off, no SOCKS proxy (transparent Tor), and DoH hard-off (`network.trr.mode=5`) so DNS can never bypass Tor.
 
 ## What gets installed
 
