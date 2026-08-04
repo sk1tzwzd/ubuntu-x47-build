@@ -149,6 +149,7 @@ stage_anon_desktop_fx_into_skel() {
     "burn-my-windows@schneegans.github.com"
     "blur-my-shell@aunetx"
     "compiz-windows-effect@hermes83.github.com"
+    "x47-ws-walls@x47"
   )
   local uuid found=0
   run_sudo mkdir -p "$cache" "$skel/.local/share/gnome-shell/extensions"
@@ -170,10 +171,18 @@ stage_anon_desktop_fx_into_skel() {
   done
   # Refresh wallpaper / BMW / hover CSS from build assets (skel may already have them).
   local desk="$X47_ROOT/assets/desktop"
-  if [[ -f "$desk/wallpapers/x47-circuit.png" ]]; then
-    run_sudo mkdir -p "$skel/.local/share/backgrounds"
-    run_sudo install -m 0644 "$desk/wallpapers/x47-circuit.png" \
-      "$skel/.local/share/backgrounds/x47-circuit.png"
+  run_sudo mkdir -p "$skel/.local/share/backgrounds"
+  local wf
+  for wf in x47-circuit.png x47-circuit-green.png x47-circuit-red.png x47-circuit-purple.png; do
+    [[ -f "$desk/wallpapers/$wf" ]] || continue
+    run_sudo install -m 0644 "$desk/wallpapers/$wf" "$skel/.local/share/backgrounds/$wf"
+  done
+  # Bundled workspace-wall extension (also copied from main user if present).
+  if [[ -d "$X47_ROOT/assets/extensions/x47-ws-walls@x47" ]]; then
+    run_sudo mkdir -p "$skel/.local/share/gnome-shell/extensions"
+    run_sudo rm -rf "$skel/.local/share/gnome-shell/extensions/x47-ws-walls@x47"
+    run_sudo cp -a "$X47_ROOT/assets/extensions/x47-ws-walls@x47" \
+      "$skel/.local/share/gnome-shell/extensions/"
   fi
   if [[ -f "$desk/burn-my-windows-x47-open.conf" && -f "$desk/burn-my-windows-x47-close.conf" ]]; then
     run_sudo mkdir -p "$skel/.config/burn-my-windows/profiles"

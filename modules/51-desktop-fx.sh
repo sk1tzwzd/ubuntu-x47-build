@@ -200,17 +200,46 @@ firefox_hover_buttons() {
 }
 
 set_wallpaper() {
-  local src="$AM_DESKTOP/wallpapers/x47-circuit.png"
+  # Teal (ws1) + green (ws2) + red (ws3) + purple (ws4) ASCII duster walls.
   local dest_dir="$HOME/.local/share/backgrounds"
-  local dest="$dest_dir/x47-circuit.png"
-  [[ -f "$src" ]] || { warn "missing $src — skipping wallpaper"; return 0; }
-  log "setting X47 circuit wallpaper"
+  local src_dir="$AM_DESKTOP/wallpapers"
+  local f dest
   mkdir -p "$dest_dir"
-  install -m 0644 "$src" "$dest"
-  gsettings set org.gnome.desktop.background picture-uri "file://$dest" 2>/dev/null || true
-  gsettings set org.gnome.desktop.background picture-uri-dark "file://$dest" 2>/dev/null || true
-  gsettings set org.gnome.desktop.background picture-options 'zoom' 2>/dev/null || true
-  ok "wallpaper -> $dest"
+  log "installing X47 workspace wallpapers (teal/green/red/purple)"
+  for f in x47-circuit.png x47-circuit-green.png x47-circuit-red.png x47-circuit-purple.png; do
+    [[ -f "$src_dir/$f" ]] || { warn "missing $src_dir/$f"; continue; }
+    install -m 0644 "$src_dir/$f" "$dest_dir/$f"
+  done
+  dest="$dest_dir/x47-circuit.png"
+  if [[ -f "$dest" ]]; then
+    gsettings set org.gnome.desktop.background picture-uri "file://$dest" 2>/dev/null || true
+    gsettings set org.gnome.desktop.background picture-uri-dark "file://$dest" 2>/dev/null || true
+    gsettings set org.gnome.desktop.background picture-options 'zoom' 2>/dev/null || true
+    ok "wallpapers -> $dest_dir (active: teal / workspace 1)"
+  fi
+  install_ws_walls_extension
+}
+
+install_ws_walls_extension() {
+  local uuid="x47-ws-walls@x47"
+  local src="$X47_ROOT/assets/extensions/$uuid"
+  local dest="$HOME/.local/share/gnome-shell/extensions/$uuid"
+  [[ -d "$src" ]] || { warn "missing $src — workspace wall colours skipped"; return 0; }
+  log "installing workspace wallpaper switcher ($uuid)"
+  mkdir -p "$(dirname "$dest")"
+  rm -rf "$dest"
+  cp -a "$src" "$dest"
+  gnome-extensions enable "$uuid" 2>/dev/null || true
+  local cur
+  cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
+  if [[ "$cur" != *"'$uuid'"* ]]; then
+    if [[ "$cur" == "@as []" || "$cur" == "[]" ]]; then
+      gsettings set org.gnome.shell enabled-extensions "['$uuid']" 2>/dev/null || true
+    else
+      gsettings set org.gnome.shell enabled-extensions "${cur%]}, '$uuid']" 2>/dev/null || true
+    fi
+  fi
+  ok "workspace wall colours enabled (log out/in on Wayland)"
 }
 
 module_desktop_fx() {

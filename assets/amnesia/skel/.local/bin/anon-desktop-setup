@@ -54,6 +54,7 @@ FX_UUIDS=(
   "burn-my-windows@schneegans.github.com"
   "blur-my-shell@aunetx"
   "compiz-windows-effect@hermes83.github.com"
+  "x47-ws-walls@x47"
 )
 
 enable_uuid() {

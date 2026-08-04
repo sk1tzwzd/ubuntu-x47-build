@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.9.2 — 2026-08-05
+
+### Desktop looks
+- **Per-workspace wallpaper colours** for the desktop cube: workspace 1 teal, 2 green, 3 red, 4 purple ASCII knuckle-duster (subtle circuit tint matches). Bundled `x47-ws-walls@x47` switches on workspace change. Regenerate with `scripts/make-wallpaper.py --all`.
+
 ## v1.9.1 — 2026-08-05
 
 ### Terminal
