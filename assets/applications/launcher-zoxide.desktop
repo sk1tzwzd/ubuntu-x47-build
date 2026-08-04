@@ -2,7 +2,7 @@
 Name=zoxide
 Comment=zoxide (terminal)
 Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class zoxide -- bash -lc "zoxide; exec bash"
-Icon=x47duster
+Icon=x47-zoxide
 Terminal=false
 Type=Application
 Categories=Development;Utility;

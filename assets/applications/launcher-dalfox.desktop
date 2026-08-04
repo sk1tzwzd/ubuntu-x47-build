@@ -2,7 +2,7 @@
 Name=Dalfox
 Comment=Dalfox (terminal)
 Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class dalfox -- bash -lc "dalfox; exec bash"
-Icon=x47duster
+Icon=x47-dalfox
 Terminal=false
 Type=Application
 Categories=Network;Security;

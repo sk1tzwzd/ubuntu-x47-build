@@ -87,9 +87,12 @@ By default the installer tunes the GNOME desktop for the main user (opt out with
 - **3D effects** — Coverflow Alt-Tab, Desktop Cube, Burn My Windows (**TV Glitch** open/close), Blur My Shell, Compiz-style wobbly windows.
 - **Hover-only window controls** — minimize/maximize/close stay invisible until you hover the titlebar (GTK3 + GTK4 css, applied to snap apps like Firefox too).
 - **X47 wallpaper** — the X47 knuckle-duster as glowing teal ASCII art, centered small over a dark-minimal circuit background, set for light and dark modes. Reproducible with `scripts/make-wallpaper.py`.
-- **Desktop widgets** — clocks (London/NY), BTC ticker, CPU/RAM sparklines, cybersecurity Reddit feed, and an **Install/Update** helper (search → copy apt/snap commands; always shows update-all cheat sheet). Widgets sit **under** app windows, **hide in fullscreen**, **snap to a 16px grid**, and drag from the **title**. Positions: `~/.config/x47-widgets/layout.json`.
+- **Window animations** — open uses **TV Glitch**, close uses **Broken Glass** (split Burn My Windows profiles `x47-open.conf` / `x47-close.conf`).
+- **Linux CMD Helper widget** — a single sleek desktop card: type a question in plain English (e.g. "how do I install notepad++") and get back just the Ubuntu terminal command (Anthropic Claude Haiku); click to copy. It sits **above the desktop icons but under app windows**, **hides in fullscreen**, **snaps to a 16px grid**, and drags from its **title**. Position: `~/.config/x47-widgets/layout.json`.
 
-User-level only (no sudo). On Wayland you must **log out and back in** once for the effects to load. Reverse with `gnome-extensions disable <uuid>`, delete `~/.config/burn-my-windows/profiles/x47.conf`, remove the marked block from `~/.config/gtk-{3.0,4.0}/gtk.css`, or `gsettings reset org.gnome.desktop.background picture-uri`.
+  The helper needs an Anthropic API key at `~/.config/x47-widgets/anthropic.key` (chmod 600), or pass `X47_ANTHROPIC_KEY=sk-ant-…` when running `./install.sh`. The key is never stored in this repo.
+
+User-level only (no sudo). On Wayland you must **log out and back in** once for the effects to load. Reverse with `gnome-extensions disable <uuid>`, delete `~/.config/burn-my-windows/profiles/x47-*.conf`, remove the marked block from `~/.config/gtk-{3.0,4.0}/gtk.css`, or `gsettings reset org.gnome.desktop.background picture-uri`.
 
 ## Install from ISO
 

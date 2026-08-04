@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.9.0 — 2026-08-05
+
+### Desktop widget
+- **Linux CMD Helper** replaces the old widget bundle (clocks/BTC/vitals/Reddit/PKG). One sleek dark-glass card: type a question in plain English, get back just the Ubuntu terminal command (Anthropic Claude Haiku), click to copy.
+- API key read at runtime from `~/.config/x47-widgets/anthropic.key` (chmod 600) or the `X47_ANTHROPIC_KEY` env var during install — never bundled in this repo.
+- Fixed the after-reboot invisibility: the card now stacks just above the desktop-icons window (below app windows), so it stays on the desktop and never overlaps windows. Still hides in fullscreen and snaps to a grid.
+
+### Desktop looks
+- **Broken Glass** window close animation (open stays TV Glitch) via split Burn My Windows profiles (`x47-open.conf` / `x47-close.conf`).
+
+### Launchers / icons
+- New bespoke icon set for the 19 tools that used the knuckle-duster fallback: a teal/steel **dev-tool** family (bat, delta, eza, fd, http, lazygit, uv, yq, zoxide) and a red/green tactical **pentest** family (dalfox, dnsx, gau, gowitness, interactsh-client, kerbrute, rustscan, tlsx, gitleaks, trufflehog).
+
+### Fixes / tweaks
+- **Cursor** opens a single IDE window (`window.restoreWindows: none`) and the update nag is silenced (`update.mode: none`).
+- **Mullvad** starts minimized to the tray (`startMinimized`) while keeping autostart + autoconnect; applied by `50-gnome.sh`.
+
 ## v1.8.0 — 2026-08-05
 
 ### Terminal

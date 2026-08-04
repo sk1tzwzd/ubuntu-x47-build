@@ -1,209 +1,88 @@
-/* X47 desktop widgets — sleek dark cards, teal accents to match the wallpaper. */
+/* Linux CMD Helper — sleek dark-glass card, teal X47 accent. */
 
-.x47-card {
-  background-color: rgba(8, 13, 17, 0.66);
-  border: 1px solid rgba(64, 224, 208, 0.18);
-  border-radius: 8px;
-  padding: 13px 16px;
-  spacing: 4px;
-  min-width: 300px;
+.x47-cmd-card {
+  background-color: rgba(10, 14, 18, 0.78);
+  border: 1px solid rgba(64, 224, 208, 0.28);
+  border-radius: 14px;
+  padding: 14px 16px 12px 16px;
+  spacing: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
 }
 
-.x47-card:hover {
-  border: 1px solid rgba(64, 224, 208, 0.40);
+.x47-cmd-title-row {
+  spacing: 8px;
 }
 
-.x47-card-title {
-  color: rgba(64, 224, 208, 0.82);
-  font-family: monospace;
+.x47-cmd-dot {
+  color: #40e0d0;
   font-size: 8pt;
-  letter-spacing: 3px;
-  margin-bottom: 6px;
-  /* Drag handle — grab the title to move the card. */
-  cursor: grab;
 }
 
-.x47-card-title:hover {
-  color: rgba(64, 224, 208, 1.0);
-}
-
-/* --- world clock --- */
-.x47-clock-row {
-  margin-top: 6px;
-}
-
-.x47-clock-zone {
-  color: rgba(220, 240, 238, 0.5);
-  font-family: monospace;
-  font-size: 8pt;
+.x47-cmd-title {
+  color: rgba(230, 240, 240, 0.85);
+  font-size: 9pt;
+  font-weight: bold;
   letter-spacing: 2px;
 }
 
-.x47-clock-time {
-  color: #eaf7f5;
-  font-family: monospace;
-  font-weight: bold;
-  font-size: 23pt;
-  text-shadow: 0 0 12px rgba(64, 224, 208, 0.30);
+.x47-cmd-input-row {
+  spacing: 8px;
 }
 
-/* --- bitcoin --- */
-.x47-btc-price {
-  color: #eaf7f5;
-  font-family: monospace;
-  font-weight: bold;
-  font-size: 18pt;
-  text-shadow: 0 0 12px rgba(64, 224, 208, 0.30);
-}
-
-.x47-btc-change {
-  font-family: monospace;
+.x47-cmd-entry {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(64, 224, 208, 0.18);
+  border-radius: 9px;
+  padding: 7px 12px;
+  color: #e6f0f0;
+  caret-color: #40e0d0;
+  selection-background-color: rgba(64, 224, 208, 0.35);
   font-size: 10pt;
 }
 
-.x47-up {
-  color: #52e0a1;
+.x47-cmd-entry:focus {
+  border-color: rgba(64, 224, 208, 0.55);
+  background-color: rgba(255, 255, 255, 0.09);
 }
 
-.x47-down {
-  color: #ff6b6b;
+.x47-cmd-entry StLabel.hint-text {
+  color: rgba(200, 215, 215, 0.38);
 }
 
-/* --- system vitals --- */
-.x47-metric-row {
-  spacing: 10px;
-  margin-bottom: 8px;
-}
-
-.x47-metric-label {
-  color: rgba(220, 240, 238, 0.55);
-  font-family: monospace;
-  font-size: 8pt;
-  letter-spacing: 2px;
-}
-
-.x47-metric-value {
-  color: #eaf7f5;
-  font-family: monospace;
+.x47-cmd-go {
+  background-color: rgba(64, 224, 208, 0.16);
+  border: 1px solid rgba(64, 224, 208, 0.35);
+  border-radius: 9px;
+  color: #40e0d0;
+  padding: 5px 12px;
+  font-size: 11pt;
   font-weight: bold;
-  font-size: 13pt;
 }
 
-.x47-metric-graph {
-  width: 268px;
-  height: 34px;
+.x47-cmd-go:hover {
+  background-color: rgba(64, 224, 208, 0.30);
 }
 
-.x47-load {
-  color: rgba(220, 240, 238, 0.6);
+.x47-cmd-result {
+  background-color: rgba(64, 224, 208, 0.08);
+  border: 1px solid rgba(64, 224, 208, 0.22);
+  border-radius: 9px;
+  padding: 9px 12px;
+}
+
+.x47-cmd-result:hover {
+  background-color: rgba(64, 224, 208, 0.16);
+  border-color: rgba(64, 224, 208, 0.45);
+}
+
+.x47-cmd-result-text {
+  color: #9df3e8;
   font-family: monospace;
-  font-size: 9pt;
-  letter-spacing: 1px;
+  font-size: 9.5pt;
 }
 
-/* --- reddit --- */
-.x47-reddit-item {
-  padding: 6px 4px;
-  border-radius: 5px;
-  background-color: transparent;
-  border: none;
-  width: 288px;
-}
-
-.x47-reddit-item:hover {
-  background-color: rgba(64, 224, 208, 0.12);
-}
-
-.x47-reddit-item:active {
-  background-color: rgba(64, 224, 208, 0.20);
-}
-
-.x47-reddit-title {
-  color: #dceff0;
-  font-family: monospace;
-  font-size: 9pt;
-}
-
-.x47-reddit-sub {
-  color: rgba(64, 224, 208, 0.7);
-  font-family: monospace;
-  font-size: 7pt;
-  letter-spacing: 1px;
-}
-
-.x47-reddit-status {
-  color: rgba(220, 240, 238, 0.4);
-  font-family: monospace;
+.x47-cmd-status {
+  color: rgba(200, 215, 215, 0.45);
   font-size: 8pt;
-}
-
-/* --- install / update helper --- */
-.x47-pkg-cheat {
-  spacing: 4px;
-  margin-bottom: 8px;
-}
-
-.x47-pkg-cmd {
-  padding: 5px 6px;
-  border-radius: 5px;
-  background-color: rgba(64, 224, 208, 0.06);
-  border: none;
-  width: 288px;
-}
-
-.x47-pkg-cmd:hover {
-  background-color: rgba(64, 224, 208, 0.14);
-}
-
-.x47-pkg-label {
-  color: rgba(64, 224, 208, 0.85);
-  font-family: monospace;
-  font-size: 7pt;
-  letter-spacing: 1px;
-}
-
-.x47-pkg-cmdtext {
-  color: #eaf7f5;
-  font-family: monospace;
-  font-size: 8pt;
-}
-
-.x47-pkg-search-row {
-  spacing: 6px;
-  margin: 6px 0;
-}
-
-.x47-pkg-entry {
-  width: 230px;
-  font-family: monospace;
-  font-size: 9pt;
-}
-
-.x47-pkg-entry StEntry {
-  background-color: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(64, 224, 208, 0.25);
-  border-radius: 4px;
-  padding: 4px 6px;
-  color: #eaf7f5;
-  caret-color: #40e0d0;
-}
-
-.x47-pkg-go {
-  padding: 4px 10px;
-  font-family: monospace;
-  font-size: 8pt;
-  background-color: rgba(64, 224, 208, 0.18);
-  border-radius: 4px;
-  color: #eaf7f5;
-}
-
-.x47-pkg-go:hover {
-  background-color: rgba(64, 224, 208, 0.32);
-}
-
-.x47-pkg-status {
-  color: rgba(220, 240, 238, 0.45);
-  font-family: monospace;
-  font-size: 8pt;
-  margin-bottom: 4px;
+  letter-spacing: 0.5px;
 }

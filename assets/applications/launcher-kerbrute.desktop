@@ -2,7 +2,7 @@
 Name=kerbrute
 Comment=kerbrute (terminal)
 Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class kerbrute -- bash -lc "kerbrute; exec bash"
-Icon=x47duster
+Icon=x47-kerbrute
 Terminal=false
 Type=Application
 Categories=Network;Security;

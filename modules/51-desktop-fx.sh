@@ -93,24 +93,28 @@ cube_workspaces() {
 }
 
 bmw_fx_profile() {
-  # Burn My Windows v48 reads per-profile keyfiles; ship one with the TV Glitch
-  # effect enabled (fire/matrix/glitch off) and drop empty auto-created profiles.
-  local src="$AM_DESKTOP/burn-my-windows-x47.conf"
+  # Burn My Windows v48 reads per-profile keyfiles. Ship two: TV Glitch for
+  # window open, Broken Glass for window close. Drop stale x47 profiles and
+  # empty auto-created ones.
+  local src_open="$AM_DESKTOP/burn-my-windows-x47-open.conf"
+  local src_close="$AM_DESKTOP/burn-my-windows-x47-close.conf"
   local dir="$HOME/.config/burn-my-windows/profiles"
-  [[ -f "$src" ]] || { warn "missing $src — skipping BMW profile"; return 0; }
-  log "installing Burn My Windows TV Glitch profile"
+  [[ -f "$src_open" && -f "$src_close" ]] || { warn "missing BMW profile assets — skipping"; return 0; }
+  log "installing Burn My Windows profiles (open: TV Glitch, close: Broken Glass)"
   mkdir -p "$dir"
+  rm -f "$dir/x47.conf"
   local f
   for f in "$dir"/*.conf; do
     [[ -e "$f" ]] || continue
-    [[ "$(basename "$f")" == "x47.conf" ]] && continue
+    [[ "$(basename "$f")" == x47-*.conf ]] && continue
     # Only remove profiles that don't enable any effect (the empty default).
     if ! grep -qE '^[a-z0-9-]+-enable-effect=true' "$f" 2>/dev/null; then
       rm -f "$f"
     fi
   done
-  install -m 0644 "$src" "$dir/x47.conf"
-  ok "BMW TV Glitch profile -> $dir/x47.conf"
+  install -m 0644 "$src_open" "$dir/x47-open.conf"
+  install -m 0644 "$src_close" "$dir/x47-close.conf"
+  ok "BMW profiles -> $dir/x47-{open,close}.conf"
 }
 
 coverflow_tune() {

@@ -56,7 +56,33 @@ module_gnome() {
     gsettings set org.gnome.desktop.default-applications.terminal exec "${terminal_exec//\'/}" 2>/dev/null || true
   fi
 
+  mullvad_tray_start
+
   ok "GNOME module done"
+}
+
+# Mullvad autostarts + autoconnects; make the GUI open minimized in the tray
+# instead of popping a window at login. Skipped while the GUI is running so
+# the app doesn't overwrite the file on exit.
+mullvad_tray_start() {
+  local gui_settings="$HOME/.config/Mullvad VPN/gui_settings.json"
+  [[ -f "$gui_settings" ]] || return 0
+  if pgrep -f "mullvad-gu[i]" >/dev/null 2>&1; then
+    warn "Mullvad GUI running — skipping startMinimized tweak (set it in the app or re-run later)"
+    return 0
+  fi
+  if python3 - "$gui_settings" <<'PY'
+import json, sys
+path = sys.argv[1]
+data = json.load(open(path))
+if data.get("startMinimized") is True:
+    sys.exit(1)
+data["startMinimized"] = True
+json.dump(data, open(path, "w"))
+PY
+  then
+    ok "Mullvad set to start minimized in the tray"
+  fi
 }
 
 module_gnome "$@"

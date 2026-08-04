@@ -2,7 +2,7 @@
 Name=gitleaks
 Comment=gitleaks (terminal)
 Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class gitleaks -- bash -lc "gitleaks; exec bash"
-Icon=x47duster
+Icon=x47-gitleaks
 Terminal=false
 Type=Application
 Categories=Network;Security;

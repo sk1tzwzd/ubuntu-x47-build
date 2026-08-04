@@ -2,7 +2,7 @@
 Name=yq
 Comment=yq (terminal)
 Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class yq -- bash -lc "yq; exec bash"
-Icon=x47duster
+Icon=x47-yq
 Terminal=false
 Type=Application
 Categories=Development;Utility;

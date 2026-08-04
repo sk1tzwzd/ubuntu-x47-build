@@ -2,7 +2,7 @@
 Name=interactsh-client
 Comment=interactsh-client (terminal)
 Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class interactsh-client -- bash -lc "interactsh-client; exec bash"
-Icon=x47duster
+Icon=x47-interactsh-client
 Terminal=false
 Type=Application
 Categories=Network;Security;

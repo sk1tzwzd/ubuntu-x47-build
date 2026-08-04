@@ -169,10 +169,13 @@ stage_anon_desktop_fx_into_skel() {
     run_sudo install -m 0644 "$desk/wallpapers/x47-circuit.png" \
       "$skel/.local/share/backgrounds/x47-circuit.png"
   fi
-  if [[ -f "$desk/burn-my-windows-x47.conf" ]]; then
+  if [[ -f "$desk/burn-my-windows-x47-open.conf" && -f "$desk/burn-my-windows-x47-close.conf" ]]; then
     run_sudo mkdir -p "$skel/.config/burn-my-windows/profiles"
-    run_sudo install -m 0644 "$desk/burn-my-windows-x47.conf" \
-      "$skel/.config/burn-my-windows/profiles/x47.conf"
+    run_sudo rm -f "$skel/.config/burn-my-windows/profiles/x47.conf"
+    run_sudo install -m 0644 "$desk/burn-my-windows-x47-open.conf" \
+      "$skel/.config/burn-my-windows/profiles/x47-open.conf"
+    run_sudo install -m 0644 "$desk/burn-my-windows-x47-close.conf" \
+      "$skel/.config/burn-my-windows/profiles/x47-close.conf"
   fi
   if [[ -f "$desk/gtk-hover-controls.css" ]]; then
     local begin="/* --- x47 hover window controls --- */"

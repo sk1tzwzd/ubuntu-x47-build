@@ -2,7 +2,7 @@
 Name=gowitness
 Comment=gowitness (terminal)
 Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class gowitness -- bash -lc "gowitness; exec bash"
-Icon=x47duster
+Icon=x47-gowitness
 Terminal=false
 Type=Application
 Categories=Network;Security;
