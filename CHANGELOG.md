@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.5.0 — 2026-08-04
+
+### Desktop looks
+- **Matrix window animations** — Burn My Windows now ships a managed profile (`x47.conf`) with the Matrix effect for open/close animations (fire off); empty auto-created profiles are removed.
+- **Coverflow tuning** — the 3D Alt-Tab switcher is bound to both window and application switching, hides the panel while switching, and uses the Coverflow style (set via the extension's own schema dir).
+- **Blur My Shell** — blurred panel, overview, and dash.
+- **Wobbly windows** — Compiz-style window effect (`compiz-windows-effect`).
+- **X47 circuit wallpaper** — custom dark-minimal wallpaper (X47 duster on charcoal with subtle circuit traces) bundled at `assets/desktop/wallpapers/x47-circuit.png`, installed to `~/.local/share/backgrounds/` and set for light + dark.
+- `ego_install` now also checks the local extensions directory, so already-downloaded extensions aren't re-fetched before the next login.
+
 ## v1.4.0 — 2026-08-04
 
 ### Desktop looks

@@ -56,10 +56,11 @@ Everything is reversible: `sudo apt-get install <pkg>`. Core desktop/session pac
 
 By default the installer tunes the GNOME desktop for the main user (opt out with `--skip-desktop-fx`):
 
-- **Bottom dock** — Ubuntu Dock moved to the bottom as a floating, centered dock.
-- **3D effects** — version-matched GNOME extensions from extensions.gnome.org: Coverflow Alt-Tab (3D window switcher), Desktop Cube (rotating 3D workspaces, fixed at 4), and Burn My Windows (open/close animations).
+- **Bottom dock** — Ubuntu Dock moved to the bottom with intelligent autohide (reveal on hover).
+- **3D effects** — version-matched GNOME extensions from extensions.gnome.org: Coverflow Alt-Tab (3D window switcher, bound to window + app switching), Desktop Cube (rotating 3D workspaces, fixed at 4), Burn My Windows (Matrix open/close animation), Blur My Shell (blurred panel/overview/dash), and Compiz-style wobbly windows.
+- **X47 wallpaper** — custom dark circuit wallpaper featuring the X47 duster, set for light and dark modes.
 
-User-level only (no sudo). On Wayland you must **log out and back in** once for the effects to load. Reverse with `gnome-extensions disable <uuid>` or `gsettings reset org.gnome.shell.extensions.dash-to-dock dock-position`.
+User-level only (no sudo). On Wayland you must **log out and back in** once for the effects to load. Reverse with `gnome-extensions disable <uuid>`, delete `~/.config/burn-my-windows/profiles/x47.conf`, or `gsettings reset org.gnome.desktop.background picture-uri`.
 
 ## What gets installed
 

@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
-# Desktop looks: move the Ubuntu Dock to the bottom and add 3D window/desktop
-# effects (Coverflow Alt-Tab, Desktop Cube, Burn My Windows). User-level only
-# (no sudo). On Wayland the extensions load after a log out / log back in.
+# Desktop looks: bottom dock, 3D window/desktop effects (Coverflow Alt-Tab,
+# Desktop Cube, Burn My Windows "Matrix"), Blur My Shell, wobbly windows, and a
+# custom X47 wallpaper. User-level only (no sudo). On Wayland the extensions
+# load after a log out / log back in.
 set -euo pipefail
 # shellcheck disable=SC1091
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/common.sh"
+
+AM_DESKTOP="$X47_ROOT/assets/desktop"
 
 # Extensions to install (version-matched from extensions.gnome.org)
 X47_FX_UUIDS=(
   "CoverflowAltTab@palatis.blogspot.com"
   "desktop-cube@schneegans.github.com"
   "burn-my-windows@schneegans.github.com"
+  "blur-my-shell@aunetx"
+  "compiz-windows-effect@hermes83.github.com"
 )
 
 dock_to_bottom() {
@@ -43,7 +48,10 @@ enable_uuid() {
 # Download + install a version-matched extension from extensions.gnome.org.
 ego_install() {
   local uuid="$1" shellver info url tmp
-  if gnome-extensions info "$uuid" >/dev/null 2>&1; then
+  # Check the install dir too: on Wayland `gnome-extensions info` can't see
+  # extensions installed since the last login.
+  if gnome-extensions info "$uuid" >/dev/null 2>&1 \
+     || [[ -d "$HOME/.local/share/gnome-shell/extensions/$uuid" ]]; then
     log "extension already installed: $uuid"
     enable_uuid "$uuid"
     return 0
@@ -84,6 +92,54 @@ cube_workspaces() {
   gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
 }
 
+bmw_matrix_profile() {
+  # Burn My Windows v48 reads per-profile keyfiles; ship one with the Matrix
+  # effect enabled (fire off) and drop any empty auto-created profiles so
+  # Matrix is the only open/close animation.
+  local src="$AM_DESKTOP/burn-my-windows-x47.conf"
+  local dir="$HOME/.config/burn-my-windows/profiles"
+  [[ -f "$src" ]] || { warn "missing $src — skipping Matrix profile"; return 0; }
+  log "installing Burn My Windows Matrix profile"
+  mkdir -p "$dir"
+  local f
+  for f in "$dir"/*.conf; do
+    [[ -e "$f" ]] || continue
+    [[ "$(basename "$f")" == "x47.conf" ]] && continue
+    # Only remove profiles that don't enable any effect (the empty default).
+    if ! grep -qE '^[a-z0-9-]+-enable-effect=true' "$f" 2>/dev/null; then
+      rm -f "$f"
+    fi
+  done
+  install -m 0644 "$src" "$dir/x47.conf"
+  ok "Matrix profile -> $dir/x47.conf"
+}
+
+coverflow_tune() {
+  # The extension ships its own compiled schema, so gsettings needs
+  # --schemadir to find org.gnome.shell.extensions.coverflowalttab.
+  local sdir="$HOME/.local/share/gnome-shell/extensions/CoverflowAltTab@palatis.blogspot.com/schemas"
+  [[ -f "$sdir/gschemas.compiled" ]] || { warn "Coverflow schema not found — skipping tuning"; return 0; }
+  log "tuning Coverflow Alt-Tab (3D switcher bound to window/app switching)"
+  gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab switcher-style 'Coverflow' 2>/dev/null || true
+  gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab bind-to-switch-windows true 2>/dev/null || true
+  gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab bind-to-switch-applications true 2>/dev/null || true
+  gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab hide-panel true 2>/dev/null || true
+}
+
+set_wallpaper() {
+  local src="$AM_DESKTOP/wallpapers/x47-circuit.png"
+  local dest_dir="$HOME/.local/share/backgrounds"
+  local dest="$dest_dir/x47-circuit.png"
+  [[ -f "$src" ]] || { warn "missing $src — skipping wallpaper"; return 0; }
+  log "setting X47 circuit wallpaper"
+  mkdir -p "$dest_dir"
+  install -m 0644 "$src" "$dest"
+  gsettings set org.gnome.desktop.background picture-uri "file://$dest" 2>/dev/null || true
+  gsettings set org.gnome.desktop.background picture-uri-dark "file://$dest" 2>/dev/null || true
+  gsettings set org.gnome.desktop.background picture-options 'zoom' 2>/dev/null || true
+  ok "wallpaper -> $dest"
+}
+
 module_desktop_fx() {
   if [[ "${X47_SKIP_DESKTOP_FX:-0}" == "1" ]]; then
     warn "skipping desktop-fx module (--skip-desktop-fx)"
@@ -98,8 +154,9 @@ module_desktop_fx() {
     return 0
   fi
   if ! have gnome-extensions; then
-    warn "gnome-extensions CLI missing — dock only, skipping 3D effects"
+    warn "gnome-extensions CLI missing — dock + wallpaper only, skipping 3D effects"
     dock_to_bottom
+    set_wallpaper
     return 0
   fi
 
@@ -111,6 +168,9 @@ module_desktop_fx() {
   done
 
   cube_workspaces
+  bmw_matrix_profile
+  coverflow_tune
+  set_wallpaper
 
   ok "desktop-fx module done"
   if [[ "$ok_any" == "1" ]]; then
