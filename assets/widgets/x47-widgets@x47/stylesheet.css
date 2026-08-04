@@ -1,0 +1,68 @@
+/* X47 desktop widgets — dark minimal, teal accents to match the wallpaper. */
+
+.x47-widgets {
+  spacing: 14px;
+}
+
+.x47-card {
+  background-color: rgba(8, 14, 18, 0.62);
+  border: 1px solid rgba(64, 224, 208, 0.22);
+  border-radius: 14px;
+  padding: 14px 18px;
+  spacing: 6px;
+}
+
+.x47-card-title {
+  color: rgba(64, 224, 208, 0.85);
+  font-family: monospace;
+  font-size: 9pt;
+  letter-spacing: 3px;
+  margin-bottom: 4px;
+}
+
+.x47-clock-row {
+  spacing: 0px;
+  margin-top: 6px;
+}
+
+.x47-clock-zone {
+  color: rgba(220, 240, 238, 0.55);
+  font-family: monospace;
+  font-size: 9pt;
+  letter-spacing: 2px;
+}
+
+.x47-clock-time {
+  color: #e9f7f5;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 24pt;
+  text-shadow: 0 0 12px rgba(64, 224, 208, 0.35);
+}
+
+.x47-btc-price {
+  color: #e9f7f5;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 18pt;
+  text-shadow: 0 0 12px rgba(64, 224, 208, 0.35);
+}
+
+.x47-btc-change {
+  font-family: monospace;
+  font-size: 10pt;
+}
+
+.x47-up {
+  color: #52e0a1;
+}
+
+.x47-down {
+  color: #ff6b6b;
+}
+
+.x47-vitals {
+  color: rgba(233, 247, 245, 0.85);
+  font-family: monospace;
+  font-size: 11pt;
+}

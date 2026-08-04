@@ -10,6 +10,9 @@
 - **Glitch window animations** — Burn My Windows profile switched from Matrix to the subtler hacker-style Glitch effect (400 ms).
 - **Hover-only window controls** — minimize/maximize/close are invisible until the titlebar is hovered, via managed GTK3/GTK4 css blocks (also installed into snap app sandboxes, e.g. Firefox).
 
+### Desktop widgets
+- New bundled **X47 Widgets** GNOME extension + `52-widgets.sh` module: digital clocks for London and New York, a live BTC/USD ticker (CoinGecko, 60 s refresh, 24 h change), and system vitals (CPU / RAM / load). Drawn on the wallpaper beneath windows, styled to match the X47 theme. Skipped with `--skip-desktop-fx`.
+
 ## v1.5.0 — 2026-08-04
 
 ### Desktop looks

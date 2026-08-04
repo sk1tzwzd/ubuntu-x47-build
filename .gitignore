@@ -26,3 +26,4 @@ tmp/
 
 # Large extracted WezTerm (downloaded at install time)
 assets/wezterm/squashfs-root/
+build/

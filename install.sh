@@ -11,7 +11,7 @@
 #   ./install.sh --skip-apt       # skip apt repos/packages
 #   ./install.sh --skip-hardening # skip ufw/fail2ban/sysctl restore
 #   ./install.sh --skip-debloat   # keep language packs + default desktop apps
-#   ./install.sh --skip-desktop-fx # skip bottom dock + 3D window/desktop effects
+#   ./install.sh --skip-desktop-fx # skip dock/3D effects + desktop widgets
 #   ./install.sh --with-amnesia   # also create the amnesiac Tor-forced 'anon' user
 #   ./install.sh --only 10-terminal,30-icons
 #
@@ -65,6 +65,7 @@ MODULES=(
   40-hardening.sh
   50-gnome.sh
   51-desktop-fx.sh
+  52-widgets.sh
   60-amnesia.sh
 )
 
