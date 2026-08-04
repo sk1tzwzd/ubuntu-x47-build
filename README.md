@@ -65,18 +65,29 @@ Firefox is left as the hardened snap (the earlier snap→deb swap was removed). 
 
 ## Firefox hardening
 
-- **Main browser** — a system-wide enterprise policy at `/etc/firefox/policies/policies.json` (honored by the Firefox snap and deb): telemetry/studies/Pocket/sponsored content off, tracking protection with cryptomining + fingerprinting blocking, HTTPS-only, DNS-over-HTTPS, no prefetch/speculative connections. JavaScript stays on for normal browsing.
+- **Main browser** — a system-wide enterprise policy at `/etc/firefox/policies/policies.json` (honored by the Firefox snap and deb): telemetry/studies/Pocket/sponsored content off, tracking protection with cryptomining + fingerprinting blocking, HTTPS-only, DNS-over-HTTPS, no prefetch/speculative connections. JavaScript stays on for normal browsing. The installer also sets **hardened Firefox as the default browser** (over Chrome).
 - **Anon browser** — stays Tor Browser "Safest": JavaScript off, no SOCKS proxy (transparent Tor), and DoH hard-off (`network.trr.mode=5`) so DNS can never bypass Tor.
+
+## Updating Cursor
+
+Cursor is installed from the official apt repo. Use:
+
+```bash
+update-cursor
+# or: sudo apt update && sudo apt install --only-upgrade cursor
+```
+
+If the GUI says an update is available but apt says you already have the newest version, that is a **known Cursor lag** (in-app feed vs apt repo). It is not caused by X47 debloat. Wait and re-run later, or silence the nag with `update-cursor --quiet-gui`.
 
 ## Desktop looks
 
 By default the installer tunes the GNOME desktop for the main user (opt out with `--skip-desktop-fx`):
 
 - **Bottom dock** — Ubuntu Dock moved to the bottom with intelligent autohide (reveal on hover).
-- **3D effects** — version-matched GNOME extensions from extensions.gnome.org: Coverflow Alt-Tab (3D window switcher, bound to window + app switching), Desktop Cube (rotating 3D workspaces, fixed at 4), Burn My Windows (Glitch open/close animation), Blur My Shell (blurred panel/overview/dash), and Compiz-style wobbly windows.
+- **3D effects** — Coverflow Alt-Tab, Desktop Cube, Burn My Windows (**TV Glitch** open/close), Blur My Shell, Compiz-style wobbly windows.
 - **Hover-only window controls** — minimize/maximize/close stay invisible until you hover the titlebar (GTK3 + GTK4 css, applied to snap apps like Firefox too).
 - **X47 wallpaper** — the X47 knuckle-duster as glowing teal ASCII art, centered small over a dark-minimal circuit background, set for light and dark modes. Reproducible with `scripts/make-wallpaper.py`.
-- **Desktop widgets** — bundled *X47 Widgets* extension (`assets/widgets/`): digital clocks for London and New York, a live BTC/USD ticker with 24 h change (CoinGecko, 60 s refresh), system vitals with rolling **CPU/RAM sparkline graphs** and load, and a **cybersecurity Reddit feed** (click a title to open it). **Drag from the card title** to move; positions save to `~/.config/x47-widgets/layout.json`.
+- **Desktop widgets** — clocks (London/NY), BTC ticker, CPU/RAM sparklines, cybersecurity Reddit feed, and an **Install/Update** helper (search → copy apt/snap commands; always shows update-all cheat sheet). Widgets sit **under** app windows, **hide in fullscreen**, **snap to a 16px grid**, and drag from the **title**. Positions: `~/.config/x47-widgets/layout.json`.
 
 User-level only (no sudo). On Wayland you must **log out and back in** once for the effects to load. Reverse with `gnome-extensions disable <uuid>`, delete `~/.config/burn-my-windows/profiles/x47.conf`, remove the marked block from `~/.config/gtk-{3.0,4.0}/gtk.css`, or `gsettings reset org.gnome.desktop.background picture-uri`.
 

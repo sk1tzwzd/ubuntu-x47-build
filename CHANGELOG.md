@@ -5,10 +5,21 @@
 ### Performance
 - New `06-perf.sh` module (default, opt out with `--skip-perf`) trims boot time and idle resource use, all reversible: takes `chkrootkit`/`bettercap` off the boot path, cuts the GRUB timeout to 1s, masks ModemManager, switches ClamAV to on-demand scans, disables kdump-tools and cloud-init, and turns off the printing/discovery stack.
 
+### Desktop looks
+- **TV Glitch** window open/close (replaces plain Glitch) via the managed Burn My Windows profile.
+
 ### Desktop widgets
-- **Sleeker cards + live graphs** — the System card now draws rolling CPU and RAM sparklines (Cairo) next to the readouts, with tightened styling across all cards.
-- **Draggable (fixed)** — widgets live in the chrome layer so they receive pointer events (background-group placement blocked clicks); drag from the card **title**. Positions persist to `~/.config/x47-widgets/layout.json`.
-- **Cybersecurity Reddit feed** — hottest posts from r/netsec, r/cybersecurity, r/hacking, r/AskNetsec, r/Malware, and r/bugbounty; click a title to open it. Defaults to the left edge so the feed isn't clipped.
+- **Under app windows** — cards sit below `window_group` so they never overlay programs; still clickable on empty desktop (drag from the title).
+- **Hide in fullscreen** — all widgets vanish when any primary-monitor window is fullscreen; restore on exit.
+- **Snap-to-grid** — 16px grid on drag-end and default layout; positions in `~/.config/x47-widgets/layout.json`.
+- **Install / Update helper** — always shows `apt upgrade`, `snap refresh`, `update-cursor`; search returns install or upgrade/refresh commands (click to copy).
+- **CPU/RAM sparklines**, clocks, BTC, cybersecurity Reddit feed (as before).
+
+### Firefox
+- Hardening module also forces **hardened Firefox** as the default browser (`xdg-settings` + `mimeapps.list`), replacing Chrome.
+
+### Tools
+- `update-cursor` helper (`~/.local/bin/update-cursor`): upgrades via apt (source of truth for .deb). Documents the known Cursor GUI-vs-apt lag; `--quiet-gui` sets `update.mode=none`.
 
 ### Performance / debloat
 - Debloat also removes **Ubuntu Help** (`yelp` / docs) and the **App Centre** + **Desktop Security Centre** snaps.

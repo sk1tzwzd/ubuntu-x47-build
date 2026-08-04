@@ -93,13 +93,12 @@ cube_workspaces() {
 }
 
 bmw_fx_profile() {
-  # Burn My Windows v48 reads per-profile keyfiles; ship one with the Glitch
-  # effect enabled (fire/matrix off) and drop any empty auto-created profiles
-  # so Glitch is the only open/close animation.
+  # Burn My Windows v48 reads per-profile keyfiles; ship one with the TV Glitch
+  # effect enabled (fire/matrix/glitch off) and drop empty auto-created profiles.
   local src="$AM_DESKTOP/burn-my-windows-x47.conf"
   local dir="$HOME/.config/burn-my-windows/profiles"
   [[ -f "$src" ]] || { warn "missing $src — skipping BMW profile"; return 0; }
-  log "installing Burn My Windows Glitch profile"
+  log "installing Burn My Windows TV Glitch profile"
   mkdir -p "$dir"
   local f
   for f in "$dir"/*.conf; do
@@ -111,7 +110,7 @@ bmw_fx_profile() {
     fi
   done
   install -m 0644 "$src" "$dir/x47.conf"
-  ok "BMW Glitch profile -> $dir/x47.conf"
+  ok "BMW TV Glitch profile -> $dir/x47.conf"
 }
 
 coverflow_tune() {

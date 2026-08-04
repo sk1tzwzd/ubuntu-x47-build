@@ -1,12 +1,7 @@
-// X47 Widgets — draggable desktop widgets (chrome layer so they receive
-// clicks/drags on Wayland).
-//   - World clock: London + New York
-//   - Bitcoin ticker (CoinGecko, 60 s)
-//   - System vitals: CPU / RAM sparklines + load
-//   - Cybersecurity Reddit feed (click a title to open it)
-//
-// Drag from the card title. Positions persist to
-// $XDG_CONFIG_HOME/x47-widgets/layout.json.
+// X47 Widgets — desktop cards below window_group (never over apps),
+// snap-to-grid, hide in fullscreen, title-bar drag.
+//   - World clock, BTC, vitals sparklines, Reddit feed
+//   - PKG helper: update cheat sheet + search → install/upgrade commands
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
@@ -26,36 +21,44 @@ const BTC_URL =
     '?ids=bitcoin&vs_currencies=usd&include_24hr_change=true';
 
 const SUBREDDITS = 'netsec+cybersecurity+hacking+AskNetsec+Malware+bugbounty';
-// Reddit blocks the .json API for non-OAuth clients (403); Atom RSS works.
 const REDDIT_URL = `https://www.reddit.com/r/${SUBREDDITS}/.rss?limit=12`;
 const BROWSER_UA =
     'Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0';
 
 const HISTORY = 60;
-const MARGIN = 28;
-const CARD_GAP = 14;
+const MARGIN = 32;
+const CARD_GAP = 16;
 const CARD_WIDTH = 320;
+const CELL = 16;
 const REDDIT_POSTS = 4;
-const TEAL = [64 / 255, 224 / 255, 208 / 255];
 const DRAG_THRESHOLD = 4;
+const TEAL = [64 / 255, 224 / 255, 208 / 255];
+
+const UPDATE_CHEAT = [
+    {label: 'Update all apt', cmd: 'sudo apt update && sudo apt upgrade'},
+    {label: 'Update all snaps', cmd: 'sudo snap refresh'},
+    {label: 'Update Cursor', cmd: 'update-cursor'},
+];
 
 export default class X47WidgetsExtension extends Extension {
     enable() {
         this._cards = {};
         this._dragMonId = 0;
         this._drag = null;
+        this._winSignals = [];
         this._layout = this._loadLayout();
         this._session = new Soup.Session({timeout: 15, user_agent: BROWSER_UA});
         this._prevCpu = null;
         this._cpuHist = [];
         this._ramHist = [];
+        this._hiddenForFullscreen = false;
 
         this._buildClock();
         this._buildBtc();
         this._buildVitals();
         this._buildReddit();
+        this._buildPkg();
 
-        // Place after first allocate so heights are real (avoids Reddit cut-off).
         this._placeIdle = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._placeCards();
             this._placeIdle = 0;
@@ -63,6 +66,7 @@ export default class X47WidgetsExtension extends Extension {
         });
         this._monitorsChangedId = Main.layoutManager.connect(
             'monitors-changed', () => this._placeCards());
+        this._setupFullscreenWatch();
 
         this._tickClocks();
         this._tickVitals();
@@ -101,6 +105,7 @@ export default class X47WidgetsExtension extends Extension {
             this._dragMonId = 0;
         }
         this._drag = null;
+        this._teardownFullscreenWatch();
 
         if (this._monitorsChangedId) {
             Main.layoutManager.disconnect(this._monitorsChangedId);
@@ -112,17 +117,20 @@ export default class X47WidgetsExtension extends Extension {
         }
         for (const id in this._cards) {
             const card = this._cards[id];
-            Main.layoutManager.removeChrome(card);
+            const parent = card.get_parent();
+            if (parent)
+                parent.remove_child(card);
             card.destroy();
         }
         this._cards = null;
-
         this._clocks = null;
-        this._btcPrice = null;
-        this._btcChange = null;
+        this._btcPrice = this._btcChange = null;
         this._cpuValue = this._ramValue = this._loadLabel = null;
         this._cpuArea = this._ramArea = null;
         this._redditBox = null;
+        this._pkgResults = null;
+        this._pkgStatus = null;
+        this._pkgEntry = null;
         this._prevCpu = null;
         this._cpuHist = this._ramHist = null;
     }
@@ -137,17 +145,13 @@ export default class X47WidgetsExtension extends Extension {
             track_hover: true,
             width: CARD_WIDTH,
         });
-        // Chrome (not backgroundGroup): receives pointer events so drag/clicks work.
-        Main.layoutManager.addChrome(card, {
-            affectsStruts: false,
-            trackFullscreen: true,
-        });
+        // Below window_group: apps cover widgets; empty desktop still clickable.
+        Main.layoutManager.uiGroup.insert_child_below(card, global.window_group);
         this._cards[id] = card;
         return card;
     }
 
     _title(card, id, text) {
-        // Drag handle = title only, so Reddit rows keep their clicks.
         const title = new St.Label({
             text,
             style_class: 'x47-card-title',
@@ -216,23 +220,19 @@ export default class X47WidgetsExtension extends Extension {
     _drawSparkline(area, data) {
         const cr = area.get_context();
         const [w, h] = area.get_surface_size();
-
         cr.setSourceRGBA(TEAL[0], TEAL[1], TEAL[2], 0.10);
         cr.setLineWidth(1);
         cr.moveTo(0, h - 0.5);
         cr.lineTo(w, h - 0.5);
         cr.stroke();
-
         if (!data || data.length < 2) {
             cr.$dispose();
             return;
         }
-
         const n = data.length;
         const dx = w / (HISTORY - 1);
         const x0 = w - (n - 1) * dx;
         const yOf = v => h - (Math.max(0, Math.min(100, v)) / 100) * (h - 2) - 1;
-
         cr.moveTo(x0, h);
         for (let i = 0; i < n; i++)
             cr.lineTo(x0 + i * dx, yOf(data[i]));
@@ -240,7 +240,6 @@ export default class X47WidgetsExtension extends Extension {
         cr.closePath();
         cr.setSourceRGBA(TEAL[0], TEAL[1], TEAL[2], 0.14);
         cr.fill();
-
         cr.setLineWidth(2);
         cr.setSourceRGBA(TEAL[0], TEAL[1], TEAL[2], 0.9);
         cr.moveTo(x0, yOf(data[0]));
@@ -259,7 +258,188 @@ export default class X47WidgetsExtension extends Extension {
         this._redditBox.add_child(this._redditStatus);
     }
 
-    // --- drag + layout ------------------------------------------------------
+    _buildPkg() {
+        const card = this._makeCard('pkg');
+        this._title(card, 'pkg', 'INSTALL / UPDATE');
+
+        const cheat = new St.BoxLayout({
+            orientation: Clutter.Orientation.VERTICAL,
+            style_class: 'x47-pkg-cheat',
+        });
+        for (const row of UPDATE_CHEAT) {
+            const btn = new St.Button({
+                style_class: 'x47-pkg-cmd',
+                reactive: true,
+                can_focus: true,
+                track_hover: true,
+                x_expand: true,
+            });
+            const box = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true});
+            box.add_child(new St.Label({text: row.label, style_class: 'x47-pkg-label'}));
+            box.add_child(new St.Label({text: row.cmd, style_class: 'x47-pkg-cmdtext'}));
+            btn.set_child(box);
+            btn.connect('clicked', () => this._copyCmd(row.cmd));
+            cheat.add_child(btn);
+        }
+        card.add_child(cheat);
+
+        const searchRow = new St.BoxLayout({style_class: 'x47-pkg-search-row'});
+        this._pkgEntry = new St.Entry({
+            style_class: 'x47-pkg-entry',
+            hint_text: 'search app (e.g. notepad++)',
+            can_focus: true,
+            x_expand: true,
+        });
+        this._pkgEntry.clutter_text.connect('activate', () => this._runPkgSearch());
+        const go = new St.Button({
+            label: 'GO',
+            style_class: 'x47-pkg-go',
+            reactive: true,
+            can_focus: true,
+        });
+        go.connect('clicked', () => this._runPkgSearch());
+        searchRow.add_child(this._pkgEntry);
+        searchRow.add_child(go);
+        card.add_child(searchRow);
+
+        this._pkgStatus = new St.Label({text: 'click a command to copy', style_class: 'x47-pkg-status'});
+        card.add_child(this._pkgStatus);
+        this._pkgResults = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL});
+        card.add_child(this._pkgResults);
+    }
+
+    _copyCmd(cmd) {
+        const clip = St.Clipboard.get_default();
+        clip.set_text(St.ClipboardType.CLIPBOARD, cmd);
+        if (this._pkgStatus)
+            this._pkgStatus.set_text('copied — paste in a terminal');
+        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 3, () => {
+            if (this._pkgStatus)
+                this._pkgStatus.set_text('click a command to copy');
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _runCmd(argv) {
+        return new Promise((resolve, reject) => {
+            try {
+                const proc = Gio.Subprocess.new(
+                    argv,
+                    Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
+                proc.communicate_utf8_async(null, null, (p, res) => {
+                    try {
+                        const [, stdout] = p.communicate_utf8_finish(res);
+                        resolve(stdout || '');
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    async _runPkgSearch() {
+        const q = (this._pkgEntry?.get_text() || '').trim();
+        this._pkgResults.destroy_all_children();
+        if (!q) {
+            this._pkgStatus?.set_text('type a name, then Enter / GO');
+            return;
+        }
+        this._pkgStatus?.set_text('searching…');
+        const results = [];
+        try {
+            const aptOut = await this._runCmd([
+                'apt-cache', 'search', '--names-only', q.replace(/[^a-zA-Z0-9+._-]/g, ' '),
+            ]);
+            const aptLines = aptOut.split('\n').filter(l => l.includes(' - ')).slice(0, 4);
+            for (const line of aptLines) {
+                const pkg = line.split(' - ')[0].trim();
+                if (!pkg)
+                    continue;
+                let installed = false;
+                try {
+                    const st = await this._runCmd(['dpkg-query', '-W', '-f=${Status}', pkg]);
+                    installed = st.includes('install ok installed');
+                } catch {
+                    installed = false;
+                }
+                results.push({
+                    label: installed ? `apt · upgrade ${pkg}` : `apt · install ${pkg}`,
+                    cmd: installed
+                        ? `sudo apt install --only-upgrade ${pkg}`
+                        : `sudo apt install ${pkg}`,
+                });
+            }
+        } catch {
+            // apt-cache missing / failed
+        }
+
+        if (GLib.find_program_in_path('snap')) {
+            try {
+                const snapOut = await this._runCmd(['snap', 'find', q]);
+                const lines = snapOut.split('\n').slice(1).filter(l => l.trim());
+                for (const line of lines.slice(0, 2)) {
+                    const name = line.trim().split(/\s+/)[0];
+                    if (!name || name === 'Name')
+                        continue;
+                    let installed = false;
+                    try {
+                        await this._runCmd(['snap', 'list', name]);
+                        installed = true;
+                    } catch {
+                        installed = false;
+                    }
+                    results.push({
+                        label: installed ? `snap · refresh ${name}` : `snap · install ${name}`,
+                        cmd: installed
+                            ? `sudo snap refresh ${name}`
+                            : `sudo snap install ${name}`,
+                    });
+                }
+            } catch {
+                // snap find failed / no matches
+            }
+        }
+
+        const uniq = [];
+        const seen = new Set();
+        for (const r of results) {
+            if (seen.has(r.cmd))
+                continue;
+            seen.add(r.cmd);
+            uniq.push(r);
+            if (uniq.length >= 3)
+                break;
+        }
+
+        if (!uniq.length) {
+            this._pkgStatus?.set_text('no match — try another name');
+            return;
+        }
+        this._pkgStatus?.set_text(`${uniq.length} match(es) — click to copy`);
+        for (const r of uniq) {
+            const btn = new St.Button({
+                style_class: 'x47-pkg-cmd',
+                reactive: true,
+                track_hover: true,
+                x_expand: true,
+            });
+            const box = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true});
+            box.add_child(new St.Label({text: r.label, style_class: 'x47-pkg-label'}));
+            box.add_child(new St.Label({text: r.cmd, style_class: 'x47-pkg-cmdtext'}));
+            btn.set_child(box);
+            btn.connect('clicked', () => this._copyCmd(r.cmd));
+            this._pkgResults.add_child(btn);
+        }
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._placeCards();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    // --- drag / grid / layout -----------------------------------------------
 
     _attachDrag(handle, card, id) {
         handle.connect('button-press-event', (_actor, event) => {
@@ -267,12 +447,9 @@ export default class X47WidgetsExtension extends Extension {
                 return Clutter.EVENT_PROPAGATE;
             const [px, py] = event.get_coords();
             this._drag = {
-                card,
-                id,
-                startX: px,
-                startY: py,
-                dx: px - card.x,
-                dy: py - card.y,
+                card, id,
+                startX: px, startY: py,
+                dx: px - card.x, dy: py - card.y,
                 moved: false,
             };
             if (!this._dragMonId) {
@@ -290,28 +467,23 @@ export default class X47WidgetsExtension extends Extension {
         if (t === Clutter.EventType.MOTION) {
             const [px, py] = ev.get_coords();
             if (!this._drag.moved) {
-                const adx = Math.abs(px - this._drag.startX);
-                const ady = Math.abs(py - this._drag.startY);
-                if (adx < DRAG_THRESHOLD && ady < DRAG_THRESHOLD)
+                if (Math.abs(px - this._drag.startX) < DRAG_THRESHOLD &&
+                    Math.abs(py - this._drag.startY) < DRAG_THRESHOLD)
                     return Clutter.EVENT_STOP;
                 this._drag.moved = true;
             }
-            const mon = Main.layoutManager.primaryMonitor;
             let x = Math.round(px - this._drag.dx);
             let y = Math.round(py - this._drag.dy);
-            if (mon) {
-                const w = this._drag.card.width || CARD_WIDTH;
-                const h = this._drag.card.height || 80;
-                x = Math.max(mon.x, Math.min(x, mon.x + mon.width - w));
-                y = Math.max(mon.y, Math.min(y, mon.y + mon.height - h));
-            }
+            [x, y] = this._snapClamp(this._drag.card, x, y);
             this._drag.card.set_position(x, y);
             return Clutter.EVENT_STOP;
         }
         if (t === Clutter.EventType.BUTTON_RELEASE) {
             const {card, id, moved} = this._drag;
             if (moved) {
-                this._layout[id] = {x: card.x, y: card.y};
+                const [x, y] = this._snapClamp(card, card.x, card.y);
+                card.set_position(x, y);
+                this._layout[id] = {x, y};
                 this._saveLayout();
             }
             this._drag = null;
@@ -324,15 +496,20 @@ export default class X47WidgetsExtension extends Extension {
         return Clutter.EVENT_PROPAGATE;
     }
 
-    _clamp(card, x, y) {
+    _snapClamp(card, x, y) {
         const mon = Main.layoutManager.primaryMonitor;
         if (!mon)
             return [x, y];
         const w = Math.max(card.width || CARD_WIDTH, 1);
         const h = Math.max(card.height || 80, 1);
-        const cx = Math.max(mon.x + MARGIN, Math.min(x, mon.x + mon.width - w - MARGIN));
-        const cy = Math.max(mon.y + MARGIN, Math.min(y, mon.y + mon.height - h - MARGIN));
-        return [cx, cy];
+        let sx = mon.x + MARGIN + Math.round((x - mon.x - MARGIN) / CELL) * CELL;
+        let sy = mon.y + MARGIN + Math.round((y - mon.y - MARGIN) / CELL) * CELL;
+        sx = Math.max(mon.x + MARGIN, Math.min(sx, mon.x + mon.width - w - MARGIN));
+        sy = Math.max(mon.y + MARGIN, Math.min(sy, mon.y + mon.height - h - MARGIN));
+        // Re-snap after clamp so edges stay on-grid.
+        sx = mon.x + MARGIN + Math.round((sx - mon.x - MARGIN) / CELL) * CELL;
+        sy = mon.y + MARGIN + Math.round((sy - mon.y - MARGIN) / CELL) * CELL;
+        return [sx, sy];
     }
 
     _placeCards() {
@@ -340,24 +517,22 @@ export default class X47WidgetsExtension extends Extension {
         if (!mon || !this._cards)
             return;
 
-        // Default layout: clock/btc/vitals stacked on the right; Reddit on the
-        // left so the tall feed is never clipped off the bottom.
-        const rightStack = ['clock', 'btc', 'vitals'];
-        let y = mon.y + MARGIN + 36;
+        const rightStack = ['clock', 'btc', 'vitals', 'pkg'];
+        let y = mon.y + MARGIN + CELL * 2;
         for (const id of rightStack) {
             const card = this._cards[id];
             if (!card)
                 continue;
             const saved = this._layout[id];
-            const w = card.width || CARD_WIDTH;
             const h = Math.max(card.height || 100, 80);
             let x, cy;
             if (saved) {
-                [x, cy] = this._clamp(card, saved.x, saved.y);
+                [x, cy] = this._snapClamp(card, saved.x, saved.y);
             } else {
-                x = mon.x + mon.width - w - MARGIN;
+                x = mon.x + mon.width - CARD_WIDTH - MARGIN;
                 cy = y;
-                y += h + CARD_GAP;
+                [x, cy] = this._snapClamp(card, x, cy);
+                y = cy + h + CARD_GAP;
             }
             card.set_position(x, cy);
         }
@@ -367,11 +542,9 @@ export default class X47WidgetsExtension extends Extension {
             const saved = this._layout.reddit;
             let x, cy;
             if (saved) {
-                [x, cy] = this._clamp(reddit, saved.x, saved.y);
+                [x, cy] = this._snapClamp(reddit, saved.x, saved.y);
             } else {
-                x = mon.x + MARGIN;
-                cy = mon.y + MARGIN + 36;
-                [x, cy] = this._clamp(reddit, x, cy);
+                [x, cy] = this._snapClamp(reddit, mon.x + MARGIN, mon.y + MARGIN + CELL * 2);
             }
             reddit.set_position(x, cy);
         }
@@ -387,9 +560,7 @@ export default class X47WidgetsExtension extends Extension {
             const [ok, bytes] = GLib.file_get_contents(this._layoutFile());
             if (ok)
                 return JSON.parse(new TextDecoder().decode(bytes)) || {};
-        } catch {
-            // no saved layout yet
-        }
+        } catch { /* none */ }
         return {};
     }
 
@@ -398,10 +569,106 @@ export default class X47WidgetsExtension extends Extension {
             const dir = GLib.build_filenamev(
                 [GLib.get_user_config_dir(), 'x47-widgets']);
             GLib.mkdir_with_parents(dir, 0o755);
-            GLib.file_set_contents(
-                this._layoutFile(), JSON.stringify(this._layout));
+            GLib.file_set_contents(this._layoutFile(), JSON.stringify(this._layout));
         } catch (e) {
             logError(e, 'x47-widgets: could not save layout');
+        }
+    }
+
+    // --- fullscreen hide ----------------------------------------------------
+
+    _setupFullscreenWatch() {
+        const refresh = () => this._updateFullscreenVisibility();
+        try {
+            this._fsDisplayId = global.display.connect('in-fullscreen-changed', refresh);
+        } catch {
+            this._fsDisplayId = 0;
+        }
+        try {
+            this._fsCreatedId = global.display.connect('window-created', (_d, win) => {
+                this._watchWindow(win);
+                refresh();
+            });
+        } catch {
+            this._fsCreatedId = 0;
+        }
+        for (const actor of global.get_window_actors()) {
+            const win = actor.meta_window;
+            if (win)
+                this._watchWindow(win);
+        }
+        refresh();
+        this._fsTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 2, () => {
+            refresh();
+            return GLib.SOURCE_CONTINUE;
+        });
+    }
+
+    _watchWindow(win) {
+        if (!win || win._x47FsWatched)
+            return;
+        win._x47FsWatched = true;
+        try {
+            const id = win.connect('notify::fullscreen', () => this._updateFullscreenVisibility());
+            this._winSignals.push([win, id]);
+        } catch { /* ignore */ }
+    }
+
+    _teardownFullscreenWatch() {
+        if (this._fsDisplayId) {
+            global.display.disconnect(this._fsDisplayId);
+            this._fsDisplayId = 0;
+        }
+        if (this._fsCreatedId) {
+            global.display.disconnect(this._fsCreatedId);
+            this._fsCreatedId = 0;
+        }
+        if (this._fsTimer) {
+            GLib.source_remove(this._fsTimer);
+            this._fsTimer = 0;
+        }
+        for (const [win, id] of this._winSignals) {
+            try {
+                win.disconnect(id);
+            } catch { /* gone */ }
+        }
+        this._winSignals = [];
+    }
+
+    _primaryHasFullscreen() {
+        const mon = Main.layoutManager.primaryMonitor;
+        if (!mon)
+            return false;
+        try {
+            if (typeof global.display.get_monitor_in_fullscreen === 'function' &&
+                global.display.get_monitor_in_fullscreen(mon.index))
+                return true;
+        } catch { /* fall through */ }
+        for (const actor of global.get_window_actors()) {
+            const win = actor.meta_window;
+            if (!win || win.minimized)
+                continue;
+            try {
+                if (win.get_monitor() !== mon.index)
+                    continue;
+                if (win.is_fullscreen && win.is_fullscreen())
+                    return true;
+                if (win.fullscreen)
+                    return true;
+            } catch { /* ignore */ }
+        }
+        return false;
+    }
+
+    _updateFullscreenVisibility() {
+        const hide = this._primaryHasFullscreen();
+        if (hide === this._hiddenForFullscreen)
+            return;
+        this._hiddenForFullscreen = hide;
+        for (const id in this._cards) {
+            const card = this._cards[id];
+            if (card)
+                card.visible = !hide;
         }
     }
 
@@ -480,7 +747,6 @@ export default class X47WidgetsExtension extends Extension {
             }
             this._prevCpu = {total, idle};
         }
-
         const mem = this._readFile('/proc/meminfo');
         if (mem) {
             const totalKb = Number(mem.match(/MemTotal:\s+(\d+)/)?.[1]);
@@ -492,7 +758,6 @@ export default class X47WidgetsExtension extends Extension {
                 this._ramArea?.queue_repaint();
             }
         }
-
         const load = this._readFile('/proc/loadavg');
         if (load)
             this._loadLabel?.set_text(`LOAD ${load.split(' ').slice(0, 3).join('  ')}`);
@@ -531,8 +796,7 @@ export default class X47WidgetsExtension extends Extension {
 
     _parseAtom(xml) {
         const out = [];
-        const entries = xml.split('<entry>').slice(1);
-        for (const e of entries) {
+        for (const e of xml.split('<entry>').slice(1)) {
             const title = e.match(/<title>([\s\S]*?)<\/title>/)?.[1];
             const href = e.match(/<link[^>]*href="([^"]+)"/)?.[1];
             const sub = e.match(/<category[^>]*term="([^"]+)"/)?.[1];
@@ -563,15 +827,8 @@ export default class X47WidgetsExtension extends Extension {
                 x_expand: true,
             });
             const title = p.title.length > 68 ? `${p.title.slice(0, 66)}…` : p.title;
-            box.add_child(new St.Label({
-                text: title,
-                style_class: 'x47-reddit-title',
-                x_expand: true,
-            }));
-            box.add_child(new St.Label({
-                text: `r/${p.sub}`,
-                style_class: 'x47-reddit-sub',
-            }));
+            box.add_child(new St.Label({text: title, style_class: 'x47-reddit-title', x_expand: true}));
+            box.add_child(new St.Label({text: `r/${p.sub}`, style_class: 'x47-reddit-sub'}));
             item.set_child(box);
             item.connect('clicked', () => {
                 try {
@@ -582,7 +839,6 @@ export default class X47WidgetsExtension extends Extension {
             });
             this._redditBox.add_child(item);
         }
-        // Re-clamp after content height changes so the card isn't cut off.
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._placeCards();
             return GLib.SOURCE_REMOVE;

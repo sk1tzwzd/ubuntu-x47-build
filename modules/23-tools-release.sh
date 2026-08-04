@@ -74,6 +74,12 @@ EOF
     warn "ruby/gem not available — skipping gems"
   fi
 
+  # Cursor apt update helper (GUI popup often lies before apt catches up)
+  if [[ -f "$X47_ROOT/scripts/update-cursor.sh" ]]; then
+    install -m 0755 "$X47_ROOT/scripts/update-cursor.sh" "$HOME/.local/bin/update-cursor"
+    ok "update-cursor -> ~/.local/bin/update-cursor"
+  fi
+
   ok "release/git/gem tools module done"
 }
 

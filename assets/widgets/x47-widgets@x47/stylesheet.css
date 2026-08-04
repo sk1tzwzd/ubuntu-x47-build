@@ -136,3 +136,74 @@
   font-family: monospace;
   font-size: 8pt;
 }
+
+/* --- install / update helper --- */
+.x47-pkg-cheat {
+  spacing: 4px;
+  margin-bottom: 8px;
+}
+
+.x47-pkg-cmd {
+  padding: 5px 6px;
+  border-radius: 5px;
+  background-color: rgba(64, 224, 208, 0.06);
+  border: none;
+  width: 288px;
+}
+
+.x47-pkg-cmd:hover {
+  background-color: rgba(64, 224, 208, 0.14);
+}
+
+.x47-pkg-label {
+  color: rgba(64, 224, 208, 0.85);
+  font-family: monospace;
+  font-size: 7pt;
+  letter-spacing: 1px;
+}
+
+.x47-pkg-cmdtext {
+  color: #eaf7f5;
+  font-family: monospace;
+  font-size: 8pt;
+}
+
+.x47-pkg-search-row {
+  spacing: 6px;
+  margin: 6px 0;
+}
+
+.x47-pkg-entry {
+  width: 230px;
+  font-family: monospace;
+  font-size: 9pt;
+}
+
+.x47-pkg-entry StEntry {
+  background-color: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(64, 224, 208, 0.25);
+  border-radius: 4px;
+  padding: 4px 6px;
+  color: #eaf7f5;
+  caret-color: #40e0d0;
+}
+
+.x47-pkg-go {
+  padding: 4px 10px;
+  font-family: monospace;
+  font-size: 8pt;
+  background-color: rgba(64, 224, 208, 0.18);
+  border-radius: 4px;
+  color: #eaf7f5;
+}
+
+.x47-pkg-go:hover {
+  background-color: rgba(64, 224, 208, 0.32);
+}
+
+.x47-pkg-status {
+  color: rgba(220, 240, 238, 0.45);
+  font-family: monospace;
+  font-size: 8pt;
+  margin-bottom: 4px;
+}
