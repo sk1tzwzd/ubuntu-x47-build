@@ -42,7 +42,8 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 By default the installer trims the fat (opt out with `--skip-debloat`):
 
 - **Language packs** — removes every non-English `language-pack-*`, LibreOffice l10n, and non-`en` spell dictionaries.
-- **Default desktop apps** — removes GNOME games, Rhythmbox, Cheese, Thunderbird, LibreOffice, Transmission, Remmina, Shotwell, Maps/Weather/Contacts/Todo, Simple Scan, Totem, GNOME Music/Photos.
+- **Default desktop apps** — removes GNOME games, Rhythmbox, Cheese, Thunderbird, LibreOffice, Transmission, Remmina, Shotwell, Maps/Weather/Contacts/Todo, Simple Scan, Totem, GNOME Music/Photos, Ubuntu Help (`yelp`).
+- **Snap bloat** — removes the App Centre (`snap-store`) and Desktop Security Centre snaps (keeps firmware-updater).
 - **Cleanup** — `apt-get autoremove --purge`, cache clean, `journalctl` vacuum to 200M, thumbnail cache.
 - **Tweaks** — `fstrim.timer`, `zram-config` compressed swap, `vm.swappiness=10`, and the desktop file indexer (tracker/localsearch) masked.
 
@@ -75,7 +76,7 @@ By default the installer tunes the GNOME desktop for the main user (opt out with
 - **3D effects** — version-matched GNOME extensions from extensions.gnome.org: Coverflow Alt-Tab (3D window switcher, bound to window + app switching), Desktop Cube (rotating 3D workspaces, fixed at 4), Burn My Windows (Glitch open/close animation), Blur My Shell (blurred panel/overview/dash), and Compiz-style wobbly windows.
 - **Hover-only window controls** — minimize/maximize/close stay invisible until you hover the titlebar (GTK3 + GTK4 css, applied to snap apps like Firefox too).
 - **X47 wallpaper** — the X47 knuckle-duster as glowing teal ASCII art, centered small over a dark-minimal circuit background, set for light and dark modes. Reproducible with `scripts/make-wallpaper.py`.
-- **Desktop widgets** — bundled *X47 Widgets* extension (`assets/widgets/`): digital clocks for London and New York, a live BTC/USD ticker with 24 h change (CoinGecko, 60 s refresh), system vitals with rolling **CPU/RAM sparkline graphs** and load, and a **cybersecurity Reddit feed** (r/netsec, r/cybersecurity, r/hacking, r/AskNetsec, r/Malware, r/bugbounty — click a title to open it). Every card is **draggable** and remembers its position in `~/.config/x47-widgets/layout.json`. Drawn on the wallpaper beneath windows, themed to match.
+- **Desktop widgets** — bundled *X47 Widgets* extension (`assets/widgets/`): digital clocks for London and New York, a live BTC/USD ticker with 24 h change (CoinGecko, 60 s refresh), system vitals with rolling **CPU/RAM sparkline graphs** and load, and a **cybersecurity Reddit feed** (click a title to open it). **Drag from the card title** to move; positions save to `~/.config/x47-widgets/layout.json`.
 
 User-level only (no sudo). On Wayland you must **log out and back in** once for the effects to load. Reverse with `gnome-extensions disable <uuid>`, delete `~/.config/burn-my-windows/profiles/x47.conf`, remove the marked block from `~/.config/gtk-{3.0,4.0}/gtk.css`, or `gsettings reset org.gnome.desktop.background picture-uri`.
 

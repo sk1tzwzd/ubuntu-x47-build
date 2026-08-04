@@ -19,6 +19,12 @@
   font-size: 8pt;
   letter-spacing: 3px;
   margin-bottom: 6px;
+  /* Drag handle — grab the title to move the card. */
+  cursor: grab;
+}
+
+.x47-card-title:hover {
+  color: rgba(64, 224, 208, 1.0);
 }
 
 /* --- world clock --- */
@@ -97,13 +103,19 @@
 
 /* --- reddit --- */
 .x47-reddit-item {
-  padding: 5px 4px;
+  padding: 6px 4px;
   border-radius: 5px;
-  spacing: 1px;
+  background-color: transparent;
+  border: none;
+  width: 288px;
 }
 
 .x47-reddit-item:hover {
-  background-color: rgba(64, 224, 208, 0.10);
+  background-color: rgba(64, 224, 208, 0.12);
+}
+
+.x47-reddit-item:active {
+  background-color: rgba(64, 224, 208, 0.20);
 }
 
 .x47-reddit-title {

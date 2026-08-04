@@ -7,8 +7,11 @@
 
 ### Desktop widgets
 - **Sleeker cards + live graphs** — the System card now draws rolling CPU and RAM sparklines (Cairo) next to the readouts, with tightened styling across all cards.
-- **Draggable** — every widget can be dragged anywhere on the desktop; positions persist to `~/.config/x47-widgets/layout.json`.
-- **Cybersecurity Reddit feed** — a new card lists the hottest posts from r/netsec, r/cybersecurity, r/hacking, r/AskNetsec, r/Malware, and r/bugbounty; click a title to open it in your browser.
+- **Draggable (fixed)** — widgets live in the chrome layer so they receive pointer events (background-group placement blocked clicks); drag from the card **title**. Positions persist to `~/.config/x47-widgets/layout.json`.
+- **Cybersecurity Reddit feed** — hottest posts from r/netsec, r/cybersecurity, r/hacking, r/AskNetsec, r/Malware, and r/bugbounty; click a title to open it. Defaults to the left edge so the feed isn't clipped.
+
+### Performance / debloat
+- Debloat also removes **Ubuntu Help** (`yelp` / docs) and the **App Centre** + **Desktop Security Centre** snaps.
 
 ### Desktop looks
 - **ASCII duster wallpaper** — the wallpaper renders the X47 knuckle-duster as glowing teal ASCII art, centered small with negative space over the dark-minimal circuit background. Reproducible via `scripts/make-wallpaper.py` from `assets/desktop/x47-ascii.txt` + `assets/desktop/x47-circuit-bg.png`.

@@ -1,11 +1,11 @@
-// X47 Widgets — draggable desktop widgets drawn into the shell's background
-// group so they sit on the wallpaper, beneath windows (works on Wayland).
+// X47 Widgets — draggable desktop widgets (chrome layer so they receive
+// clicks/drags on Wayland).
 //   - World clock: London + New York
 //   - Bitcoin ticker (CoinGecko, 60 s)
 //   - System vitals: CPU / RAM sparklines + load
 //   - Cybersecurity Reddit feed (click a title to open it)
 //
-// Each card can be dragged; positions persist to
+// Drag from the card title. Positions persist to
 // $XDG_CONFIG_HOME/x47-widgets/layout.json.
 
 import GLib from 'gi://GLib';
@@ -26,24 +26,25 @@ const BTC_URL =
     '?ids=bitcoin&vs_currencies=usd&include_24hr_change=true';
 
 const SUBREDDITS = 'netsec+cybersecurity+hacking+AskNetsec+Malware+bugbounty';
-// Reddit blocks the .json API for non-OAuth clients (403), but the Atom RSS
-// feed still serves with a browser User-Agent.
+// Reddit blocks the .json API for non-OAuth clients (403); Atom RSS works.
 const REDDIT_URL = `https://www.reddit.com/r/${SUBREDDITS}/.rss?limit=12`;
 const BROWSER_UA =
     'Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0';
 
-const HISTORY = 60;           // samples kept for the sparklines
-const MARGIN_RIGHT = 28;
-const MARGIN_TOP = 64;
-const CARD_GAP = 16;
+const HISTORY = 60;
+const MARGIN = 28;
+const CARD_GAP = 14;
+const CARD_WIDTH = 320;
+const REDDIT_POSTS = 4;
 const TEAL = [64 / 255, 224 / 255, 208 / 255];
+const DRAG_THRESHOLD = 4;
 
 export default class X47WidgetsExtension extends Extension {
     enable() {
         this._cards = {};
         this._dragMonId = 0;
+        this._drag = null;
         this._layout = this._loadLayout();
-        // Reddit's RSS needs a browser-like UA; CoinGecko is happy with it too.
         this._session = new Soup.Session({timeout: 15, user_agent: BROWSER_UA});
         this._prevCpu = null;
         this._cpuHist = [];
@@ -54,11 +55,15 @@ export default class X47WidgetsExtension extends Extension {
         this._buildVitals();
         this._buildReddit();
 
-        this._placeCards();
+        // Place after first allocate so heights are real (avoids Reddit cut-off).
+        this._placeIdle = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._placeCards();
+            this._placeIdle = 0;
+            return GLib.SOURCE_REMOVE;
+        });
         this._monitorsChangedId = Main.layoutManager.connect(
             'monitors-changed', () => this._placeCards());
 
-        // First paint + timers.
         this._tickClocks();
         this._tickVitals();
         this._fetchBtc();
@@ -84,16 +89,19 @@ export default class X47WidgetsExtension extends Extension {
 
     disable() {
         for (const id of [this._clockTimer, this._vitalsTimer, this._btcTimer,
-            this._redditTimer]) {
+            this._redditTimer, this._placeIdle]) {
             if (id)
                 GLib.source_remove(id);
         }
         this._clockTimer = this._vitalsTimer = this._btcTimer = this._redditTimer = null;
+        this._placeIdle = 0;
 
         if (this._dragMonId) {
             global.stage.disconnect(this._dragMonId);
             this._dragMonId = 0;
         }
+        this._drag = null;
+
         if (this._monitorsChangedId) {
             Main.layoutManager.disconnect(this._monitorsChangedId);
             this._monitorsChangedId = null;
@@ -102,8 +110,11 @@ export default class X47WidgetsExtension extends Extension {
             this._session.abort();
             this._session = null;
         }
-        for (const id in this._cards)
-            this._cards[id].destroy();
+        for (const id in this._cards) {
+            const card = this._cards[id];
+            Main.layoutManager.removeChrome(card);
+            card.destroy();
+        }
         this._cards = null;
 
         this._clocks = null;
@@ -124,20 +135,33 @@ export default class X47WidgetsExtension extends Extension {
             orientation: Clutter.Orientation.VERTICAL,
             reactive: true,
             track_hover: true,
+            width: CARD_WIDTH,
         });
-        this._attachDrag(card, id);
-        Main.layoutManager._backgroundGroup.add_child(card);
+        // Chrome (not backgroundGroup): receives pointer events so drag/clicks work.
+        Main.layoutManager.addChrome(card, {
+            affectsStruts: false,
+            trackFullscreen: true,
+        });
         this._cards[id] = card;
         return card;
     }
 
-    _title(card, text) {
-        card.add_child(new St.Label({text, style_class: 'x47-card-title'}));
+    _title(card, id, text) {
+        // Drag handle = title only, so Reddit rows keep their clicks.
+        const title = new St.Label({
+            text,
+            style_class: 'x47-card-title',
+            reactive: true,
+            track_hover: true,
+        });
+        this._attachDrag(title, card, id);
+        card.add_child(title);
+        return title;
     }
 
     _buildClock() {
         const card = this._makeCard('clock');
-        this._title(card, 'WORLD CLOCK');
+        this._title(card, 'clock', 'WORLD CLOCK');
         this._clocks = [];
         for (const zone of ZONES) {
             const row = new St.BoxLayout({
@@ -155,7 +179,7 @@ export default class X47WidgetsExtension extends Extension {
 
     _buildBtc() {
         const card = this._makeCard('btc');
-        this._title(card, 'BITCOIN / USD');
+        this._title(card, 'btc', 'BITCOIN / USD');
         this._btcPrice = new St.Label({text: '. . .', style_class: 'x47-btc-price'});
         this._btcChange = new St.Label({text: '', style_class: 'x47-btc-change'});
         card.add_child(this._btcPrice);
@@ -164,7 +188,7 @@ export default class X47WidgetsExtension extends Extension {
 
     _buildVitals() {
         const card = this._makeCard('vitals');
-        this._title(card, 'SYSTEM');
+        this._title(card, 'vitals', 'SYSTEM');
         this._cpuValue = new St.Label({text: 'CPU --%', style_class: 'x47-metric-value'});
         this._cpuArea = this._makeSparkline(() => this._cpuHist);
         card.add_child(this._metricRow(this._cpuValue));
@@ -192,9 +216,7 @@ export default class X47WidgetsExtension extends Extension {
     _drawSparkline(area, data) {
         const cr = area.get_context();
         const [w, h] = area.get_surface_size();
-        cr.setLineWidth(2);
 
-        // Faint baseline grid.
         cr.setSourceRGBA(TEAL[0], TEAL[1], TEAL[2], 0.10);
         cr.setLineWidth(1);
         cr.moveTo(0, h - 0.5);
@@ -211,7 +233,6 @@ export default class X47WidgetsExtension extends Extension {
         const x0 = w - (n - 1) * dx;
         const yOf = v => h - (Math.max(0, Math.min(100, v)) / 100) * (h - 2) - 1;
 
-        // Filled area under the line.
         cr.moveTo(x0, h);
         for (let i = 0; i < n; i++)
             cr.lineTo(x0 + i * dx, yOf(data[i]));
@@ -220,7 +241,6 @@ export default class X47WidgetsExtension extends Extension {
         cr.setSourceRGBA(TEAL[0], TEAL[1], TEAL[2], 0.14);
         cr.fill();
 
-        // The line itself.
         cr.setLineWidth(2);
         cr.setSourceRGBA(TEAL[0], TEAL[1], TEAL[2], 0.9);
         cr.moveTo(x0, yOf(data[0]));
@@ -232,7 +252,7 @@ export default class X47WidgetsExtension extends Extension {
 
     _buildReddit() {
         const card = this._makeCard('reddit');
-        this._title(card, 'CYBERSEC · REDDIT');
+        this._title(card, 'reddit', 'CYBERSEC · REDDIT');
         this._redditBox = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL});
         card.add_child(this._redditBox);
         this._redditStatus = new St.Label({text: 'loading…', style_class: 'x47-reddit-status'});
@@ -241,15 +261,23 @@ export default class X47WidgetsExtension extends Extension {
 
     // --- drag + layout ------------------------------------------------------
 
-    _attachDrag(card, id) {
-        card.connect('button-press-event', (actor, event) => {
+    _attachDrag(handle, card, id) {
+        handle.connect('button-press-event', (_actor, event) => {
             if (event.get_button() !== 1)
                 return Clutter.EVENT_PROPAGATE;
             const [px, py] = event.get_coords();
-            this._drag = {card, id, dx: px - card.x, dy: py - card.y};
+            this._drag = {
+                card,
+                id,
+                startX: px,
+                startY: py,
+                dx: px - card.x,
+                dy: py - card.y,
+                moved: false,
+            };
             if (!this._dragMonId) {
                 this._dragMonId = global.stage.connect(
-                    'captured-event', (s, ev) => this._onDragEvent(ev));
+                    'captured-event', (_s, ev) => this._onDragEvent(ev));
             }
             return Clutter.EVENT_STOP;
         });
@@ -261,15 +289,31 @@ export default class X47WidgetsExtension extends Extension {
         const t = ev.type();
         if (t === Clutter.EventType.MOTION) {
             const [px, py] = ev.get_coords();
-            this._drag.card.set_position(
-                Math.round(px - this._drag.dx),
-                Math.round(py - this._drag.dy));
+            if (!this._drag.moved) {
+                const adx = Math.abs(px - this._drag.startX);
+                const ady = Math.abs(py - this._drag.startY);
+                if (adx < DRAG_THRESHOLD && ady < DRAG_THRESHOLD)
+                    return Clutter.EVENT_STOP;
+                this._drag.moved = true;
+            }
+            const mon = Main.layoutManager.primaryMonitor;
+            let x = Math.round(px - this._drag.dx);
+            let y = Math.round(py - this._drag.dy);
+            if (mon) {
+                const w = this._drag.card.width || CARD_WIDTH;
+                const h = this._drag.card.height || 80;
+                x = Math.max(mon.x, Math.min(x, mon.x + mon.width - w));
+                y = Math.max(mon.y, Math.min(y, mon.y + mon.height - h));
+            }
+            this._drag.card.set_position(x, y);
             return Clutter.EVENT_STOP;
         }
         if (t === Clutter.EventType.BUTTON_RELEASE) {
-            const {card, id} = this._drag;
-            this._layout[id] = {x: card.x, y: card.y};
-            this._saveLayout();
+            const {card, id, moved} = this._drag;
+            if (moved) {
+                this._layout[id] = {x: card.x, y: card.y};
+                this._saveLayout();
+            }
             this._drag = null;
             if (this._dragMonId) {
                 global.stage.disconnect(this._dragMonId);
@@ -280,29 +324,56 @@ export default class X47WidgetsExtension extends Extension {
         return Clutter.EVENT_PROPAGATE;
     }
 
-    _placeCards() {
+    _clamp(card, x, y) {
         const mon = Main.layoutManager.primaryMonitor;
         if (!mon)
+            return [x, y];
+        const w = Math.max(card.width || CARD_WIDTH, 1);
+        const h = Math.max(card.height || 80, 1);
+        const cx = Math.max(mon.x + MARGIN, Math.min(x, mon.x + mon.width - w - MARGIN));
+        const cy = Math.max(mon.y + MARGIN, Math.min(y, mon.y + mon.height - h - MARGIN));
+        return [cx, cy];
+    }
+
+    _placeCards() {
+        const mon = Main.layoutManager.primaryMonitor;
+        if (!mon || !this._cards)
             return;
-        // Default: stack down the right edge in a fixed order.
-        const order = ['clock', 'btc', 'vitals', 'reddit'];
-        let y = mon.y + MARGIN_TOP;
-        for (const id of order) {
+
+        // Default layout: clock/btc/vitals stacked on the right; Reddit on the
+        // left so the tall feed is never clipped off the bottom.
+        const rightStack = ['clock', 'btc', 'vitals'];
+        let y = mon.y + MARGIN + 36;
+        for (const id of rightStack) {
             const card = this._cards[id];
             if (!card)
                 continue;
             const saved = this._layout[id];
+            const w = card.width || CARD_WIDTH;
+            const h = Math.max(card.height || 100, 80);
+            let x, cy;
             if (saved) {
-                const w = card.width || 300;
-                const h = card.height || 100;
-                const x = Math.max(mon.x, Math.min(saved.x, mon.x + mon.width - w));
-                const cy = Math.max(mon.y, Math.min(saved.y, mon.y + mon.height - h));
-                card.set_position(x, cy);
+                [x, cy] = this._clamp(card, saved.x, saved.y);
             } else {
-                const w = card.width || 320;
-                card.set_position(mon.x + mon.width - w - MARGIN_RIGHT, y);
-                y += (card.height || 120) + CARD_GAP;
+                x = mon.x + mon.width - w - MARGIN;
+                cy = y;
+                y += h + CARD_GAP;
             }
+            card.set_position(x, cy);
+        }
+
+        const reddit = this._cards.reddit;
+        if (reddit) {
+            const saved = this._layout.reddit;
+            let x, cy;
+            if (saved) {
+                [x, cy] = this._clamp(reddit, saved.x, saved.y);
+            } else {
+                x = mon.x + MARGIN;
+                cy = mon.y + MARGIN + 36;
+                [x, cy] = this._clamp(reddit, x, cy);
+            }
+            reddit.set_position(x, cy);
         }
     }
 
@@ -438,7 +509,7 @@ export default class X47WidgetsExtension extends Extension {
                         return;
                     }
                     const xml = new TextDecoder().decode(bytes.get_data());
-                    const posts = this._parseAtom(xml).slice(0, 6);
+                    const posts = this._parseAtom(xml).slice(0, REDDIT_POSTS);
                     if (posts.length)
                         this._renderReddit(posts);
                     else
@@ -480,23 +551,41 @@ export default class X47WidgetsExtension extends Extension {
         this._redditBox.destroy_all_children();
         this._redditStatus = null;
         for (const p of posts) {
-            const item = new St.BoxLayout({
+            const item = new St.Button({
                 style_class: 'x47-reddit-item',
-                orientation: Clutter.Orientation.VERTICAL,
                 reactive: true,
+                can_focus: true,
                 track_hover: true,
+                x_expand: true,
+            });
+            const box = new St.BoxLayout({
+                orientation: Clutter.Orientation.VERTICAL,
+                x_expand: true,
             });
             const title = p.title.length > 68 ? `${p.title.slice(0, 66)}…` : p.title;
-            item.add_child(new St.Label({text: title, style_class: 'x47-reddit-title'}));
-            item.add_child(new St.Label({
+            box.add_child(new St.Label({
+                text: title,
+                style_class: 'x47-reddit-title',
+                x_expand: true,
+            }));
+            box.add_child(new St.Label({
                 text: `r/${p.sub}`,
                 style_class: 'x47-reddit-sub',
             }));
-            item.connect('button-press-event', () => {
-                Gio.AppInfo.launch_default_for_uri(p.url, null);
-                return Clutter.EVENT_STOP;
+            item.set_child(box);
+            item.connect('clicked', () => {
+                try {
+                    Gio.AppInfo.launch_default_for_uri(p.url, null);
+                } catch (e) {
+                    logError(e, 'x47-widgets: open reddit post failed');
+                }
             });
             this._redditBox.add_child(item);
         }
+        // Re-clamp after content height changes so the card isn't cut off.
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._placeCards();
+            return GLib.SOURCE_REMOVE;
+        });
     }
 }

@@ -105,7 +105,8 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
         </p>
         <ul class="clean">
           <li><strong>Language packs</strong> — removes non-English <code>language-pack-*</code>, LibreOffice l10n, and non-<code>en</code> spell dictionaries</li>
-          <li><strong>Default apps</strong> — GNOME games, Rhythmbox, Cheese, Thunderbird, LibreOffice, Transmission, Remmina, Shotwell, Maps/Weather/Contacts/Todo, Simple Scan, Totem, GNOME Music/Photos</li>
+          <li><strong>Default apps</strong> — GNOME games, Rhythmbox, Cheese, Thunderbird, LibreOffice, Transmission, Remmina, Shotwell, Maps/Weather/Contacts/Todo, Simple Scan, Totem, GNOME Music/Photos, Ubuntu Help</li>
+          <li><strong>Snap bloat</strong> — App Centre (<code>snap-store</code>) and Desktop Security Centre (keeps firmware-updater)</li>
           <li><strong>Cleanup</strong> — <code>apt autoremove --purge</code>, cache clean, journal vacuum to 200M, thumbnail cache</li>
           <li><strong>Tweaks</strong> — <code>fstrim.timer</code>, <code>zram-config</code> compressed swap, <code>vm.swappiness=10</code>, file indexer (tracker/localsearch) masked</li>
         </ul>
@@ -147,7 +148,7 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
           <li><strong>Blur + wobble</strong> — Blur My Shell (panel/overview/dash) and Compiz-style wobbly windows</li>
           <li><strong>Hover-only window controls</strong> — minimize/maximize/close stay invisible until you hover the titlebar (GTK3 + GTK4 apps, including snap Firefox)</li>
           <li><strong>X47 wallpaper</strong> — the X47 knuckle-duster as glowing teal ASCII art, centered over a dark circuit background, set for light and dark modes</li>
-          <li><strong>Desktop widgets</strong> — bundled X47 Widgets extension: London + New York clocks, live BTC/USD ticker, system vitals with rolling CPU/RAM graphs, and a cybersecurity Reddit feed (click to open). Every card is draggable and remembers where you put it</li>
+          <li><strong>Desktop widgets</strong> — London + New York clocks, BTC ticker, CPU/RAM graphs, cybersecurity Reddit feed (click to open). Drag from the card title to move; positions are remembered</li>
         </ul>
         <div class="aside">
           Extensions are pulled version-matched from extensions.gnome.org. On a

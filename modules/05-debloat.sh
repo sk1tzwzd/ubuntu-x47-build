@@ -24,6 +24,8 @@ X47_DEBLOAT_APPS=(
   transmission-gtk transmission-common remmina
   shotwell gnome-maps gnome-weather gnome-contacts gnome-todo
   simple-scan totem gnome-music gnome-photos
+  # Help docs (Ubuntu Help / yelp)
+  yelp yelp-xsl ubuntu-docs gnome-user-docs
 )
 
 is_denied() {
@@ -70,7 +72,7 @@ remove_language_packs() {
 }
 
 remove_desktop_apps() {
-  log "removing default desktop apps (games, mail, office, media)"
+  log "removing default desktop apps (games, mail, office, media, help)"
   # libreoffice as a family (metapackages + parts), guarded by denylist filter
   local -a office=()
   local p
@@ -78,6 +80,26 @@ remove_desktop_apps() {
     [[ -n "$p" ]] && office+=("$p")
   done < <(dpkg-query -W -f='${Package}\n' 'libreoffice*' 2>/dev/null || true)
   purge_pkgs "${X47_DEBLOAT_APPS[@]}" "${office[@]}"
+}
+
+remove_snap_bloat() {
+  # App Centre (snap-store) and Desktop Security Centre — Canonical snaps that
+  # sit idle in the background. Keep firmware-updater (useful).
+  if ! have snap; then
+    log "snap not available — skipping App Centre / Security Centre removal"
+    return 0
+  fi
+  log "removing App Centre and Security Centre snaps"
+  local s
+  for s in snap-store desktop-security-center; do
+    if snap list "$s" >/dev/null 2>&1; then
+      run_sudo snap remove --purge "$s" >/dev/null 2>&1 \
+        && ok "removed snap: $s" \
+        || warn "could not remove snap: $s"
+    else
+      log "snap not installed: $s"
+    fi
+  done
 }
 
 cleanup_system() {
@@ -125,10 +147,11 @@ module_debloat() {
 
   remove_language_packs
   remove_desktop_apps
+  remove_snap_bloat
   cleanup_system
   perf_tweaks
 
-  ok "debloat module done (reverse anything with: sudo apt-get install <pkg>)"
+  ok "debloat module done (reverse: sudo apt-get install <pkg> / sudo snap install <name>)"
 }
 
 module_debloat "$@"
