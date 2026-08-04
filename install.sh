@@ -11,6 +11,7 @@
 #   ./install.sh --skip-apt       # skip apt repos/packages
 #   ./install.sh --skip-hardening # skip ufw/fail2ban/sysctl restore
 #   ./install.sh --skip-debloat   # keep language packs + default desktop apps
+#   ./install.sh --skip-perf      # skip boot/service perf tweaks + Firefox deb swap
 #   ./install.sh --skip-desktop-fx # skip dock/3D effects + desktop widgets
 #   ./install.sh --with-amnesia   # also create the amnesiac Tor-forced 'anon' user
 #   ./install.sh --only 10-terminal,30-icons
@@ -24,6 +25,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 X47_SKIP_APT=0
 X47_SKIP_HARDENING=0
 X47_SKIP_DEBLOAT=0
+X47_SKIP_PERF=0
 X47_SKIP_DESKTOP_FX=0
 X47_USER_ONLY=0
 X47_WITH_AMNESIA=0
@@ -39,6 +41,7 @@ while [[ $# -gt 0 ]]; do
     --skip-apt) X47_SKIP_APT=1; shift ;;
     --skip-hardening) X47_SKIP_HARDENING=1; shift ;;
     --skip-debloat) X47_SKIP_DEBLOAT=1; shift ;;
+    --skip-perf) X47_SKIP_PERF=1; shift ;;
     --skip-desktop-fx) X47_SKIP_DESKTOP_FX=1; shift ;;
     --user-only) X47_USER_ONLY=1; X47_SKIP_APT=1; X47_SKIP_HARDENING=1; shift ;;
     --with-amnesia) X47_WITH_AMNESIA=1; shift ;;
@@ -48,11 +51,12 @@ while [[ $# -gt 0 ]]; do
     *) die "unknown flag: $1 (try --help)" ;;
   esac
 done
-export X47_SKIP_APT X47_SKIP_HARDENING X47_SKIP_DEBLOAT X47_SKIP_DESKTOP_FX X47_USER_ONLY X47_WITH_AMNESIA
+export X47_SKIP_APT X47_SKIP_HARDENING X47_SKIP_DEBLOAT X47_SKIP_PERF X47_SKIP_DESKTOP_FX X47_USER_ONLY X47_WITH_AMNESIA
 
 MODULES=(
   00-apt.sh
   05-debloat.sh
+  06-perf.sh
   10-terminal.sh
   11-tor-browser.sh
   12-firefox-hardening.sh

@@ -77,6 +77,7 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
             <tr><td><code>--skip-apt</code></td><td>Skip third-party repos and apt packages</td></tr>
             <tr><td><code>--skip-hardening</code></td><td>Skip UFW / fail2ban / sysctl / auditd restore</td></tr>
             <tr><td><code>--skip-debloat</code></td><td>Keep language packs and default desktop apps (no trimming)</td></tr>
+            <tr><td><code>--skip-perf</code></td><td>Skip boot/service perf tweaks and the Firefox snap&rarr;deb swap</td></tr>
             <tr><td><code>--skip-desktop-fx</code></td><td>Skip bottom dock + 3D window/desktop effects</td></tr>
             <tr><td><code>--with-amnesia</code></td><td>Create the amnesiac Tor-forced <code>anon</code> user</td></tr>
             <tr><td><code>--only 10-terminal,30-icons</code></td><td>Run a subset of modules</td></tr>
@@ -107,6 +108,24 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
           <li><strong>Default apps</strong> — GNOME games, Rhythmbox, Cheese, Thunderbird, LibreOffice, Transmission, Remmina, Shotwell, Maps/Weather/Contacts/Todo, Simple Scan, Totem, GNOME Music/Photos</li>
           <li><strong>Cleanup</strong> — <code>apt autoremove --purge</code>, cache clean, journal vacuum to 200M, thumbnail cache</li>
           <li><strong>Tweaks</strong> — <code>fstrim.timer</code>, <code>zram-config</code> compressed swap, <code>vm.swappiness=10</code>, file indexer (tracker/localsearch) masked</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Boot / runtime performance</h2>
+        <p class="section-lead">
+          Runs by default (opt out with <code>--skip-perf</code>). Trims boot
+          time and idle resource use; every step is reversible and prints how
+          to undo it.
+        </p>
+        <ul class="clean">
+          <li><strong>Pentest tools off the boot path</strong> — <code>chkrootkit</code> and <code>bettercap</code> are kept but no longer run as boot services (they were adding ~60s of boot I/O)</li>
+          <li><strong>Faster GRUB</strong> — menu timeout cut to 1s and hidden</li>
+          <li><strong>ModemManager masked</strong> — no cellular modem, so no serial-port probe stalls</li>
+          <li><strong>ClamAV on-demand</strong> — resident daemon stopped (frees ~1&nbsp;GB RAM); scan with <code>clamscan -r</code></li>
+          <li><strong>kdump-tools + cloud-init disabled</strong> — frees reserved RAM and install-time-only services</li>
+          <li><strong>Printing/discovery off</strong> — <code>cups</code>, <code>cups-browsed</code>, <code>avahi</code> (re-enable if you print)</li>
+          <li><strong>Firefox snap &rarr; Mozilla .deb</strong> — faster launches and lower RAM/disk; the existing profile is migrated first</li>
         </ul>
       </section>
 

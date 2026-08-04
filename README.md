@@ -32,6 +32,7 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 | `--skip-apt` | Skip third-party repos and apt packages |
 | `--skip-hardening` | Skip UFW / fail2ban / sysctl / auditd restore |
 | `--skip-debloat` | Keep language packs and default desktop apps (no trimming) |
+| `--skip-perf` | Skip boot/service perf tweaks and the Firefox snap→deb swap |
 | `--skip-desktop-fx` | Skip bottom dock + 3D window/desktop effects |
 | `--with-amnesia` | Also create the amnesiac, Tor-forced `anon` user (opt-in) |
 | `--only 10-terminal,30-icons` | Run a subset of modules |
@@ -46,6 +47,19 @@ By default the installer trims the fat (opt out with `--skip-debloat`):
 - **Tweaks** — `fstrim.timer`, `zram-config` compressed swap, `vm.swappiness=10`, and the desktop file indexer (tracker/localsearch) masked.
 
 Everything is reversible: `sudo apt-get install <pkg>`. Core desktop/session packages and the pentest/dev toolchain are never touched. Note: zram adds compressed swap; if you want *true* amnesia in the anon session, still disable swap (see below).
+
+## Boot / runtime performance
+
+The `06-perf.sh` module trims boot time and idle resource use (opt out with `--skip-perf`). Every step prints how to undo it:
+
+- **Pentest tools off the boot path** — `chkrootkit` and `bettercap` are kept but no longer run as boot services (they were adding ~60s of boot I/O). Run them on demand.
+- **Faster GRUB** — menu timeout cut to 1s and hidden.
+- **ModemManager masked** — no cellular modem means no serial-port probe stalls at boot.
+- **ClamAV on-demand** — the resident daemon is stopped (frees ~1 GB RAM); `freshclam` still updates signatures, scan with `clamscan -r <dir>`.
+- **kdump-tools disabled** — frees the reserved crash-kernel RAM.
+- **cloud-init disabled** on the installed system (it is only needed at install time).
+- **Printing/discovery off** — `cups`, `cups-browsed`, and `avahi` disabled (re-enable if you print).
+- **Firefox snap → Mozilla .deb** — faster launches and lower RAM/disk; your existing profile (bookmarks, history, the hover tweak) is migrated first.
 
 ## Firefox hardening
 

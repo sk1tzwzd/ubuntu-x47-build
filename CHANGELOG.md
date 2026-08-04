@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Performance
+- New `06-perf.sh` module (default, opt out with `--skip-perf`) trims boot time and idle resource use, all reversible: takes `chkrootkit`/`bettercap` off the boot path, cuts the GRUB timeout to 1s, masks ModemManager, switches ClamAV to on-demand scans, disables kdump-tools and cloud-init, turns off the printing/discovery stack, and replaces the Firefox snap with the Mozilla .deb (migrating the existing profile first).
+
 ### Desktop looks
 - **ASCII duster wallpaper** — the wallpaper renders the X47 knuckle-duster as glowing teal ASCII art, centered small with negative space over the dark-minimal circuit background. Reproducible via `scripts/make-wallpaper.py` from `assets/desktop/x47-ascii.txt` + `assets/desktop/x47-circuit-bg.png`.
 
