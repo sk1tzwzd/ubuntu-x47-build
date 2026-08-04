@@ -80,6 +80,25 @@ remove_desktop_apps() {
     [[ -n "$p" ]] && office+=("$p")
   done < <(dpkg-query -W -f='${Package}\n' 'libreoffice*' 2>/dev/null || true)
   purge_pkgs "${X47_DEBLOAT_APPS[@]}" "${office[@]}"
+
+  # Hide Help from the app grid even if a metapackage pulls yelp back in.
+  local yelp_desk="$HOME/.local/share/applications/org.gnome.Yelp.desktop"
+  if [[ "$(id -u)" -eq 0 && -n "${SUDO_USER:-}" && "$SUDO_USER" != root ]]; then
+    yelp_desk="$(getent passwd "$SUDO_USER" | cut -d: -f6)/.local/share/applications/org.gnome.Yelp.desktop"
+  fi
+  mkdir -p "$(dirname "$yelp_desk")"
+  cat > "$yelp_desk" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Help
+NoDisplay=true
+Hidden=true
+Exec=/usr/bin/yelp %u
+Icon=org.gnome.Yelp
+EOF
+  if [[ "$(id -u)" -eq 0 && -n "${SUDO_USER:-}" && "$SUDO_USER" != root ]]; then
+    chown "$SUDO_USER:" "$yelp_desk" 2>/dev/null || true
+  fi
 }
 
 remove_snap_bloat() {
