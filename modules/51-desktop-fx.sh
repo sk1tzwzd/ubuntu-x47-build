@@ -14,13 +14,14 @@ X47_FX_UUIDS=(
 )
 
 dock_to_bottom() {
-  log "moving Ubuntu Dock to the bottom (always visible)"
+  log "moving Ubuntu Dock to the bottom (intelligent autohide, reveal on hover)"
   gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || warn "dock-position failed"
   gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false 2>/dev/null || true
-  # Always show the dock — do not autohide/intellihide, even under maximized apps.
-  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed true 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock autohide false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
+  # Hide when a window overlaps; reveal when the cursor is pushed to the edge.
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show true 2>/dev/null || true
 }
 
 # Enable a uuid both via the CLI and by appending to the enabled-extensions
