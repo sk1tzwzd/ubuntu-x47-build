@@ -1,51 +1,53 @@
-/* X47 desktop widgets — dark minimal, teal accents to match the wallpaper. */
-
-.x47-widgets {
-  spacing: 14px;
-}
+/* X47 desktop widgets — sleek dark cards, teal accents to match the wallpaper. */
 
 .x47-card {
-  background-color: rgba(8, 14, 18, 0.62);
-  border: 1px solid rgba(64, 224, 208, 0.22);
-  border-radius: 14px;
-  padding: 14px 18px;
-  spacing: 6px;
+  background-color: rgba(8, 13, 17, 0.66);
+  border: 1px solid rgba(64, 224, 208, 0.18);
+  border-radius: 8px;
+  padding: 13px 16px;
+  spacing: 4px;
+  min-width: 300px;
+}
+
+.x47-card:hover {
+  border: 1px solid rgba(64, 224, 208, 0.40);
 }
 
 .x47-card-title {
-  color: rgba(64, 224, 208, 0.85);
+  color: rgba(64, 224, 208, 0.82);
   font-family: monospace;
-  font-size: 9pt;
+  font-size: 8pt;
   letter-spacing: 3px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
+/* --- world clock --- */
 .x47-clock-row {
-  spacing: 0px;
   margin-top: 6px;
 }
 
 .x47-clock-zone {
-  color: rgba(220, 240, 238, 0.55);
+  color: rgba(220, 240, 238, 0.5);
   font-family: monospace;
-  font-size: 9pt;
+  font-size: 8pt;
   letter-spacing: 2px;
 }
 
 .x47-clock-time {
-  color: #e9f7f5;
+  color: #eaf7f5;
   font-family: monospace;
   font-weight: bold;
-  font-size: 24pt;
-  text-shadow: 0 0 12px rgba(64, 224, 208, 0.35);
+  font-size: 23pt;
+  text-shadow: 0 0 12px rgba(64, 224, 208, 0.30);
 }
 
+/* --- bitcoin --- */
 .x47-btc-price {
-  color: #e9f7f5;
+  color: #eaf7f5;
   font-family: monospace;
   font-weight: bold;
   font-size: 18pt;
-  text-shadow: 0 0 12px rgba(64, 224, 208, 0.35);
+  text-shadow: 0 0 12px rgba(64, 224, 208, 0.30);
 }
 
 .x47-btc-change {
@@ -61,8 +63,64 @@
   color: #ff6b6b;
 }
 
-.x47-vitals {
-  color: rgba(233, 247, 245, 0.85);
+/* --- system vitals --- */
+.x47-metric-row {
+  spacing: 10px;
+  margin-bottom: 8px;
+}
+
+.x47-metric-label {
+  color: rgba(220, 240, 238, 0.55);
   font-family: monospace;
-  font-size: 11pt;
+  font-size: 8pt;
+  letter-spacing: 2px;
+}
+
+.x47-metric-value {
+  color: #eaf7f5;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 13pt;
+}
+
+.x47-metric-graph {
+  width: 268px;
+  height: 34px;
+}
+
+.x47-load {
+  color: rgba(220, 240, 238, 0.6);
+  font-family: monospace;
+  font-size: 9pt;
+  letter-spacing: 1px;
+}
+
+/* --- reddit --- */
+.x47-reddit-item {
+  padding: 5px 4px;
+  border-radius: 5px;
+  spacing: 1px;
+}
+
+.x47-reddit-item:hover {
+  background-color: rgba(64, 224, 208, 0.10);
+}
+
+.x47-reddit-title {
+  color: #dceff0;
+  font-family: monospace;
+  font-size: 9pt;
+}
+
+.x47-reddit-sub {
+  color: rgba(64, 224, 208, 0.7);
+  font-family: monospace;
+  font-size: 7pt;
+  letter-spacing: 1px;
+}
+
+.x47-reddit-status {
+  color: rgba(220, 240, 238, 0.4);
+  font-family: monospace;
+  font-size: 8pt;
 }

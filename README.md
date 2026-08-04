@@ -59,7 +59,8 @@ The `06-perf.sh` module trims boot time and idle resource use (opt out with `--s
 - **kdump-tools disabled** — frees the reserved crash-kernel RAM.
 - **cloud-init disabled** on the installed system (it is only needed at install time).
 - **Printing/discovery off** — `cups`, `cups-browsed`, and `avahi` disabled (re-enable if you print).
-- **Firefox snap → Mozilla .deb** — faster launches and lower RAM/disk; your existing profile (bookmarks, history, the hover tweak) is migrated first.
+
+Firefox is left as the hardened snap (the earlier snap→deb swap was removed). If you ran a build that swapped it, `scripts/firefox-restore-snap.sh` puts the snap and your profile back.
 
 ## Firefox hardening
 
@@ -74,7 +75,7 @@ By default the installer tunes the GNOME desktop for the main user (opt out with
 - **3D effects** — version-matched GNOME extensions from extensions.gnome.org: Coverflow Alt-Tab (3D window switcher, bound to window + app switching), Desktop Cube (rotating 3D workspaces, fixed at 4), Burn My Windows (Glitch open/close animation), Blur My Shell (blurred panel/overview/dash), and Compiz-style wobbly windows.
 - **Hover-only window controls** — minimize/maximize/close stay invisible until you hover the titlebar (GTK3 + GTK4 css, applied to snap apps like Firefox too).
 - **X47 wallpaper** — the X47 knuckle-duster as glowing teal ASCII art, centered small over a dark-minimal circuit background, set for light and dark modes. Reproducible with `scripts/make-wallpaper.py`.
-- **Desktop widgets** — bundled *X47 Widgets* extension (`assets/widgets/`): digital clocks for London and New York, a live BTC/USD ticker with 24 h change (CoinGecko, 60 s refresh), and CPU/RAM/load vitals. Drawn on the wallpaper beneath windows, themed to match.
+- **Desktop widgets** — bundled *X47 Widgets* extension (`assets/widgets/`): digital clocks for London and New York, a live BTC/USD ticker with 24 h change (CoinGecko, 60 s refresh), system vitals with rolling **CPU/RAM sparkline graphs** and load, and a **cybersecurity Reddit feed** (r/netsec, r/cybersecurity, r/hacking, r/AskNetsec, r/Malware, r/bugbounty — click a title to open it). Every card is **draggable** and remembers its position in `~/.config/x47-widgets/layout.json`. Drawn on the wallpaper beneath windows, themed to match.
 
 User-level only (no sudo). On Wayland you must **log out and back in** once for the effects to load. Reverse with `gnome-extensions disable <uuid>`, delete `~/.config/burn-my-windows/profiles/x47.conf`, remove the marked block from `~/.config/gtk-{3.0,4.0}/gtk.css`, or `gsettings reset org.gnome.desktop.background picture-uri`.
 

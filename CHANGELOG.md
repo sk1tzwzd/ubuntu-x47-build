@@ -3,12 +3,18 @@
 ## Unreleased
 
 ### Performance
-- New `06-perf.sh` module (default, opt out with `--skip-perf`) trims boot time and idle resource use, all reversible: takes `chkrootkit`/`bettercap` off the boot path, cuts the GRUB timeout to 1s, masks ModemManager, switches ClamAV to on-demand scans, disables kdump-tools and cloud-init, turns off the printing/discovery stack, and replaces the Firefox snap with the Mozilla .deb (migrating the existing profile first).
+- New `06-perf.sh` module (default, opt out with `--skip-perf`) trims boot time and idle resource use, all reversible: takes `chkrootkit`/`bettercap` off the boot path, cuts the GRUB timeout to 1s, masks ModemManager, switches ClamAV to on-demand scans, disables kdump-tools and cloud-init, and turns off the printing/discovery stack.
+
+### Desktop widgets
+- **Sleeker cards + live graphs** — the System card now draws rolling CPU and RAM sparklines (Cairo) next to the readouts, with tightened styling across all cards.
+- **Draggable** — every widget can be dragged anywhere on the desktop; positions persist to `~/.config/x47-widgets/layout.json`.
+- **Cybersecurity Reddit feed** — a new card lists the hottest posts from r/netsec, r/cybersecurity, r/hacking, r/AskNetsec, r/Malware, and r/bugbounty; click a title to open it in your browser.
 
 ### Desktop looks
 - **ASCII duster wallpaper** — the wallpaper renders the X47 knuckle-duster as glowing teal ASCII art, centered small with negative space over the dark-minimal circuit background. Reproducible via `scripts/make-wallpaper.py` from `assets/desktop/x47-ascii.txt` + `assets/desktop/x47-circuit-bg.png`.
 
 ### Fixes
+- **Firefox** — reverted the snap→deb swap; the build keeps the hardened Firefox snap. `scripts/firefox-restore-snap.sh` restores the snap (and migrated profile) on machines where the earlier swap ran.
 - **BTC widget** — set a descriptive User-Agent so CoinGecko stops returning 403 (the ticker was silently blank); HTTP errors now surface on the card.
 
 ## v1.6.0 — 2026-08-04

@@ -11,7 +11,6 @@
 #   5. Disable kdump-tools (frees reserved crash-kernel RAM)
 #   6. Disable cloud-init on the installed system (it is only needed at install)
 #   7. Disable the printing/discovery stack (cups, cups-browsed, avahi)
-#   8. Replace the Firefox snap with the Mozilla .deb (faster launch, less RAM)
 set -euo pipefail
 # shellcheck disable=SC1091
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/common.sh"
@@ -94,46 +93,6 @@ disable_printing() {
   ok "printing/discovery off (undo: sudo systemctl enable --now cups cups-browsed avahi-daemon)"
 }
 
-# --- 8. Firefox snap -> Mozilla .deb ---------------------------------------
-firefox_snap_to_deb() {
-  if ! have snap || ! snap list firefox >/dev/null 2>&1; then
-    log "no Firefox snap present — skipping snap->deb swap"
-    return 0
-  fi
-  log "replacing the Firefox snap with the Mozilla .deb"
-
-  # Migrate the snap profile into the standard location BEFORE removing snap,
-  # so bookmarks/history/userChrome survive.
-  local snap_moz="$HOME/snap/firefox/common/.mozilla"
-  if [[ -d "$snap_moz" && ! -d "$HOME/.mozilla" ]]; then
-    log "migrating Firefox profile from the snap into ~/.mozilla"
-    cp -a "$snap_moz" "$HOME/.mozilla" || warn "profile copy failed (continuing)"
-  elif [[ -d "$snap_moz" ]]; then
-    warn "~/.mozilla already exists — leaving it; snap profile at $snap_moz"
-  fi
-
-  # Mozilla APT repo (keyring + source + pin so apt wins over the snap shim).
-  local key=/etc/apt/keyrings/packages.mozilla.org.asc
-  run_sudo install -d -m 0755 /etc/apt/keyrings
-  if curl -fsSL https://packages.mozilla.org/apt/repo-signing-key.gpg | run_sudo tee "$key" >/dev/null; then
-    echo "deb [signed-by=$key] https://packages.mozilla.org/apt mozilla main" \
-      | run_sudo tee /etc/apt/sources.list.d/mozilla.list >/dev/null
-    printf 'Package: *\nPin: origin packages.mozilla.org\nPin-Priority: 1000\n' \
-      | run_sudo tee /etc/apt/preferences.d/mozilla >/dev/null
-  else
-    warn "could not fetch Mozilla signing key — keeping the snap"
-    return 0
-  fi
-
-  run_sudo snap remove --purge firefox >/dev/null 2>&1 || warn "snap remove firefox failed"
-  run_sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq >/dev/null 2>&1 || true
-  if run_sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq firefox >/dev/null 2>&1; then
-    ok "Firefox .deb installed (profile migrated; undo: sudo apt purge firefox && sudo snap install firefox)"
-  else
-    warn "apt install firefox failed — reinstall the snap with: sudo snap install firefox"
-  fi
-}
-
 module_perf() {
   if [[ "${X47_SKIP_PERF:-0}" == "1" ]] || [[ "${X47_USER_ONLY:-0}" == "1" ]] \
      || [[ "${X47_SKIP_APT:-0}" == "1" ]]; then
@@ -149,7 +108,6 @@ module_perf() {
   disable_kdump
   disable_cloudinit
   disable_printing
-  firefox_snap_to_deb
 
   ok "perf module done"
 }

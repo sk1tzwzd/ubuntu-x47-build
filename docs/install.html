@@ -125,8 +125,12 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
           <li><strong>ClamAV on-demand</strong> — resident daemon stopped (frees ~1&nbsp;GB RAM); scan with <code>clamscan -r</code></li>
           <li><strong>kdump-tools + cloud-init disabled</strong> — frees reserved RAM and install-time-only services</li>
           <li><strong>Printing/discovery off</strong> — <code>cups</code>, <code>cups-browsed</code>, <code>avahi</code> (re-enable if you print)</li>
-          <li><strong>Firefox snap &rarr; Mozilla .deb</strong> — faster launches and lower RAM/disk; the existing profile is migrated first</li>
         </ul>
+        <div class="aside">
+          Firefox stays the hardened snap. If an earlier build swapped it to the
+          Mozilla .deb, <code>scripts/firefox-restore-snap.sh</code> restores the
+          snap and your profile.
+        </div>
       </section>
 
       <section>
@@ -143,7 +147,7 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
           <li><strong>Blur + wobble</strong> — Blur My Shell (panel/overview/dash) and Compiz-style wobbly windows</li>
           <li><strong>Hover-only window controls</strong> — minimize/maximize/close stay invisible until you hover the titlebar (GTK3 + GTK4 apps, including snap Firefox)</li>
           <li><strong>X47 wallpaper</strong> — the X47 knuckle-duster as glowing teal ASCII art, centered over a dark circuit background, set for light and dark modes</li>
-          <li><strong>Desktop widgets</strong> — bundled X47 Widgets extension: London + New York digital clocks, live BTC/USD ticker (24 h change), and CPU/RAM/load vitals, drawn on the wallpaper beneath windows</li>
+          <li><strong>Desktop widgets</strong> — bundled X47 Widgets extension: London + New York clocks, live BTC/USD ticker, system vitals with rolling CPU/RAM graphs, and a cybersecurity Reddit feed (click to open). Every card is draggable and remembers where you put it</li>
         </ul>
         <div class="aside">
           Extensions are pulled version-matched from extensions.gnome.org. On a
