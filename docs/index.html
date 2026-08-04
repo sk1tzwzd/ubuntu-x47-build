@@ -79,13 +79,15 @@ chmod +x install.sh snapshot.sh modules/*.sh
       <section>
         <h2>Install from ISO</h2>
         <p class="section-lead">
-          Each release also ships a bootable installer ISO — the official
-          Ubuntu 26.04 desktop image with the X47 build baked in. Pick
-          <em>Install X47 Ubuntu 26.04</em> at boot, install as normal, and the
-          X47 setup runs automatically on your first login. GitHub caps
-          release files at 2&nbsp;GB, so the ISO is split into parts:
+          Download the bootable installer from the latest
+          <a href="https://github.com/sk1tzwzd/ubuntu-x47-build/releases/latest">GitHub release</a>.
+          It is a fresh Ubuntu 26.04 install — you choose language, disk,
+          username, and password. No personal files from the reference machine
+          are included; only the X47 installer scripts ride along. Pick
+          <em>Install X47 Ubuntu 26.04</em> at boot; first login runs the setup
+          terminal. GitHub caps release files at 2&nbsp;GB, so the ISO is split:
         </p>
-        <pre><code># download all x47-ubuntu-26.04-desktop-amd64.iso.*.part files, then:
+        <pre><code># download SHA256SUMS + every x47-ubuntu-26.04-desktop-amd64.iso.*.part, then:
 cat x47-ubuntu-26.04-desktop-amd64.iso.*.part &gt; x47-ubuntu-26.04-desktop-amd64.iso
 sha256sum -c SHA256SUMS --ignore-missing</code></pre>
         <p class="section-lead" style="margin-top:1rem">

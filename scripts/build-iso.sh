@@ -4,8 +4,10 @@
 # The result is a normal Ubuntu installer with an extra (default) boot entry
 # that seeds the Subiquity autoinstall with:
 #   - this repo copied to /opt/ubuntu-x47-build on the installed system
+#     (git archive of HEAD only — no home directories, keys, or personal files)
 #   - a first-login autostart that runs install.sh in a terminal
-# The usual interactive steps (language, keyboard, disk, user) are kept.
+# The usual interactive steps (language, keyboard, disk, user/password) are
+# kept — each installer creates their own account from scratch.
 #
 # No root required: xorriso does all ISO extraction/repacking in userspace.
 #

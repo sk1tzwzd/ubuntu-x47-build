@@ -50,11 +50,14 @@ chmod +x install.sh snapshot.sh modules/*.sh
       <section>
         <h2>Install from ISO</h2>
         <p class="section-lead">
-          Prefer a fresh machine? Each release ships a bootable ISO — the
-          official Ubuntu 26.04 desktop image with this build baked in. Choose
-          <em>Install X47 Ubuntu 26.04</em> in the boot menu, install Ubuntu as
-          normal (language, disk, username are all still your choice), and the
-          X47 installer starts in a terminal on your first login.
+          Prefer a fresh machine? Grab the ISO from the
+          <a href="https://github.com/sk1tzwzd/ubuntu-x47-build/releases/latest">latest release</a>
+          — official Ubuntu 26.04 desktop remastered with the X47 scripts.
+          Choose <em>Install X47 Ubuntu 26.04</em> in the boot menu. Language,
+          disk, username, and password stay interactive (you create your own
+          account). Nothing from the maintainer’s home directory is on the
+          image — only a <code>git archive</code> of this repo under
+          <code>/opt/ubuntu-x47-build</code>. First login opens the setup terminal.
         </p>
         <p class="section-lead">
           GitHub limits release files to 2&nbsp;GB, so the ISO comes in parts.

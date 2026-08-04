@@ -11,23 +11,29 @@ ANON_DEFAULT_PASS="${ANON_DEFAULT_PASS:-anon}"
 AM_ASSETS="$X47_ROOT/assets/amnesia"
 
 install_wezterm_shared() {
-  # Anon cannot read /home/wzd — ship a world-usable wezterm wrapper.
-  local src_appimage="/home/wzd/tools/wezterm/wezterm.AppImage"
-  local src_apprun="/home/wzd/tools/wezterm/squashfs-root/AppRun"
+  # Anon cannot read the main user's home — ship a world-usable wezterm wrapper.
+  # Prefer the installing user's tools dir (works on fresh ISO installs too).
+  local src_home="$HOME"
+  if [[ -n "${SUDO_USER:-}" ]]; then
+    src_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+    [[ -n "$src_home" ]] || src_home="$HOME"
+  fi
+  local src_appimage="$src_home/tools/wezterm/wezterm.AppImage"
+  local src_apprun="$src_home/tools/wezterm/squashfs-root/AppRun"
   local dest=/opt/x47-amnesia/wezterm
   run_sudo mkdir -p "$dest"
   if [[ -x "$src_apprun" ]]; then
     if [[ ! -x "$dest/squashfs-root/AppRun" ]]; then
       log "copying WezTerm into /opt/x47-amnesia for shared use"
       run_sudo rm -rf "$dest/squashfs-root"
-      run_sudo cp -a /home/wzd/tools/wezterm/squashfs-root "$dest/"
+      run_sudo cp -a "$src_home/tools/wezterm/squashfs-root" "$dest/"
       [[ -f "$src_appimage" ]] && run_sudo cp -a "$src_appimage" "$dest/wezterm.AppImage" || true
     fi
   elif [[ -x "$src_appimage" ]]; then
     run_sudo cp -a "$src_appimage" "$dest/wezterm.AppImage"
     (cd "$dest" && run_sudo ./wezterm.AppImage --appimage-extract >/dev/null) || true
   else
-    warn "WezTerm not found under /home/wzd/tools/wezterm — anon VulnScape launcher may fail"
+    warn "WezTerm not found under $src_home/tools/wezterm — run 10-terminal first"
     return 1
   fi
   run_sudo tee /usr/local/bin/wezterm >/dev/null <<EOF
