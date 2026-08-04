@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Desktop looks
-- **ASCII duster wallpaper** — the wallpaper now renders the X47 knuckle-duster as glowing teal ASCII art on the charcoal background instead of the rendered logo. Reproducible via `scripts/make-wallpaper.py` from `assets/desktop/x47-ascii.txt`.
+- **ASCII duster wallpaper** — the wallpaper renders the X47 knuckle-duster as glowing teal ASCII art, centered small with negative space over the dark-minimal circuit background. Reproducible via `scripts/make-wallpaper.py` from `assets/desktop/x47-ascii.txt` + `assets/desktop/x47-circuit-bg.png`.
 
 ### Fixes
 - **BTC widget** — set a descriptive User-Agent so CoinGecko stops returning 403 (the ticker was silently blank); HTTP errors now surface on the card.

@@ -59,7 +59,7 @@ By default the installer tunes the GNOME desktop for the main user (opt out with
 - **Bottom dock** — Ubuntu Dock moved to the bottom with intelligent autohide (reveal on hover).
 - **3D effects** — version-matched GNOME extensions from extensions.gnome.org: Coverflow Alt-Tab (3D window switcher, bound to window + app switching), Desktop Cube (rotating 3D workspaces, fixed at 4), Burn My Windows (Glitch open/close animation), Blur My Shell (blurred panel/overview/dash), and Compiz-style wobbly windows.
 - **Hover-only window controls** — minimize/maximize/close stay invisible until you hover the titlebar (GTK3 + GTK4 css, applied to snap apps like Firefox too).
-- **X47 wallpaper** — the X47 knuckle-duster rendered as glowing teal ASCII art on a dark charcoal background, set for light and dark modes. Reproducible with `scripts/make-wallpaper.py`.
+- **X47 wallpaper** — the X47 knuckle-duster as glowing teal ASCII art, centered small over a dark-minimal circuit background, set for light and dark modes. Reproducible with `scripts/make-wallpaper.py`.
 - **Desktop widgets** — bundled *X47 Widgets* extension (`assets/widgets/`): digital clocks for London and New York, a live BTC/USD ticker with 24 h change (CoinGecko, 60 s refresh), and CPU/RAM/load vitals. Drawn on the wallpaper beneath windows, themed to match.
 
 User-level only (no sudo). On Wayland you must **log out and back in** once for the effects to load. Reverse with `gnome-extensions disable <uuid>`, delete `~/.config/burn-my-windows/profiles/x47.conf`, remove the marked block from `~/.config/gtk-{3.0,4.0}/gtk.css`, or `gsettings reset org.gnome.desktop.background picture-uri`.
