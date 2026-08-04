@@ -35,7 +35,8 @@
         <ul class="clean">
           <li><strong>RAM-only home</strong> — <code>/home/anon</code> is tmpfs; wiped on reboot; skeleton from <code>/var/lib/anon-skel</code></li>
           <li><strong>Forced Tor + kill-switch</strong> — UID-scoped nftables; IPv6 dropped for anon; Tor config inlined in <code>/etc/tor/torrc</code></li>
-          <li><strong>Desktop</strong> — dark Yaru Prussian green, green accent, location off; first-run wizard skipped</li>
+          <li><strong>Desktop</strong> — matches main X47 looks (dock, Coverflow, Cube, TV Glitch, blur, wobbly, wallpaper, hover controls) without widgets; dark Yaru Prussian green; first-run wizard skipped</li>
+          <li><strong>Terminal</strong> — WezTerm as default (<code>/usr/local/bin/wezterm</code>); GNOME Terminal removed</li>
           <li><strong>Apps</strong> — Firefox Safest (JS off), Electrum, Feather, Kleopatra, KeePassXC, VulnScape, NymVPN</li>
           <li><strong>Anon Firefox</strong> — Safest / JS off, no SOCKS proxy (transparent Tor), and DoH hard-off (<code>network.trr.mode=5</code>) so DNS cannot bypass Tor</li>
           <li><strong>Random MAC</strong> — spoofed on anon login (Tails-style), restored on logout; boot cleanup clears leftover NM cloned-MAC</li>

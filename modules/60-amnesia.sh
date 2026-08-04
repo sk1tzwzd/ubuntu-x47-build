@@ -127,6 +127,79 @@ EOF
   fi
 }
 
+# Copy main-user desktop-fx extensions into a shared cache and the anon skel
+# so each tmpfs login gets Coverflow/Cube/BMW/blur/wobbly — never widgets.
+stage_anon_desktop_fx_into_skel() {
+  local skel="${1:?skel dest}"
+  local cache=/opt/x47-amnesia/gnome-shell-extensions
+  local src_root="$HOME"
+  if [[ ! -d "$src_root/.local/share/gnome-shell/extensions" ]] && [[ -n "${SUDO_USER:-}" ]]; then
+    src_root="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+  fi
+  local src_ext="$src_root/.local/share/gnome-shell/extensions"
+  local uuids=(
+    "CoverflowAltTab@palatis.blogspot.com"
+    "desktop-cube@schneegans.github.com"
+    "burn-my-windows@schneegans.github.com"
+    "blur-my-shell@aunetx"
+    "compiz-windows-effect@hermes83.github.com"
+  )
+  local uuid found=0
+  run_sudo mkdir -p "$cache" "$skel/.local/share/gnome-shell/extensions"
+  for uuid in "${uuids[@]}"; do
+    if [[ -d "$src_ext/$uuid" ]]; then
+      log "staging extension for anon: $uuid"
+      run_sudo rm -rf "$cache/$uuid" "$skel/.local/share/gnome-shell/extensions/$uuid"
+      run_sudo cp -a "$src_ext/$uuid" "$cache/"
+      run_sudo cp -a "$src_ext/$uuid" "$skel/.local/share/gnome-shell/extensions/"
+      found=1
+    elif [[ -d "$cache/$uuid" ]]; then
+      log "reusing cached extension for anon: $uuid"
+      run_sudo rm -rf "$skel/.local/share/gnome-shell/extensions/$uuid"
+      run_sudo cp -a "$cache/$uuid" "$skel/.local/share/gnome-shell/extensions/"
+      found=1
+    else
+      warn "desktop-fx extension missing for anon skel: $uuid (run 51-desktop-fx first)"
+    fi
+  done
+  # Refresh wallpaper / BMW / hover CSS from build assets (skel may already have them).
+  local desk="$X47_ROOT/assets/desktop"
+  if [[ -f "$desk/wallpapers/x47-circuit.png" ]]; then
+    run_sudo mkdir -p "$skel/.local/share/backgrounds"
+    run_sudo install -m 0644 "$desk/wallpapers/x47-circuit.png" \
+      "$skel/.local/share/backgrounds/x47-circuit.png"
+  fi
+  if [[ -f "$desk/burn-my-windows-x47.conf" ]]; then
+    run_sudo mkdir -p "$skel/.config/burn-my-windows/profiles"
+    run_sudo install -m 0644 "$desk/burn-my-windows-x47.conf" \
+      "$skel/.config/burn-my-windows/profiles/x47.conf"
+  fi
+  if [[ -f "$desk/gtk-hover-controls.css" ]]; then
+    local begin="/* --- x47 hover window controls --- */"
+    local end="/* --- end x47 hover window controls --- */"
+    local d
+    for d in gtk-3.0 gtk-4.0; do
+      run_sudo mkdir -p "$skel/.config/$d"
+      {
+        printf '%s\n' "$begin"
+        cat "$desk/gtk-hover-controls.css"
+        printf '%s\n' "$end"
+      } | run_sudo tee "$skel/.config/$d/gtk.css" >/dev/null
+    done
+  fi
+  if [[ -f "$X47_ROOT/assets/wezterm/wezterm.lua" ]]; then
+    run_sudo mkdir -p "$skel/.config/wezterm" "$skel/.config/wzd"
+    run_sudo install -m 0644 "$X47_ROOT/assets/wezterm/wezterm.lua" "$skel/.config/wezterm/wezterm.lua"
+    [[ -f "$X47_ROOT/assets/wzd/watermark.png" ]] \
+      && run_sudo install -m 0644 "$X47_ROOT/assets/wzd/watermark.png" "$skel/.config/wzd/watermark.png"
+  fi
+  if [[ "$found" == "1" ]]; then
+    ok "anon desktop-fx extensions staged (no widgets)"
+  else
+    warn "no desktop-fx extensions staged — anon still gets wallpaper/dock/WezTerm"
+  fi
+}
+
 install_persistent_helper() {
   log "installing persistent storage + MAC spoof helpers"
   run_sudo install -m 0755 "$AM_ASSETS/anon-persistent" /usr/local/sbin/anon-persistent
@@ -316,6 +389,7 @@ module_amnesia() {
   run_sudo rm -rf /var/lib/anon-skel
   run_sudo mkdir -p /var/lib/anon-skel
   run_sudo cp -aT "$AM_ASSETS/skel" /var/lib/anon-skel
+  stage_anon_desktop_fx_into_skel /var/lib/anon-skel
   run_sudo chmod 0755 /var/lib/anon-skel/.local/bin/* 2>/dev/null || true
   run_sudo chown -R "$ANON_USER:$ANON_USER" /var/lib/anon-skel
   run_sudo chmod 0700 /var/lib/anon-skel

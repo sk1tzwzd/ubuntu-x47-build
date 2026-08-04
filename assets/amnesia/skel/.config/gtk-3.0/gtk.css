@@ -1,0 +1,18 @@
+/* --- x47 hover window controls --- */
+/* X47: window controls (minimize / maximize / close) stay invisible until
+ * the titlebar area is hovered. Works for GTK3 and GTK4 apps. */
+headerbar windowcontrols button,
+windowcontrols button,
+headerbar button.titlebutton,
+.titlebar button.titlebutton {
+  opacity: 0;
+  transition: opacity 150ms ease-in-out;
+}
+
+headerbar:hover windowcontrols button,
+windowcontrols:hover button,
+headerbar:hover button.titlebutton,
+.titlebar:hover button.titlebutton {
+  opacity: 1;
+}
+/* --- end x47 hover window controls --- */

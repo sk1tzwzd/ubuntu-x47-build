@@ -88,7 +88,7 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
       <section>
         <h2>What gets installed</h2>
         <ul class="clean">
-          <li><strong>Terminal</strong> — WezTerm AppImage, wrapper, watermark, GNOME default terminal</li>
+          <li><strong>Terminal</strong> — WezTerm AppImage (wide window + watermark); GNOME Terminal removed</li>
           <li><strong>Privacy</strong> — Mullvad VPN (apt), Tor Browser (latest from Tor Project)</li>
           <li><strong>Tools</strong> — nmap, Metasploit, wireshark, hashcat, Go recon suite, pipx AD tools, cargo utilities, release binaries</li>
           <li><strong>Icons &amp; launchers</strong> — kali-* pack, custom cool icons, x47duster fallback (no Kali dragon)</li>
@@ -105,7 +105,7 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
         </p>
         <ul class="clean">
           <li><strong>Language packs</strong> — removes non-English <code>language-pack-*</code>, LibreOffice l10n, and non-<code>en</code> spell dictionaries</li>
-          <li><strong>Default apps</strong> — GNOME games, Rhythmbox, Cheese, Thunderbird, LibreOffice, Transmission, Remmina, Shotwell, Maps/Weather/Contacts/Todo, Simple Scan, Totem, GNOME Music/Photos, Ubuntu Help</li>
+          <li><strong>Default apps</strong> — GNOME Terminal, GNOME games, Rhythmbox, Cheese, Thunderbird, LibreOffice, Transmission, Remmina, Shotwell, Maps/Weather/Contacts/Todo, Simple Scan, Totem, GNOME Music/Photos, Ubuntu Help</li>
           <li><strong>Snap bloat</strong> — App Centre (<code>snap-store</code>) and Desktop Security Centre (keeps firmware-updater)</li>
           <li><strong>Cleanup</strong> — <code>apt autoremove --purge</code>, cache clean, journal vacuum to 200M, thumbnail cache</li>
           <li><strong>Tweaks</strong> — <code>fstrim.timer</code>, <code>zram-config</code> compressed swap, <code>vm.swappiness=10</code>, file indexer (tracker/localsearch) masked</li>

@@ -10,7 +10,7 @@ set -euo pipefail
 X47_DEBLOAT_DENYLIST=(
   gnome-shell gdm3 nautilus network-manager network-manager-gnome
   snapd firefox mutter ubuntu-session ubuntu-desktop-minimal
-  gnome-control-center gnome-terminal xserver-xorg xwayland
+  gnome-control-center xserver-xorg xwayland
   gnome-settings-daemon gvfs policykit-1 sudo
 )
 
@@ -26,6 +26,8 @@ X47_DEBLOAT_APPS=(
   simple-scan totem gnome-music gnome-photos
   # Help docs (Ubuntu Help / yelp)
   yelp yelp-xsl ubuntu-docs gnome-user-docs
+  # Default GNOME Terminal — WezTerm is the build default
+  gnome-terminal gnome-terminal-data
 )
 
 is_denied() {

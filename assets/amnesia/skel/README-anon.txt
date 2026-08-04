@@ -7,11 +7,13 @@ A Tails-inspired amnesiac profile on a normal Ubuntu install:
 
   * Home lives in RAM (tmpfs) — wiped every reboot.
   * All traffic is forced through Tor (kill-switch; IPv6 blocked).
+  * Desktop matches the main X47 look (dock, 3D effects, wallpaper) — no widgets.
   * Dark Prussian-green theme, green accent, location off.
   * Firefox (Safest): JavaScript off by default, .onion unblocked.
 
 Apps
 ----
+  * WezTerm — default terminal (shared /usr/local/bin/wezterm)
   * Firefox (Amnesia / Safest) — default browser, auto-starts
   * Electrum — Bitcoin
   * Feather — Monero

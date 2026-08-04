@@ -85,7 +85,38 @@ EOF
     gsettings set org.gnome.desktop.default-applications.terminal exec-arg 'start' 2>/dev/null || true
   fi
 
+  # Hide GNOME Terminal from the app grid (package purge is in 05-debloat).
+  hide_gnome_terminal_launcher
+  prune_terminal_from_favorites
+
   ok "WezTerm installed and set as default terminal"
+}
+
+hide_gnome_terminal_launcher() {
+  local desk dir="$HOME/.local/share/applications"
+  mkdir -p "$dir"
+  for desk in org.gnome.Terminal.desktop gnome-terminal.desktop; do
+    cat > "$dir/$desk" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Terminal
+NoDisplay=true
+Hidden=true
+Exec=/usr/bin/gnome-terminal
+Icon=org.gnome.Terminal
+EOF
+  done
+}
+
+prune_terminal_from_favorites() {
+  have gsettings || return 0
+  local cur
+  cur="$(gsettings get org.gnome.shell favorite-apps 2>/dev/null || echo "@as []")"
+  [[ "$cur" == *"Terminal"* || "$cur" == *"gnome-terminal"* || "$cur" == *"org.gnome.Terminal"* ]] || return 0
+  # Drop any Terminal desktop ids from the favorites list.
+  local cleaned
+  cleaned="$(printf '%s' "$cur" | sed -E "s/'org\.gnome\.Terminal\.desktop',? ?//g; s/'gnome-terminal\.desktop',? ?//g; s/, ]/]/g; s/\[,/[/g")"
+  gsettings set org.gnome.shell favorite-apps "$cleaned" 2>/dev/null || true
 }
 
 module_terminal "$@"

@@ -2,7 +2,7 @@
 
 Idempotent installer that reproduces a custom Ubuntu 24.04 / 26 desktop:
 
-- **WezTerm** as the default terminal, with a subtle grey **X47 ASCII watermark** on the right
+- **WezTerm** as the default terminal (wide window so the **X47 watermark** sits on the right); GNOME Terminal is removed
 - **Mullvad VPN** (apt) and **Tor Browser** (latest from Tor Project, registered in the app menu)
 - Pentest + developer toolchain (apt, Go, pipx, cargo, GitHub release binaries, gems)
 - Custom **app-grid launchers** and icons (`kali-*` pack, custom `kali-cool-*`, `x47duster` fallback — no Kali dragon)
@@ -42,7 +42,7 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 By default the installer trims the fat (opt out with `--skip-debloat`):
 
 - **Language packs** — removes every non-English `language-pack-*`, LibreOffice l10n, and non-`en` spell dictionaries.
-- **Default desktop apps** — removes GNOME games, Rhythmbox, Cheese, Thunderbird, LibreOffice, Transmission, Remmina, Shotwell, Maps/Weather/Contacts/Todo, Simple Scan, Totem, GNOME Music/Photos, Ubuntu Help (`yelp`).
+- **Default desktop apps** — removes GNOME Terminal, GNOME games, Rhythmbox, Cheese, Thunderbird, LibreOffice, Transmission, Remmina, Shotwell, Maps/Weather/Contacts/Todo, Simple Scan, Totem, GNOME Music/Photos, Ubuntu Help (`yelp`).
 - **Snap bloat** — removes the App Centre (`snap-store`) and Desktop Security Centre snaps (keeps firmware-updater).
 - **Cleanup** — `apt-get autoremove --purge`, cache clean, `journalctl` vacuum to 200M, thumbnail cache.
 - **Tweaks** — `fstrim.timer`, `zram-config` compressed swap, `vm.swappiness=10`, and the desktop file indexer (tracker/localsearch) masked.
@@ -109,8 +109,8 @@ To build it yourself: `sudo apt install xorriso`, then `./scripts/build-iso.sh` 
 ### Terminal
 - WezTerm AppImage under `~/tools/wezterm`
 - Wrapper at `~/.local/bin/wezterm`
-- Config: `~/.config/wezterm/wezterm.lua` + watermark `~/.config/wzd/watermark.png`
-- Default terminal via `xdg-terminals.list` + GNOME gsettings
+- Config: `~/.config/wezterm/wezterm.lua` (`initial_cols=160`, `initial_rows=48`) + watermark `~/.config/wzd/watermark.png`
+- Default terminal via `xdg-terminals.list` + GNOME gsettings; GNOME Terminal purged / hidden
 
 ### Privacy
 - **Mullvad VPN** via official apt repo (`mullvad-vpn` in the apt manifest)
@@ -137,7 +137,8 @@ Files under `config/` are copied back to `/etc` (UFW rules, fail2ban jails, sysc
 
 - **RAM-only home** — `/home/anon` is a `tmpfs` mount. Wiped every reboot; skeleton re-copied from `/var/lib/anon-skel`.
 - **Forced Tor + kill-switch** — UID-scoped nftables; IPv6 dropped for `anon`. Tor config is inlined in `/etc/tor/torrc` (AppArmor blocks `torrc.d`).
-- **Desktop** — dark `Yaru-prussiangreen-dark`, green accent, location off; Ubuntu first-run wizard skipped.
+- **Desktop** — same looks as the main user (bottom dock, Coverflow, Cube, TV Glitch, blur, wobbly, wallpaper, hover controls) **without X47 Widgets**; dark `Yaru-prussiangreen-dark`, green accent, location off; first-run wizard skipped.
+- **Terminal** — WezTerm (`/usr/local/bin/wezterm`) as default; GNOME Terminal removed.
 - **Apps** — Firefox (Safest / JS off), Electrum (BTC), Feather (XMR), Kleopatra (PGP), KeePassXC, VulnScape, **NymVPN** (daemon + GUI; connect after login).
 - **Random MAC** — Tails-style spoof on anon login, restored on logout (`anon-mac-spoof`).
 - **Unprivileged** — `anon` is not in `sudo`/`adm` (except narrow sudoers for persistent vault, MAC spoof, and starting `nym-vpnd`).

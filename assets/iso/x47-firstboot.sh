@@ -27,8 +27,11 @@ fi;
 read -rp "Press Enter to close...";
 '
 
-if command -v gnome-terminal >/dev/null 2>&1; then
-  exec gnome-terminal --title="X47 first-boot setup" -- bash -c "$run_install"
+# Prefer WezTerm (build default); fall back to x-terminal-emulator.
+if command -v wezterm >/dev/null 2>&1; then
+  exec wezterm start -- bash -c "$run_install"
+elif [[ -x "$HOME/.local/bin/wezterm" ]]; then
+  exec "$HOME/.local/bin/wezterm" start -- bash -c "$run_install"
 elif command -v x-terminal-emulator >/dev/null 2>&1; then
   exec x-terminal-emulator -e bash -c "$run_install"
 fi

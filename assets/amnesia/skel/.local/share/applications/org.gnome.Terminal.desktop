@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Terminal
+NoDisplay=true
+Hidden=true
+Exec=/usr/bin/gnome-terminal
+Icon=org.gnome.Terminal

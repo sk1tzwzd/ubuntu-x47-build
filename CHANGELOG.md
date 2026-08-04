@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.8.0 — 2026-08-05
+
+### Terminal
+- **Larger WezTerm** — default window `160×48` so the X47 knuckle-duster watermark sits on the right with room.
+- **GNOME Terminal removed** — purged by debloat; launchers hidden and stripped from favorites. WezTerm remains the only default.
+
+### Amnesia
+- **WezTerm default for anon** — shared `/usr/local/bin/wezterm`, skel config + watermark, GNOME Terminal hidden.
+- **Anon desktop matches main looks** — dock, Coverflow, Desktop Cube, TV Glitch, Blur My Shell, wobbly windows, wallpaper, hover controls. **No X47 Widgets** on anon.
+- ISO first-boot opens **WezTerm** (not GNOME Terminal).
+
 ## v1.7.0 — 2026-08-05
 
 ### Desktop looks
