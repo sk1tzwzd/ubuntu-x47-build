@@ -44,6 +44,29 @@ chmod +x install.sh snapshot.sh modules/*.sh
       </section>
 
       <section>
+        <h2>Install from ISO</h2>
+        <p class="section-lead">
+          Prefer a fresh machine? Each release ships a bootable ISO — the
+          official Ubuntu 26.04 desktop image with this build baked in. Choose
+          <em>Install X47 Ubuntu 26.04</em> in the boot menu, install Ubuntu as
+          normal (language, disk, username are all still your choice), and the
+          X47 installer starts in a terminal on your first login.
+        </p>
+        <p class="section-lead">
+          GitHub limits release files to 2&nbsp;GB, so the ISO comes in parts.
+          Download every <code>.part</code> file plus <code>SHA256SUMS</code>
+          from the release, then:
+        </p>
+        <pre><code>cat x47-ubuntu-26.04-desktop-amd64.iso.*.part &gt; x47-ubuntu-26.04-desktop-amd64.iso
+sha256sum -c SHA256SUMS --ignore-missing</code></pre>
+        <p class="section-lead" style="margin-top:1rem">
+          Flash it to a USB stick (GNOME Disks, balenaEtcher, or
+          <code>dd</code>) and boot. You can also build the ISO yourself with
+          <code>scripts/build-iso.sh</code> (needs <code>xorriso</code>, no root).
+        </p>
+      </section>
+
+      <section>
         <h2>Flags</h2>
         <table class="flags">
           <thead>
@@ -97,8 +120,9 @@ chmod +x install.sh snapshot.sh modules/*.sh
           <li><strong>Bottom dock</strong> — Ubuntu Dock moved to the bottom with intelligent autohide (reveal on hover)</li>
           <li><strong>3D window switcher</strong> — Coverflow Alt-Tab, bound to window and application switching</li>
           <li><strong>Rotating desktops</strong> — Desktop Cube (workspaces fixed at 4)</li>
-          <li><strong>Window animations</strong> — Burn My Windows with the Matrix open/close effect</li>
+          <li><strong>Window animations</strong> — Burn My Windows with the Glitch open/close effect</li>
           <li><strong>Blur + wobble</strong> — Blur My Shell (panel/overview/dash) and Compiz-style wobbly windows</li>
+          <li><strong>Hover-only window controls</strong> — minimize/maximize/close stay invisible until you hover the titlebar (GTK3 + GTK4 apps, including snap Firefox)</li>
           <li><strong>X47 wallpaper</strong> — custom dark circuit wallpaper, set for light and dark modes</li>
         </ul>
         <div class="aside">

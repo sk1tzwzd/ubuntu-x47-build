@@ -92,14 +92,14 @@ cube_workspaces() {
   gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
 }
 
-bmw_matrix_profile() {
-  # Burn My Windows v48 reads per-profile keyfiles; ship one with the Matrix
-  # effect enabled (fire off) and drop any empty auto-created profiles so
-  # Matrix is the only open/close animation.
+bmw_fx_profile() {
+  # Burn My Windows v48 reads per-profile keyfiles; ship one with the Glitch
+  # effect enabled (fire/matrix off) and drop any empty auto-created profiles
+  # so Glitch is the only open/close animation.
   local src="$AM_DESKTOP/burn-my-windows-x47.conf"
   local dir="$HOME/.config/burn-my-windows/profiles"
-  [[ -f "$src" ]] || { warn "missing $src — skipping Matrix profile"; return 0; }
-  log "installing Burn My Windows Matrix profile"
+  [[ -f "$src" ]] || { warn "missing $src — skipping BMW profile"; return 0; }
+  log "installing Burn My Windows Glitch profile"
   mkdir -p "$dir"
   local f
   for f in "$dir"/*.conf; do
@@ -111,7 +111,7 @@ bmw_matrix_profile() {
     fi
   done
   install -m 0644 "$src" "$dir/x47.conf"
-  ok "Matrix profile -> $dir/x47.conf"
+  ok "BMW Glitch profile -> $dir/x47.conf"
 }
 
 coverflow_tune() {
@@ -124,6 +124,76 @@ coverflow_tune() {
   gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab bind-to-switch-windows true 2>/dev/null || true
   gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab bind-to-switch-applications true 2>/dev/null || true
   gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab hide-panel true 2>/dev/null || true
+}
+
+# Append the hover-only window-controls CSS to a gtk.css (idempotent via
+# marker block; replaces the block if the asset changed).
+install_hover_css_into() {
+  local css_dir="$1" src="$2"
+  local css="$css_dir/gtk.css"
+  local begin="/* --- x47 hover window controls --- */"
+  local end="/* --- end x47 hover window controls --- */"
+  mkdir -p "$css_dir"
+  if [[ -f "$css" ]] && grep -qF "$begin" "$css"; then
+    # Drop the old managed block before re-adding it.
+    local tmp
+    tmp="$(mktemp)"
+    awk -v b="$begin" -v e="$end" '
+      index($0, b) { skip = 1 }
+      !skip { print }
+      index($0, e) { skip = 0 }
+    ' "$css" > "$tmp"
+    mv "$tmp" "$css"
+  fi
+  {
+    printf '%s\n' "$begin"
+    cat "$src"
+    printf '%s\n' "$end"
+  } >> "$css"
+}
+
+hover_window_controls() {
+  local src="$AM_DESKTOP/gtk-hover-controls.css"
+  [[ -f "$src" ]] || { warn "missing $src — skipping hover window controls"; return 0; }
+  log "hiding window controls until hover (GTK3 + GTK4 css)"
+  install_hover_css_into "$HOME/.config/gtk-3.0" "$src"
+  install_hover_css_into "$HOME/.config/gtk-4.0" "$src"
+  # Snap apps (e.g. Firefox) read gtk.css from their own sandboxed config dir.
+  local snap_conf
+  for snap_conf in "$HOME"/snap/*/current/.config; do
+    [[ -d "$snap_conf" ]] || continue
+    install_hover_css_into "$snap_conf/gtk-3.0" "$src"
+    install_hover_css_into "$snap_conf/gtk-4.0" "$src"
+  done
+  ok "hover-only window controls installed (restart apps to pick it up)"
+}
+
+# Firefox renders its own min/max/close buttons, so it needs a userChrome.css
+# (plus the legacy-stylesheets pref) instead of GTK css.
+firefox_hover_buttons() {
+  local src="$AM_DESKTOP/firefox-userChrome.css"
+  [[ -f "$src" ]] || { warn "missing $src — skipping Firefox hover buttons"; return 0; }
+  local prof found=0
+  for prof in "$HOME"/snap/firefox/common/.mozilla/firefox/*.default* \
+              "$HOME"/.mozilla/firefox/*.default*; do
+    [[ -d "$prof" ]] || continue
+    found=1
+    mkdir -p "$prof/chrome"
+    local dest="$prof/chrome/userChrome.css"
+    if [[ -f "$dest" ]] && ! grep -qF "x47 hover window buttons" "$dest"; then
+      cat "$src" >> "$dest"
+    elif [[ ! -f "$dest" ]]; then
+      install -m 0644 "$src" "$dest"
+    fi
+    if ! grep -qF "toolkit.legacyUserProfileCustomizations.stylesheets" "$prof/user.js" 2>/dev/null; then
+      echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$prof/user.js"
+    fi
+  done
+  if [[ "$found" == "1" ]]; then
+    ok "Firefox hover-only window buttons installed (restart Firefox)"
+  else
+    warn "no Firefox profile found — hover buttons will apply after Firefox first run + rerun"
+  fi
 }
 
 set_wallpaper() {
@@ -168,8 +238,10 @@ module_desktop_fx() {
   done
 
   cube_workspaces
-  bmw_matrix_profile
+  bmw_fx_profile
   coverflow_tune
+  hover_window_controls
+  firefox_hover_buttons
   set_wallpaper
 
   ok "desktop-fx module done"

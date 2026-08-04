@@ -1,0 +1,11 @@
+/* --- x47 hover window buttons (Firefox) --- */
+/* Requires toolkit.legacyUserProfileCustomizations.stylesheets = true. */
+.titlebar-buttonbox-container {
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.titlebar-buttonbox-container:hover,
+.titlebar-buttonbox-container:focus-within {
+  opacity: 1;
+}
+/* --- end x47 hover window buttons --- */

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=X47 First Boot Setup
+Comment=Runs the X47 Ubuntu build installer on first login
+Exec=/usr/local/bin/x47-firstboot
+Terminal=false
+X-GNOME-Autostart-enabled=true

@@ -57,10 +57,24 @@ Everything is reversible: `sudo apt-get install <pkg>`. Core desktop/session pac
 By default the installer tunes the GNOME desktop for the main user (opt out with `--skip-desktop-fx`):
 
 - **Bottom dock** — Ubuntu Dock moved to the bottom with intelligent autohide (reveal on hover).
-- **3D effects** — version-matched GNOME extensions from extensions.gnome.org: Coverflow Alt-Tab (3D window switcher, bound to window + app switching), Desktop Cube (rotating 3D workspaces, fixed at 4), Burn My Windows (Matrix open/close animation), Blur My Shell (blurred panel/overview/dash), and Compiz-style wobbly windows.
+- **3D effects** — version-matched GNOME extensions from extensions.gnome.org: Coverflow Alt-Tab (3D window switcher, bound to window + app switching), Desktop Cube (rotating 3D workspaces, fixed at 4), Burn My Windows (Glitch open/close animation), Blur My Shell (blurred panel/overview/dash), and Compiz-style wobbly windows.
+- **Hover-only window controls** — minimize/maximize/close stay invisible until you hover the titlebar (GTK3 + GTK4 css, applied to snap apps like Firefox too).
 - **X47 wallpaper** — custom dark circuit wallpaper featuring the X47 duster, set for light and dark modes.
 
-User-level only (no sudo). On Wayland you must **log out and back in** once for the effects to load. Reverse with `gnome-extensions disable <uuid>`, delete `~/.config/burn-my-windows/profiles/x47.conf`, or `gsettings reset org.gnome.desktop.background picture-uri`.
+User-level only (no sudo). On Wayland you must **log out and back in** once for the effects to load. Reverse with `gnome-extensions disable <uuid>`, delete `~/.config/burn-my-windows/profiles/x47.conf`, remove the marked block from `~/.config/gtk-{3.0,4.0}/gtk.css`, or `gsettings reset org.gnome.desktop.background picture-uri`.
+
+## Install from ISO
+
+Each release also ships a bootable installer ISO: the official Ubuntu 26.04 desktop image remastered with this build baked in (`scripts/build-iso.sh`, built by the *Build X47 ISO* GitHub Actions workflow). Pick **Install X47 Ubuntu 26.04 (custom build)** in the boot menu, install Ubuntu as normal (language, disk, and user stay interactive), and the X47 installer runs in a terminal on first login.
+
+GitHub caps release assets at 2 GB, so the ISO is split into parts:
+
+```bash
+cat x47-ubuntu-26.04-desktop-amd64.iso.*.part > x47-ubuntu-26.04-desktop-amd64.iso
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+To build it yourself: `sudo apt install xorriso`, then `./scripts/build-iso.sh` (no root needed; ~13 GB of free disk).
 
 ## What gets installed
 

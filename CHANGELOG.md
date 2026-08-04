@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.6.0 — 2026-08-04
+
+### Installable ISO
+- New `scripts/build-iso.sh`: remasters the official Ubuntu 26.04 desktop ISO with the X47 build baked in (autoinstall seed + repo at `/opt/ubuntu-x47-build` + first-login setup terminal). Userspace only (xorriso), no root.
+- New *Build X47 ISO* GitHub Actions workflow: builds the ISO and attaches it to a release, split into <2 GB parts (`cat *.part > iso` to rejoin, `SHA256SUMS` included).
+
+### Desktop looks
+- **Glitch window animations** — Burn My Windows profile switched from Matrix to the subtler hacker-style Glitch effect (400 ms).
+- **Hover-only window controls** — minimize/maximize/close are invisible until the titlebar is hovered, via managed GTK3/GTK4 css blocks (also installed into snap app sandboxes, e.g. Firefox).
+
 ## v1.5.0 — 2026-08-04
 
 ### Desktop looks
