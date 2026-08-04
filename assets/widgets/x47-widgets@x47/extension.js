@@ -54,6 +54,7 @@ export default class LinuxCmdHelperExtension extends Extension {
 
         this._placeIdle = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._placeCard();
+            this._restack();
             this._placeIdle = 0;
             return GLib.SOURCE_REMOVE;
         });
@@ -268,17 +269,36 @@ export default class LinuxCmdHelperExtension extends Extension {
         const wg = global.window_group;
         if (!this._card || this._card.get_parent() !== wg)
             return;
-        let desktop = null;
-        for (const actor of global.get_window_actors()) {
-            const win = actor.meta_window;
-            if (win && win.get_window_type() === Meta.WindowType.DESKTOP &&
-                actor.get_parent() === wg)
-                desktop = actor;
+
+        // Place the card directly below the lowest *real* app window, so it
+        // sits under every application window but above the wallpaper and the
+        // desktop-icons (DESKTOP-type) window. This does not depend on
+        // identifying DING's actor, and it never hides the card at the bottom.
+        const appTypes = new Set([
+            Meta.WindowType.NORMAL,
+            Meta.WindowType.DIALOG,
+            Meta.WindowType.MODAL_DIALOG,
+            Meta.WindowType.UTILITY,
+            Meta.WindowType.SPLASHSCREEN,
+        ]);
+        const children = wg.get_children();
+        let lowestApp = null;
+        for (const child of children) {
+            if (child === this._card)
+                continue;
+            const win = typeof child.meta_window !== 'undefined'
+                ? child.meta_window : null;
+            if (win && appTypes.has(win.get_window_type())) {
+                lowestApp = child;
+                break; // children are bottom-to-top; first match is lowest
+            }
         }
-        if (desktop)
-            wg.set_child_above_sibling(this._card, desktop);
+
+        if (lowestApp)
+            wg.set_child_below_sibling(this._card, lowestApp);
         else
-            wg.set_child_at_index(this._card, 0);
+            wg.set_child_above_sibling(this._card, null); // no app windows: top, visible on desktop
+
         this._updateFullscreenVisibility();
     }
 
