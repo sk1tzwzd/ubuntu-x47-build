@@ -72,7 +72,11 @@ export default class X47WidgetsExtension extends Extension {
         this._monitorsChangedId = Main.layoutManager.connect(
             'monitors-changed', () => this._position());
 
-        this._session = new Soup.Session({timeout: 15});
+        // CoinGecko rejects requests without a descriptive User-Agent (403).
+        this._session = new Soup.Session({
+            timeout: 15,
+            user_agent: 'x47-widgets/1.0 (GNOME Shell extension)',
+        });
         this._prevCpu = null;
 
         this._tickClocks();
@@ -153,6 +157,11 @@ export default class X47WidgetsExtension extends Extension {
             msg, GLib.PRIORITY_DEFAULT, null, (session, res) => {
                 try {
                     const bytes = session.send_and_read_finish(res);
+                    if (msg.get_status() !== Soup.Status.OK) {
+                        this._btcPrice?.set_text('unavailable');
+                        this._btcChange?.set_text(`HTTP ${msg.get_status()}`);
+                        return;
+                    }
                     const data = JSON.parse(new TextDecoder().decode(bytes.get_data()));
                     const usd = data?.bitcoin?.usd;
                     const chg = data?.bitcoin?.usd_24h_change;
@@ -167,8 +176,9 @@ export default class X47WidgetsExtension extends Extension {
                         this._btcChange.remove_style_class_name(up ? 'x47-down' : 'x47-up');
                         this._btcChange.add_style_class_name(up ? 'x47-up' : 'x47-down');
                     }
-                } catch {
+                } catch (e) {
                     // Network down or API hiccup — keep the last value.
+                    logError(e, 'x47-widgets: BTC fetch failed');
                 }
             });
     }
