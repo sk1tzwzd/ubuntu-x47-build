@@ -21,7 +21,7 @@ BG = Path(sys.argv[3]) if len(sys.argv) > 3 else ROOT / "assets/desktop/x47-circ
 W, H = 3840, 2160
 # Fraction of canvas width the ASCII block should span (keeps it small with
 # generous negative space, like the original centered logo).
-ART_WIDTH_FRAC = 0.42
+ART_WIDTH_FRAC = 0.315
 FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 
 
