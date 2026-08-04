@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.9.1 — 2026-08-05
+
+### Terminal
+- WezTerm spawn sized to the reference window (~128×30 / ~1008×450 inner).
+- **No OS title bar** — `INTEGRATED_BUTTONS|RESIZE`; Hide / Maximize / Close sit on the right of the tab bar.
+- Docs site hero + WezTerm screenshots refreshed to the current desktop (ASCII wallpaper, CMD Helper, dock).
+
+### Fixes
+- Linux CMD Helper stacking confirmed after login (visible top-right above desktop icons).
+
 ## v1.9.0 — 2026-08-05
 
 ### Desktop widget

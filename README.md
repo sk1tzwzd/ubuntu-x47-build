@@ -2,7 +2,7 @@
 
 Idempotent installer that reproduces a custom Ubuntu 24.04 / 26 desktop:
 
-- **WezTerm** as the default terminal (wide window so the **X47 watermark** sits on the right); GNOME Terminal is removed
+- **WezTerm** as the default terminal (compact spawn size, **X47 watermark** on the right, no OS title bar — minimize/maximize/close live on the tab bar); GNOME Terminal is removed
 - **Mullvad VPN** (apt) and **Tor Browser** (latest from Tor Project, registered in the app menu)
 - Pentest + developer toolchain (apt, Go, pipx, cargo, GitHub release binaries, gems)
 - Custom **app-grid launchers** and icons (`kali-*` pack, custom `kali-cool-*`, `x47duster` fallback — no Kali dragon)
@@ -112,7 +112,7 @@ To build it yourself: `sudo apt install xorriso`, then `./scripts/build-iso.sh` 
 ### Terminal
 - WezTerm AppImage under `~/tools/wezterm`
 - Wrapper at `~/.local/bin/wezterm`
-- Config: `~/.config/wezterm/wezterm.lua` (`initial_cols=160`, `initial_rows=48`) + watermark `~/.config/wzd/watermark.png`
+- Config: `~/.config/wezterm/wezterm.lua` (compact spawn, `INTEGRATED_BUTTONS` tab-bar chrome) + watermark `~/.config/wzd/watermark.png`
 - Default terminal via `xdg-terminals.list` + GNOME gsettings; GNOME Terminal purged / hidden
 
 ### Privacy
