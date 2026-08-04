@@ -165,9 +165,24 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
           snap and deb).
         </p>
         <ul class="clean">
-          <li><strong>Main browser</strong> — telemetry, studies, Pocket and sponsored content off; tracking protection with cryptomining + fingerprinting blocking; HTTPS-only; DNS-over-HTTPS; no prefetch. JavaScript stays on.</li>
+          <li><strong>Main browser</strong> — telemetry, studies, Pocket and sponsored content off; tracking protection with cryptomining + fingerprinting blocking; HTTPS-only; DNS-over-HTTPS; no prefetch. JavaScript stays on. Also forced as the <strong>default browser</strong> (replaces Chrome).</li>
           <li><strong>Anon browser</strong> — stays Tor Browser "Safest": JavaScript off, no SOCKS proxy (transparent Tor), and DoH hard-off (<code>network.trr.mode=5</code>) so DNS cannot bypass Tor.</li>
         </ul>
+      </section>
+
+      <section>
+        <h2>Updating Cursor</h2>
+        <p class="section-lead">
+          Cursor is installed from the official apt repo. Prefer:
+        </p>
+        <pre><code>update-cursor
+# or: sudo apt update &amp;&amp; sudo apt install --only-upgrade cursor</code></pre>
+        <p class="section-lead" style="margin-top:1rem">
+          If the Cursor GUI says an update is available but apt says you already
+          have the newest version, that is a known Cursor lag (in-app feed vs
+          apt repo) — not caused by this build. Silence the nag with
+          <code>update-cursor --quiet-gui</code>.
+        </p>
       </section>
 
       <section>

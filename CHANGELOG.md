@@ -1,35 +1,30 @@
 # Changelog
 
-## Unreleased
-
-### Performance
-- New `06-perf.sh` module (default, opt out with `--skip-perf`) trims boot time and idle resource use, all reversible: takes `chkrootkit`/`bettercap` off the boot path, cuts the GRUB timeout to 1s, masks ModemManager, switches ClamAV to on-demand scans, disables kdump-tools and cloud-init, and turns off the printing/discovery stack.
+## v1.7.0 — 2026-08-05
 
 ### Desktop looks
 - **TV Glitch** window open/close (replaces plain Glitch) via the managed Burn My Windows profile.
+- **ASCII duster wallpaper** — X47 knuckle-duster as glowing teal ASCII art on a dark circuit background (`scripts/make-wallpaper.py`).
 
 ### Desktop widgets
-- **Under app windows** — cards sit below `window_group` so they never overlay programs; still clickable on empty desktop (drag from the title).
-- **Hide in fullscreen** — all widgets vanish when any primary-monitor window is fullscreen; restore on exit.
-- **Snap-to-grid** — 16px grid on drag-end and default layout; positions in `~/.config/x47-widgets/layout.json`.
+- Cards sit **under app windows** (below `window_group`), **hide in fullscreen**, and **snap to a 16px grid**.
+- Drag from the card **title**; positions in `~/.config/x47-widgets/layout.json`.
 - **Install / Update helper** — always shows `apt upgrade`, `snap refresh`, `update-cursor`; search returns install or upgrade/refresh commands (click to copy).
-- **CPU/RAM sparklines**, clocks, BTC, cybersecurity Reddit feed (as before).
-
-### Firefox
-- Hardening module also forces **hardened Firefox** as the default browser (`xdg-settings` + `mimeapps.list`), replacing Chrome.
-
-### Tools
-- `update-cursor` helper (`~/.local/bin/update-cursor`): upgrades via apt (source of truth for .deb). Documents the known Cursor GUI-vs-apt lag; `--quiet-gui` sets `update.mode=none`.
+- CPU/RAM sparklines, London + New York clocks, BTC ticker, cybersecurity Reddit feed.
 
 ### Performance / debloat
-- Debloat also removes **Ubuntu Help** (`yelp` / docs) and the **App Centre** + **Desktop Security Centre** snaps.
+- New `06-perf.sh` (opt out with `--skip-perf`): chkrootkit/bettercap off boot path, GRUB timeout 1s, ModemManager masked, ClamAV on-demand, kdump/cloud-init/printing off.
+- Debloat also removes **Ubuntu Help** (`yelp` / docs; launcher hidden even if re-pulled), **App Centre**, and **Desktop Security Centre** snaps.
 
-### Desktop looks
-- **ASCII duster wallpaper** — the wallpaper renders the X47 knuckle-duster as glowing teal ASCII art, centered small with negative space over the dark-minimal circuit background. Reproducible via `scripts/make-wallpaper.py` from `assets/desktop/x47-ascii.txt` + `assets/desktop/x47-circuit-bg.png`.
+### Firefox
+- Keeps the hardened snap (snap→deb swap reverted); `scripts/firefox-restore-snap.sh` for machines that swapped earlier.
+- Hardening module forces **hardened Firefox as the default browser** (`xdg-settings` + `mimeapps.list`).
+
+### Tools
+- `update-cursor` (`~/.local/bin/update-cursor`): apt-only upgrade; documents Cursor’s GUI-vs-apt lag; `--quiet-gui` sets `update.mode=none`.
 
 ### Fixes
-- **Firefox** — reverted the snap→deb swap; the build keeps the hardened Firefox snap. `scripts/firefox-restore-snap.sh` restores the snap (and migrated profile) on machines where the earlier swap ran.
-- **BTC widget** — set a descriptive User-Agent so CoinGecko stops returning 403 (the ticker was silently blank); HTTP errors now surface on the card.
+- **BTC widget** — descriptive User-Agent so CoinGecko doesn’t 403; HTTP errors surface on the card.
 
 ## v1.6.0 — 2026-08-04
 
