@@ -11,6 +11,7 @@
 #   ./install.sh --skip-apt       # skip apt repos/packages
 #   ./install.sh --skip-hardening # skip ufw/fail2ban/sysctl restore
 #   ./install.sh --skip-debloat   # keep language packs + default desktop apps
+#   ./install.sh --skip-desktop-fx # skip bottom dock + 3D window/desktop effects
 #   ./install.sh --with-amnesia   # also create the amnesiac Tor-forced 'anon' user
 #   ./install.sh --only 10-terminal,30-icons
 #
@@ -23,12 +24,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 X47_SKIP_APT=0
 X47_SKIP_HARDENING=0
 X47_SKIP_DEBLOAT=0
+X47_SKIP_DESKTOP_FX=0
 X47_USER_ONLY=0
 X47_WITH_AMNESIA=0
 X47_ONLY=""
 
 usage() {
-  sed -n '2,18p' "$0" | sed 's/^# \?//'
+  sed -n '2,19p' "$0" | sed 's/^# \?//'
   exit 0
 }
 
@@ -37,6 +39,7 @@ while [[ $# -gt 0 ]]; do
     --skip-apt) X47_SKIP_APT=1; shift ;;
     --skip-hardening) X47_SKIP_HARDENING=1; shift ;;
     --skip-debloat) X47_SKIP_DEBLOAT=1; shift ;;
+    --skip-desktop-fx) X47_SKIP_DESKTOP_FX=1; shift ;;
     --user-only) X47_USER_ONLY=1; X47_SKIP_APT=1; X47_SKIP_HARDENING=1; shift ;;
     --with-amnesia) X47_WITH_AMNESIA=1; shift ;;
     --skip-amnesia) X47_WITH_AMNESIA=0; shift ;;
@@ -45,7 +48,7 @@ while [[ $# -gt 0 ]]; do
     *) die "unknown flag: $1 (try --help)" ;;
   esac
 done
-export X47_SKIP_APT X47_SKIP_HARDENING X47_SKIP_DEBLOAT X47_USER_ONLY X47_WITH_AMNESIA
+export X47_SKIP_APT X47_SKIP_HARDENING X47_SKIP_DEBLOAT X47_SKIP_DESKTOP_FX X47_USER_ONLY X47_WITH_AMNESIA
 
 MODULES=(
   00-apt.sh
@@ -61,6 +64,7 @@ MODULES=(
   31-launchers.sh
   40-hardening.sh
   50-gnome.sh
+  51-desktop-fx.sh
   60-amnesia.sh
 )
 

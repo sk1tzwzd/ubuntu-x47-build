@@ -32,6 +32,7 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 | `--skip-apt` | Skip third-party repos and apt packages |
 | `--skip-hardening` | Skip UFW / fail2ban / sysctl / auditd restore |
 | `--skip-debloat` | Keep language packs and default desktop apps (no trimming) |
+| `--skip-desktop-fx` | Skip bottom dock + 3D window/desktop effects |
 | `--with-amnesia` | Also create the amnesiac, Tor-forced `anon` user (opt-in) |
 | `--only 10-terminal,30-icons` | Run a subset of modules |
 
@@ -50,6 +51,15 @@ Everything is reversible: `sudo apt-get install <pkg>`. Core desktop/session pac
 
 - **Main browser** — a system-wide enterprise policy at `/etc/firefox/policies/policies.json` (honored by the Firefox snap and deb): telemetry/studies/Pocket/sponsored content off, tracking protection with cryptomining + fingerprinting blocking, HTTPS-only, DNS-over-HTTPS, no prefetch/speculative connections. JavaScript stays on for normal browsing.
 - **Anon browser** — stays Tor Browser "Safest": JavaScript off, no SOCKS proxy (transparent Tor), and DoH hard-off (`network.trr.mode=5`) so DNS can never bypass Tor.
+
+## Desktop looks
+
+By default the installer tunes the GNOME desktop for the main user (opt out with `--skip-desktop-fx`):
+
+- **Bottom dock** — Ubuntu Dock moved to the bottom as a floating, centered dock.
+- **3D effects** — version-matched GNOME extensions from extensions.gnome.org: Coverflow Alt-Tab (3D window switcher), Desktop Cube (rotating 3D workspaces, fixed at 4), and Burn My Windows (open/close animations).
+
+User-level only (no sudo). On Wayland you must **log out and back in** once for the effects to load. Reverse with `gnome-extensions disable <uuid>` or `gsettings reset org.gnome.shell.extensions.dash-to-dock dock-position`.
 
 ## What gets installed
 

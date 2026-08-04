@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.4.0 — 2026-08-04
+
+### Desktop looks
+- New `51-desktop-fx.sh` module (default, opt out with `--skip-desktop-fx`): moves the Ubuntu Dock to the bottom and installs version-matched 3D effects — Coverflow Alt-Tab (window switcher), Desktop Cube (rotating workspaces, fixed at 4), and Burn My Windows (open/close animations). User-level; requires a Wayland log out/in to load. Main user only.
+
 ## v1.3.0 — 2026-08-02
 
 ### Performance / debloat

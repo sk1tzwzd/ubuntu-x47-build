@@ -54,6 +54,7 @@ chmod +x install.sh snapshot.sh modules/*.sh
             <tr><td><code>--skip-apt</code></td><td>Skip third-party repos and apt packages</td></tr>
             <tr><td><code>--skip-hardening</code></td><td>Skip UFW / fail2ban / sysctl / auditd restore</td></tr>
             <tr><td><code>--skip-debloat</code></td><td>Keep language packs and default desktop apps (no trimming)</td></tr>
+            <tr><td><code>--skip-desktop-fx</code></td><td>Skip bottom dock + 3D window/desktop effects</td></tr>
             <tr><td><code>--with-amnesia</code></td><td>Create the amnesiac Tor-forced <code>anon</code> user</td></tr>
             <tr><td><code>--only 10-terminal,30-icons</code></td><td>Run a subset of modules</td></tr>
           </tbody>
@@ -84,6 +85,25 @@ chmod +x install.sh snapshot.sh modules/*.sh
           <li><strong>Cleanup</strong> — <code>apt autoremove --purge</code>, cache clean, journal vacuum to 200M, thumbnail cache</li>
           <li><strong>Tweaks</strong> — <code>fstrim.timer</code>, <code>zram-config</code> compressed swap, <code>vm.swappiness=10</code>, file indexer (tracker/localsearch) masked</li>
         </ul>
+      </section>
+
+      <section>
+        <h2>Desktop looks</h2>
+        <p class="section-lead">
+          Runs by default for the main user (opt out with <code>--skip-desktop-fx</code>).
+          User-level only; on Wayland, log out and back in once so the effects load.
+        </p>
+        <ul class="clean">
+          <li><strong>Bottom dock</strong> — Ubuntu Dock moved to the bottom as a floating, centered dock</li>
+          <li><strong>3D window switcher</strong> — Coverflow Alt-Tab</li>
+          <li><strong>Rotating desktops</strong> — Desktop Cube (workspaces fixed at 4)</li>
+          <li><strong>Window animations</strong> — Burn My Windows open/close effects</li>
+        </ul>
+        <div class="aside">
+          Extensions are pulled version-matched from extensions.gnome.org. On a
+          brand-new GNOME release any effect without a compatible build yet is
+          skipped with a warning; the bottom dock always applies.
+        </div>
       </section>
 
       <section>
