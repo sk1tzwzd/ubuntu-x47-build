@@ -19,14 +19,17 @@ X47_FX_UUIDS=(
 )
 
 dock_to_bottom() {
-  log "moving Ubuntu Dock to the bottom (intelligent autohide, reveal on hover)"
+  log "moving Ubuntu Dock to the bottom (always visible; hides in fullscreen)"
   gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || warn "dock-position failed"
   gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false 2>/dev/null || true
-  # Hide when a window overlaps; reveal when the cursor is pushed to the edge.
-  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide true 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show true 2>/dev/null || true
+  # Static dock: always on screen, only hide when a window is fullscreen (F11).
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock autohide false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock autohide-in-fullscreen true 2>/dev/null || true
+  # F11 toggles window fullscreen system-wide (apps that handle F11 themselves still work).
+  gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
 }
 
 # Enable a uuid both via the CLI and by appending to the enabled-extensions
@@ -121,12 +124,20 @@ coverflow_tune() {
   # The extension ships its own compiled schema, so gsettings needs
   # --schemadir to find org.gnome.shell.extensions.coverflowalttab.
   local sdir="$HOME/.local/share/gnome-shell/extensions/CoverflowAltTab@palatis.blogspot.com/schemas"
+  local edir="$HOME/.local/share/gnome-shell/extensions/CoverflowAltTab@palatis.blogspot.com"
   [[ -f "$sdir/gschemas.compiled" ]] || { warn "Coverflow schema not found — skipping tuning"; return 0; }
   log "tuning Coverflow Alt-Tab (3D switcher bound to window/app switching)"
   gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab switcher-style 'Coverflow' 2>/dev/null || true
   gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab bind-to-switch-windows true 2>/dev/null || true
   gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab bind-to-switch-applications true 2>/dev/null || true
   gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab hide-panel true 2>/dev/null || true
+  # Windows-like: Alt+Tab one step past the last window → Desktop.
+  if [[ -d "$edir" && -f "$AM_DESKTOP/patch-coverflow-alttab-desktop.py" ]]; then
+    log "patching Coverflow Alt-Tab so you can Alt+Tab to the desktop"
+    python3 "$AM_DESKTOP/patch-coverflow-alttab-desktop.py" "$edir" \
+      && ok "Alt+Tab past last window selects Desktop (log out/in once on Wayland)" \
+      || warn "Coverflow desktop patch failed (extension API may have changed)"
+  fi
 }
 
 # Append the hover-only window-controls CSS to a gtk.css (idempotent via
@@ -162,13 +173,42 @@ hover_window_controls() {
   install_hover_css_into "$HOME/.config/gtk-3.0" "$src"
   install_hover_css_into "$HOME/.config/gtk-4.0" "$src"
   # Snap apps (e.g. Firefox) read gtk.css from their own sandboxed config dir.
+  # Prefer the `current` symlink; also refresh any revision dirs that already
+  # have our managed block (older installs wrote there directly).
   local snap_conf
-  for snap_conf in "$HOME"/snap/*/current/.config; do
+  for snap_conf in "$HOME"/snap/*/current/.config "$HOME"/snap/*/*/.config; do
     [[ -d "$snap_conf" ]] || continue
+    [[ "$snap_conf" == */common/.config ]] && continue
     install_hover_css_into "$snap_conf/gtk-3.0" "$src"
     install_hover_css_into "$snap_conf/gtk-4.0" "$src"
   done
   ok "hover-only window controls installed (restart apps to pick it up)"
+}
+
+# Replace a marked block in a text file (or append if missing).
+replace_marked_block() {
+  local dest="$1" begin="$2" end="$3" src="$4"
+  mkdir -p "$(dirname "$dest")"
+  local tmp
+  tmp="$(mktemp)"
+  if [[ -f "$dest" ]] && grep -qF "$begin" "$dest"; then
+    awk -v b="$begin" -v e="$end" '
+      index($0, b) { skip = 1 }
+      !skip { print }
+      index($0, e) { skip = 0 }
+    ' "$dest" > "$tmp"
+  elif [[ -f "$dest" ]]; then
+    cat "$dest" > "$tmp"
+  else
+    : > "$tmp"
+  fi
+  {
+    cat "$tmp"
+    # Ensure a trailing newline before the block when appending to non-empty.
+    [[ -s "$tmp" ]] && [[ "$(tail -c1 "$tmp" | wc -l)" -eq 0 ]] && printf '\n'
+    cat "$src"
+  } > "$dest"
+  rm -f "$tmp"
 }
 
 # Firefox renders its own min/max/close buttons, so it needs a userChrome.css
@@ -176,6 +216,8 @@ hover_window_controls() {
 firefox_hover_buttons() {
   local src="$AM_DESKTOP/firefox-userChrome.css"
   [[ -f "$src" ]] || { warn "missing $src — skipping Firefox hover buttons"; return 0; }
+  local begin="/* --- x47 hover window buttons (Firefox) --- */"
+  local end="/* --- end x47 hover window buttons --- */"
   local prof found=0
   for prof in "$HOME"/snap/firefox/common/.mozilla/firefox/*.default* \
               "$HOME"/.mozilla/firefox/*.default*; do
@@ -183,11 +225,7 @@ firefox_hover_buttons() {
     found=1
     mkdir -p "$prof/chrome"
     local dest="$prof/chrome/userChrome.css"
-    if [[ -f "$dest" ]] && ! grep -qF "x47 hover window buttons" "$dest"; then
-      cat "$src" >> "$dest"
-    elif [[ ! -f "$dest" ]]; then
-      install -m 0644 "$src" "$dest"
-    fi
+    replace_marked_block "$dest" "$begin" "$end" "$src"
     if ! grep -qF "toolkit.legacyUserProfileCustomizations.stylesheets" "$prof/user.js" 2>/dev/null; then
       echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$prof/user.js"
     fi
@@ -197,6 +235,22 @@ firefox_hover_buttons() {
   else
     warn "no Firefox profile found — hover buttons will apply after Firefox first run + rerun"
   fi
+}
+
+# Super+Shift+S screenshot — gated by ~/.config/x47/settings.conf (x47-settings).
+screenshot_keybindings() {
+  # shellcheck disable=SC1091
+  . "$X47_ROOT/lib/settings.sh"
+  x47_settings_ensure
+  if [[ "$(x47_settings_get win_screenshot 1)" != "1" ]]; then
+    log "win_screenshot disabled in X47 Settings — Print only"
+    gsettings set org.gnome.shell.keybindings show-screenshot-ui "['Print']" 2>/dev/null || true
+    return 0
+  fi
+  log "binding Super+Shift+S to the screenshot UI (Print kept; toggle via x47-settings)"
+  gsettings set org.gnome.shell.keybindings show-screenshot-ui "['Print', '<Super><Shift>s']" 2>/dev/null \
+    || warn "could not set show-screenshot-ui keybinding"
+  ok "screenshot: Print or Super+Shift+S"
 }
 
 set_wallpaper() {
@@ -220,12 +274,13 @@ set_wallpaper() {
   install_ws_walls_extension
 }
 
-install_ws_walls_extension() {
-  local uuid="x47-ws-walls@x47"
+# Install a bundled extension from assets/extensions/<uuid> and enable it.
+install_local_extension() {
+  local uuid="$1" label="${2:-$1}"
   local src="$X47_ROOT/assets/extensions/$uuid"
   local dest="$HOME/.local/share/gnome-shell/extensions/$uuid"
-  [[ -d "$src" ]] || { warn "missing $src — workspace wall colours skipped"; return 0; }
-  log "installing workspace wallpaper switcher ($uuid)"
+  [[ -d "$src" ]] || { warn "missing $src — $label skipped"; return 1; }
+  log "installing $label ($uuid)"
   mkdir -p "$(dirname "$dest")"
   rm -rf "$dest"
   cp -a "$src" "$dest"
@@ -239,7 +294,17 @@ install_ws_walls_extension() {
       gsettings set org.gnome.shell enabled-extensions "${cur%]}, '$uuid']" 2>/dev/null || true
     fi
   fi
-  ok "workspace wall colours enabled (log out/in on Wayland)"
+  ok "$label enabled (log out/in on Wayland)"
+}
+
+install_ws_walls_extension() {
+  install_local_extension "x47-ws-walls@x47" "workspace wallpaper switcher"
+}
+
+# One click on a top banner focuses/opens the notifying app.
+notification_click_activate() {
+  gsettings set org.gnome.desktop.notifications show-banners true 2>/dev/null || true
+  install_local_extension "x47-notif-activate@x47" "notification click → open app"
 }
 
 module_desktop_fx() {
@@ -274,6 +339,8 @@ module_desktop_fx() {
   coverflow_tune
   hover_window_controls
   firefox_hover_buttons
+  screenshot_keybindings
+  notification_click_activate
   set_wallpaper
 
   ok "desktop-fx module done"

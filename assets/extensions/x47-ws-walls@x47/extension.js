@@ -54,6 +54,7 @@ export default class X47WsWallsExtension extends Extension {
             idx = n - 1;
 
         const file = FILES[idx];
+        console.log(`x47-ws-walls: workspace ${idx + 1} -> ${file}`);
         const path = GLib.build_filenamev([this._bgDir, file]);
         if (!GLib.file_test(path, GLib.FileTest.IS_REGULAR)) {
             // Fall back to teal if a colour variant is missing.

@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+# View / change X47 optional features anytime.
+#
+# Usage:
+#   x47-settings              # interactive GUI if possible, else menu
+#   x47-settings list
+#   x47-settings get KEY
+#   x47-settings set KEY on|off
+#   x47-settings gui
+#   x47-settings apply        # re-apply gsettings from the conf file
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || realpath "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" && pwd)"
+
+# Resolve lib/: repo checkout (scripts/../lib) or installed share tree (bin/../lib).
+X47_LIB=""
+if [[ -f "$HERE/../lib/settings.sh" ]]; then
+  X47_LIB="$(cd "$HERE/../lib" && pwd)"
+elif [[ -f "$HOME/.local/share/ubuntu-x47-build/lib/settings.sh" ]]; then
+  X47_LIB="$HOME/.local/share/ubuntu-x47-build/lib"
+fi
+[[ -n "$X47_LIB" ]] || { echo "x47-settings: cannot find lib/settings.sh" >&2; exit 1; }
+
+# shellcheck disable=SC1091
+. "$X47_LIB/common.sh"
+# shellcheck disable=SC1091
+. "$X47_LIB/settings.sh"
+
+FEATURES=(
+  "putty_clipboard|PuTTY-style terminal clipboard (select copy, right-click paste, Ctrl+C/V)"
+  "win_screenshot|Windows-style Super+Shift+S screenshot (Print always works)"
+)
+
+usage() {
+  cat <<'EOF'
+X47 Settings — toggle optional features
+
+  x47-settings              Open settings (GUI or text menu)
+  x47-settings list         Show current values
+  x47-settings get KEY      Print 0 or 1
+  x47-settings set KEY on|off
+  x47-settings gui          Force Zenity checklist
+  x47-settings apply        Apply screenshot binding from config
+
+Keys:
+  putty_clipboard   PuTTY mouse/keyboard clipboard in WezTerm (restart terminal after change)
+  win_screenshot    Super+Shift+S opens the GNOME screenshot UI
+EOF
+}
+
+cmd_list() {
+  x47_settings_ensure
+  local entry key desc val mark
+  printf '%-18s %-6s %s\n' 'KEY' 'VALUE' 'DESCRIPTION'
+  printf '%-18s %-6s %s\n' '---' '-----' '-----------'
+  for entry in "${FEATURES[@]}"; do
+    key="${entry%%|*}"
+    desc="${entry#*|}"
+    val="$(x47_settings_get "$key" 0)"
+    mark="off"
+    [[ "$val" == "1" ]] && mark="on"
+    printf '%-18s %-6s %s\n' "$key" "$mark" "$desc"
+  done
+  echo
+  echo "Config: $X47_SETTINGS_FILE"
+}
+
+cmd_get() {
+  local key="${1:-}"
+  [[ -n "$key" ]] || { echo "usage: x47-settings get KEY" >&2; exit 2; }
+  x47_settings_get "$key" 0
+}
+
+cmd_set() {
+  local key="${1:-}" raw="${2:-}"
+  [[ -n "$key" && -n "$raw" ]] || { echo "usage: x47-settings set KEY on|off" >&2; exit 2; }
+  local known=0 entry
+  for entry in "${FEATURES[@]}"; do
+    [[ "${entry%%|*}" == "$key" ]] && known=1 && break
+  done
+  [[ "$known" == "1" ]] || { echo "unknown key: $key (try: x47-settings list)" >&2; exit 2; }
+  x47_settings_set "$key" "$raw" || { echo "value must be on/off (or 1/0)" >&2; exit 2; }
+  x47_settings_apply
+  ok "$key=$(x47_settings_get "$key")"
+  if [[ "$key" == "putty_clipboard" ]]; then
+    log "restart WezTerm (or open a new window) to pick up clipboard changes"
+  fi
+}
+
+cmd_gui() {
+  x47_settings_ensure
+  if ! have zenity; then
+    warn "zenity not installed — falling back to text menu"
+    cmd_menu
+    return
+  fi
+  local args=() entry key desc val on
+  for entry in "${FEATURES[@]}"; do
+    key="${entry%%|*}"
+    desc="${entry#*|}"
+    val="$(x47_settings_get "$key" 0)"
+    on="FALSE"
+    [[ "$val" == "1" ]] && on="TRUE"
+    args+=("$on" "$desc" "$key")
+  done
+  local picked
+  picked="$(zenity --list --checklist \
+    --title='X47 Settings' \
+    --text='Optional features (unchecked = off). WezTerm changes need a new terminal window.' \
+    --column='On' --column='Feature' --column='Key' \
+    --print-column=3 --hide-column=3 --separator='|' \
+    --width=640 --height=320 \
+    "${args[@]}" 2>/dev/null)" || exit 0
+
+  for entry in "${FEATURES[@]}"; do
+    key="${entry%%|*}"
+    if [[ "|$picked|" == *"|$key|"* ]]; then
+      x47_settings_set "$key" on
+    else
+      x47_settings_set "$key" off
+    fi
+  done
+  x47_settings_apply
+  zenity --info --title='X47 Settings' \
+    --text='Saved.\n\nIf you changed the terminal clipboard, open a new WezTerm window.' 2>/dev/null || true
+  cmd_list
+}
+
+cmd_menu() {
+  x47_settings_ensure
+  echo "X47 Settings ($X47_SETTINGS_FILE)"
+  echo
+  local i=1 entry key desc val
+  for entry in "${FEATURES[@]}"; do
+    key="${entry%%|*}"
+    desc="${entry#*|}"
+    val="$(x47_settings_get "$key" 0)"
+    printf '  %d) [%s] %s (%s)\n' "$i" "$([[ "$val" == "1" ]] && echo ON || echo off)" "$desc" "$key"
+    i=$((i + 1))
+  done
+  echo "  q) quit"
+  echo
+  local choice
+  read -rp "Toggle which feature? " choice
+  [[ "$choice" == "q" || -z "$choice" ]] && return 0
+  if ! [[ "$choice" =~ ^[0-9]+$ ]] || (( choice < 1 || choice > ${#FEATURES[@]} )); then
+    echo "invalid choice" >&2
+    exit 2
+  fi
+  entry="${FEATURES[$((choice - 1))]}"
+  key="${entry%%|*}"
+  val="$(x47_settings_get "$key" 0)"
+  if [[ "$val" == "1" ]]; then
+    cmd_set "$key" off
+  else
+    cmd_set "$key" on
+  fi
+}
+
+main() {
+  local cmd="${1:-}"
+  case "$cmd" in
+    "") if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && have zenity; then cmd_gui; else cmd_menu; fi ;;
+    list) cmd_list ;;
+    get) shift; cmd_get "$@" ;;
+    set) shift; cmd_set "$@" ;;
+    gui) cmd_gui ;;
+    apply) x47_settings_ensure; x47_settings_apply; ok "applied"; cmd_list ;;
+    -h|--help|help) usage ;;
+    *) echo "unknown command: $cmd" >&2; usage; exit 2 ;;
+  esac
+}
+
+main "$@"

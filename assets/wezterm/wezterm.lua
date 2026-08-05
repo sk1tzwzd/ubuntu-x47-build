@@ -1,7 +1,27 @@
 local wezterm = require 'wezterm'
+local act = wezterm.action
 local config = wezterm.config_builder and wezterm.config_builder() or {}
 local home = os.getenv('HOME') or ''
 local mux = wezterm.mux
+
+-- Read ~/.config/x47/settings.conf (managed by x47-settings).
+local function x47_setting_enabled(key, default_on)
+  local path = home .. '/.config/x47/settings.conf'
+  local f = io.open(path, 'r')
+  if not f then
+    return default_on
+  end
+  for line in f:lines() do
+    local k, v = line:match('^([%w_]+)%s*=%s*(%S+)')
+    if k == key then
+      f:close()
+      v = string.lower(v or '')
+      return v == '1' or v == 'true' or v == 'on' or v == 'yes'
+    end
+  end
+  f:close()
+  return default_on
+end
 
 -- Base look
 config.font = wezterm.font_with_fallback { 'DejaVu Sans Mono', 'Noto Sans Mono' }
@@ -39,6 +59,44 @@ wezterm.on('gui-startup', function(cmd)
   -- Inner size ≈ the reference screenshot's content area (no title bar).
   gui:set_inner_size(1008, 450)
 end)
+
+-- Optional PuTTY-style clipboard (toggle: x47-settings set putty_clipboard on|off).
+if x47_setting_enabled('putty_clipboard', true) then
+  -- drag left → copy; right-click → paste; Ctrl+C copy-or-SIGINT; Ctrl+V paste
+  config.mouse_bindings = {
+    {
+      event = { Up = { streak = 1, button = 'Left' } },
+      mods = 'NONE',
+      action = act.CompleteSelectionOrOpenLinkAtMouseCursor 'ClipboardAndPrimarySelection',
+    },
+    {
+      event = { Down = { streak = 1, button = 'Right' } },
+      mods = 'NONE',
+      action = act.PasteFrom 'Clipboard',
+    },
+  }
+
+  config.keys = {
+    {
+      key = 'c',
+      mods = 'CTRL',
+      action = wezterm.action_callback(function(window, pane)
+        local selection = window:get_selection_text_for_pane(pane)
+        if selection and selection ~= '' then
+          window:perform_action(act.CopyTo 'ClipboardAndPrimarySelection', pane)
+          window:perform_action(act.ClearSelection, pane)
+        else
+          window:perform_action(act.SendKey { key = 'c', mods = 'CTRL' }, pane)
+        end
+      end),
+    },
+    {
+      key = 'v',
+      mods = 'CTRL',
+      action = act.PasteFrom 'Clipboard',
+    },
+  }
+end
 
 -- X47 ASCII watermark: sits BEHIND the text, small, anchored to the right.
 config.background = {

@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.9.3 — 2026-08-05
+
+### Fixes
+- **App menus clickable again** — hover-only window controls no longer sit invisible on top of Firefox (and other CSD) header menus. GTK/Firefox CSS is scoped to min/max/close only and uses `pointer-events: none` while hidden.
+
+### Optional features + Settings
+- New **X47 Settings** app/CLI (`x47-settings`) toggles features anytime; values in `~/.config/x47/settings.conf`.
+- **PuTTY-style WezTerm clipboard** (select copy, right-click paste, Ctrl+C/V) — default on; `--skip-putty-clipboard` or `x47-settings set putty_clipboard off`.
+- **Super+Shift+S** screenshot — default on; `--skip-win-screenshot` or `x47-settings set win_screenshot off` (**Print** always kept).
+
+### Desktop
+- **Bottom dock is static** (always visible); hides only in F11 fullscreen (`autohide-in-fullscreen`). F11 bound to toggle-fullscreen.
+- **Alt+Tab to desktop** — in Coverflow, one more Alt+Tab past the last window selects **Desktop** (release Alt to minimize all). Tip: press **D** while the switcher is open for the same action.
+- **Click notification → app** — `x47-notif-activate@x47` makes a single click on a top banner focus/open the app that sent it (helps snaps/apps that only dismissed the banner).
+
 ## v1.9.2 — 2026-08-05
 
 ### Desktop looks

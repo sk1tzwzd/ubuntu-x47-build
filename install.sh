@@ -13,8 +13,12 @@
 #   ./install.sh --skip-debloat   # keep language packs + default desktop apps
 #   ./install.sh --skip-perf      # skip boot/service perf tweaks + Firefox deb swap
 #   ./install.sh --skip-desktop-fx # skip dock/3D effects + desktop widgets
+#   ./install.sh --skip-putty-clipboard  # classic terminal clipboard (no PuTTY mouse/Ctrl+C/V)
+#   ./install.sh --skip-win-screenshot   # no Super+Shift+S (Print still works)
 #   ./install.sh --with-amnesia   # also create the amnesiac Tor-forced 'anon' user
 #   ./install.sh --only 10-terminal,30-icons
+#
+# Optional features default ON and can be changed later with: x47-settings
 #
 set -euo pipefail
 
@@ -29,10 +33,12 @@ X47_SKIP_PERF=0
 X47_SKIP_DESKTOP_FX=0
 X47_USER_ONLY=0
 X47_WITH_AMNESIA=0
+X47_PUTTY_CLIPBOARD=1
+X47_WIN_SCREENSHOT=1
 X47_ONLY=""
 
 usage() {
-  sed -n '2,19p' "$0" | sed 's/^# \?//'
+  sed -n '2,22p' "$0" | sed 's/^# \?//'
   exit 0
 }
 
@@ -43,6 +49,10 @@ while [[ $# -gt 0 ]]; do
     --skip-debloat) X47_SKIP_DEBLOAT=1; shift ;;
     --skip-perf) X47_SKIP_PERF=1; shift ;;
     --skip-desktop-fx) X47_SKIP_DESKTOP_FX=1; shift ;;
+    --skip-putty-clipboard) X47_PUTTY_CLIPBOARD=0; shift ;;
+    --with-putty-clipboard) X47_PUTTY_CLIPBOARD=1; shift ;;
+    --skip-win-screenshot) X47_WIN_SCREENSHOT=0; shift ;;
+    --with-win-screenshot) X47_WIN_SCREENSHOT=1; shift ;;
     --user-only) X47_USER_ONLY=1; X47_SKIP_APT=1; X47_SKIP_HARDENING=1; shift ;;
     --with-amnesia) X47_WITH_AMNESIA=1; shift ;;
     --skip-amnesia) X47_WITH_AMNESIA=0; shift ;;
@@ -51,12 +61,14 @@ while [[ $# -gt 0 ]]; do
     *) die "unknown flag: $1 (try --help)" ;;
   esac
 done
-export X47_SKIP_APT X47_SKIP_HARDENING X47_SKIP_DEBLOAT X47_SKIP_PERF X47_SKIP_DESKTOP_FX X47_USER_ONLY X47_WITH_AMNESIA
+export X47_SKIP_APT X47_SKIP_HARDENING X47_SKIP_DEBLOAT X47_SKIP_PERF X47_SKIP_DESKTOP_FX \
+  X47_USER_ONLY X47_WITH_AMNESIA X47_PUTTY_CLIPBOARD X47_WIN_SCREENSHOT
 
 MODULES=(
   00-apt.sh
   05-debloat.sh
   06-perf.sh
+  09-settings.sh
   10-terminal.sh
   11-tor-browser.sh
   12-firefox-hardening.sh

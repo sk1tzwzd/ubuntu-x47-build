@@ -1,18 +1,42 @@
 /* --- x47 hover window controls --- */
 /* X47: window controls (minimize / maximize / close) stay invisible until
- * the titlebar area is hovered. Works for GTK3 and GTK4 apps. */
-headerbar windowcontrols button,
-windowcontrols button,
-headerbar button.titlebutton,
-.titlebar button.titlebutton {
+ * the titlebar is hovered. Scoped tightly so app menus / headerbar buttons
+ * are never hidden, and pointer-events:none while invisible so they cannot
+ * steal clicks (a common Firefox / CSD failure mode). */
+
+/* GTK4: only the windowcontrols widget */
+headerbar windowcontrols,
+windowcontrols {
   opacity: 0;
   transition: opacity 150ms ease-in-out;
+  pointer-events: none;
 }
 
-headerbar:hover windowcontrols button,
-windowcontrols:hover button,
-headerbar:hover button.titlebutton,
-.titlebar:hover button.titlebutton {
+headerbar:hover windowcontrols,
+.windowhandle:hover windowcontrols {
   opacity: 1;
+  pointer-events: auto;
+}
+
+/* GTK3 / legacy CSD: only the real window buttons — never .appmenu */
+headerbar button.titlebutton.minimize,
+headerbar button.titlebutton.maximize,
+headerbar button.titlebutton.close,
+.titlebar button.titlebutton.minimize,
+.titlebar button.titlebutton.maximize,
+.titlebar button.titlebutton.close {
+  opacity: 0;
+  transition: opacity 150ms ease-in-out;
+  pointer-events: none;
+}
+
+headerbar:hover button.titlebutton.minimize,
+headerbar:hover button.titlebutton.maximize,
+headerbar:hover button.titlebutton.close,
+.titlebar:hover button.titlebutton.minimize,
+.titlebar:hover button.titlebutton.maximize,
+.titlebar:hover button.titlebutton.close {
+  opacity: 1;
+  pointer-events: auto;
 }
 /* --- end x47 hover window controls --- */

@@ -1,0 +1,7 @@
+{
+  "uuid": "x47-notif-activate@x47",
+  "name": "X47 Notification Activate",
+  "description": "Clicking a top notification banner once focuses or opens the app that sent it (works around snaps/apps that only dismiss the banner).",
+  "shell-version": ["48", "49", "50"],
+  "url": "https://github.com/sk1tzwzd/ubuntu-x47-build"
+}

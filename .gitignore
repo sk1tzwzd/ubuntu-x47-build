@@ -16,6 +16,7 @@
 **/secrets*
 
 # Build / cache noise
+__pycache__/
 *.AppImage
 *.deb
 *.tar.gz
