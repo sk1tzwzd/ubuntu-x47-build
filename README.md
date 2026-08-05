@@ -33,7 +33,7 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 | `--skip-hardening` | Skip UFW / fail2ban / sysctl / auditd restore |
 | `--skip-debloat` | Keep language packs and default desktop apps (no trimming) |
 | `--skip-perf` | Skip boot/service perf tweaks and the Firefox snap→deb swap |
-| `--skip-desktop-fx` | Skip bottom dock / tiling / wallpapers |
+| `--skip-desktop-fx` | Skip tiling / wallpapers / lean desktop tweaks |
 | `--skip-putty-clipboard` | Disable PuTTY-style WezTerm clipboard (select copy / right-click paste / Ctrl+C·V) |
 | `--skip-win-screenshot` | Do not bind Super+Shift+S (Print still works) |
 | `--with-amnesia` | Also create the amnesiac, Tor-forced `anon` user (opt-in) |
@@ -88,7 +88,7 @@ If the GUI says an update is available but apt says you already have the newest 
 Lean GNOME desktop for the main user and `anon` (opt out with `--skip-desktop-fx`):
 
 - **No heavy FX** — Desktop Cube, Coverflow Alt-Tab, Burn My Windows, Blur My Shell, wobbly windows, and per-desktop wall switching are **not installed**. GNOME animations are off.
-- **Bottom dock** — Ubuntu Dock (intellihide; animation-time 0; hides in F11 fullscreen).
+- **No dock** — Ubuntu Dock disabled; use **Super** for Activities / app grid, and **Super+1…9** for favorites.
 - **X47 wallpapers** — ASCII knuckle-duster circuit colourways (regen with `scripts/make-wallpaper.py --all`). Anon uses a single `anon@x47` wallpaper.
 - **Notifications** — click a top banner once to jump to the app.
 - **Window tiling** — Tiling Shell; hold Ctrl while dragging; toggle via `x47-settings set tiling off`.

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Desktop looks (lean): bottom dock, CTRL-only tiling, X47 wallpapers,
-# notification click-to-focus. No cube / blur / wobbly / Coverflow / Burn My
-# Windows / per-desktop wall switcher. Animations off. User-level only.
+# Desktop looks (lean): Super/Activities launcher (no dock), CTRL-only tiling,
+# X47 wallpapers, notification click-to-focus. No cube / blur / wobbly /
+# Coverflow / Burn My Windows / per-desktop wall switcher. Animations off.
+# User-level only.
 set -euo pipefail
 # shellcheck disable=SC1091
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/common.sh"
@@ -23,26 +24,21 @@ X47_FX_UUIDS=(
   "tilingshell@ferrarodomenico.com"
 )
 
-dock_to_bottom() {
-  log "moving Ubuntu Dock to the bottom (always visible; hides in fullscreen)"
-  gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || warn "dock-position failed"
-  gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false 2>/dev/null || true
-  # Floating dock: windows maximize to the FULL screen (no reserved strip).
-  # The dock stays visible whenever nothing overlaps it, dodges out of the way
-  # of overlapping windows, and slides back over them when the mouse hits the
-  # bottom edge. (An always-on-top overlay dock is not a dash-to-dock mode.)
-  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide true 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide-mode 'ALL_WINDOWS' 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock animation-time 0 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock autohide-in-fullscreen true 2>/dev/null || true
-  # Click a pinned app: cycle through its windows, jumping workspaces to reach them.
-  gsettings set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock isolate-workspaces false 2>/dev/null || true
-  # F11 toggles window fullscreen system-wide (apps that handle F11 themselves still work).
+# Super / Activities replaces the dock (lightest launcher).
+hide_dock() {
+  log "disabling Ubuntu Dock — use Super for Activities / app grid"
+  local uuid cur
+  for uuid in ubuntu-dock@ubuntu.com dash-to-dock@micxgx.gmail.com; do
+    gnome-extensions disable "$uuid" 2>/dev/null || true
+  done
+  cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
+  for uuid in ubuntu-dock@ubuntu.com dash-to-dock@micxgx.gmail.com; do
+    cur="$(printf '%s' "$cur" | sed -E "s/'$uuid',? ?//g; s/, ]/]/g; s/\[,/[/g")"
+  done
+  gsettings set org.gnome.shell enabled-extensions "$cur" 2>/dev/null || true
+  # F11 toggles window fullscreen system-wide.
   gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
+  ok "dock off — Super opens Activities; Super+1…9 launches favorites"
 }
 
 # Enable a uuid both via the CLI and by appending to the enabled-extensions
@@ -535,13 +531,13 @@ module_desktop_fx() {
   gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
 
   if ! have gnome-extensions; then
-    warn "gnome-extensions CLI missing — wallpaper / dock only"
-    dock_to_bottom
+    warn "gnome-extensions CLI missing — wallpaper only"
+    hide_dock
     disable_heavy_fx
     return 0
   fi
 
-  dock_to_bottom
+  hide_dock
   disable_heavy_fx
 
   local uuid ok_any=0

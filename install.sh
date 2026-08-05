@@ -12,7 +12,7 @@
 #   ./install.sh --skip-hardening # skip ufw/fail2ban/sysctl restore
 #   ./install.sh --skip-debloat   # keep language packs + default desktop apps
 #   ./install.sh --skip-perf      # skip boot/service perf tweaks + Firefox deb swap
-#   ./install.sh --skip-desktop-fx # skip dock / tiling / wallpapers
+#   ./install.sh --skip-desktop-fx # skip tiling / wallpapers / lean desktop tweaks
 #   ./install.sh --skip-putty-clipboard  # classic terminal clipboard (no PuTTY mouse/Ctrl+C/V)
 #   ./install.sh --skip-win-screenshot   # no Super+Shift+S (Print still works)
 #   ./install.sh --with-amnesia   # also create the amnesiac Tor-forced 'anon' user

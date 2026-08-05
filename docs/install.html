@@ -85,7 +85,7 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
             <tr><td><code>--skip-hardening</code></td><td>Skip UFW / fail2ban / sysctl / auditd restore</td></tr>
             <tr><td><code>--skip-debloat</code></td><td>Keep language packs and default desktop apps (no trimming)</td></tr>
             <tr><td><code>--skip-perf</code></td><td>Skip boot/service perf tweaks and the Firefox snap&rarr;deb swap</td></tr>
-            <tr><td><code>--skip-desktop-fx</code></td><td>Skip bottom dock / tiling / wallpapers</td></tr>
+            <tr><td><code>--skip-desktop-fx</code></td><td>Skip tiling / wallpapers / lean desktop tweaks</td></tr>
             <tr><td><code>--skip-putty-clipboard</code></td><td>Disable PuTTY-style WezTerm clipboard (select copy / right-click paste / Ctrl+C·V)</td></tr>
             <tr><td><code>--skip-win-screenshot</code></td><td>Do not bind Super+Shift+S (Print still works)</td></tr>
             <tr><td><code>--with-amnesia</code></td><td>Create the amnesiac Tor-forced <code>anon</code> user</td></tr>
@@ -156,7 +156,7 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
           User-level only; on Wayland, log out and back in once so extension changes load.
         </p>
         <ul class="clean">
-          <li><strong>Bottom dock</strong> — intellihide, animation-time 0, hides in F11 fullscreen</li>
+          <li><strong>No dock</strong> — Super opens Activities / app grid; Super+1…9 launches favorites</li>
           <li><strong>CTRL-only tiling</strong> — Tiling Shell layouts; plain drag stays free</li>
           <li><strong>X47 wallpapers</strong> — circuit ASCII colourways; anon uses <code>anon@x47</code></li>
           <li><strong>Notifications</strong> — click a banner to jump to the app</li>

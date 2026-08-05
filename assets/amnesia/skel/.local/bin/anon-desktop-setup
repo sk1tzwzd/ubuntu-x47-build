@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Apply amnesia desktop look + privacy defaults every login (tmpfs home).
-# Lean desktop (same as main): dock, CTRL-only tiling, no cube/blur/wobbly/
-# Coverflow/Burn My Windows. Animations off. No X47 Widgets.
+# Lean desktop (same as main): Super/Activities (no dock), CTRL-only tiling,
+# no cube/blur/wobbly/Coverflow/Burn My Windows. Animations off. No X47 Widgets.
 set -euo pipefail
 
 gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
@@ -28,18 +28,15 @@ if [[ "$cur" == *"Terminal"* || "$cur" == *"gnome-terminal"* || "$cur" == *"org.
   gsettings set org.gnome.shell favorite-apps "$cleaned" 2>/dev/null || true
 fi
 
-# Dock: bottom; zero animation time; hide only in F11 fullscreen.
-gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed false 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock intellihide true 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock intellihide-mode 'ALL_WINDOWS' 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock animation-time 0 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock autohide-in-fullscreen true 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock isolate-workspaces false 2>/dev/null || true
+# No dock — Super opens Activities / app grid (Super+1…9 for favorites).
+if command -v gnome-extensions >/dev/null 2>&1; then
+  gnome-extensions disable ubuntu-dock@ubuntu.com 2>/dev/null || true
+  gnome-extensions disable dash-to-dock@micxgx.gmail.com 2>/dev/null || true
+fi
+_dock_cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
+_dock_cur="$(printf '%s' "$_dock_cur" | sed -E "s/'ubuntu-dock@ubuntu\.com',? ?//g; s/'dash-to-dock@micxgx\.gmail\.com',? ?//g; s/, ]/]/g; s/\[,/[/g")"
+gsettings set org.gnome.shell enabled-extensions "$_dock_cur" 2>/dev/null || true
+unset _dock_cur
 gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
 gsettings set org.gnome.desktop.notifications show-banners true 2>/dev/null || true
 

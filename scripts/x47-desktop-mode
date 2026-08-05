@@ -58,21 +58,10 @@ _ext_disable() {
   gsettings set org.gnome.shell enabled-extensions "$cleaned" 2>/dev/null || true
 }
 
-_dock_visual() {
-  gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide true 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide-mode 'ALL_WINDOWS' 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock animation-time 0 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock autohide-in-fullscreen true 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock isolate-workspaces false 2>/dev/null || true
+_hide_dock() {
   local uuid
   for uuid in "${X47_DOCK_UUIDS[@]}"; do
-    _ext_enable "$uuid"
+    _ext_disable "$uuid"
   done
 }
 
@@ -84,8 +73,8 @@ _apply_performance() {
   for uuid in "${X47_LEAN_FX_UUIDS[@]}"; do
     _ext_enable "$uuid"
   done
-  # Keep the bottom dock/launcher — only heavy 3D FX and animations go away.
-  _dock_visual
+  # Super / Activities replaces the dock.
+  _hide_dock
   gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
   # Keep a static workspace floor (cheap without the cube).
   gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
