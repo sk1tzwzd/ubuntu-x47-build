@@ -3,7 +3,7 @@
 ## v1.9.4 — 2026-08-05
 
 ### Desktop looks
-- **High-contrast workspace wallpapers** — the old dark green/red/purple variants were hard to tell apart. Now: WS1 teal on dark, WS2 hot pink on white, WS3 white duster on light blue, WS4 white duster on lime green.
+- **High-contrast workspace wallpapers** — same circuit pattern and crisp ASCII duster on every workspace, recoloured so you can tell them apart: WS1 teal on dark, WS2 pink duster on white, WS3 dark red duster on baby blue, WS4 white duster on medium-dark green.
 
 ## v1.9.3 — 2026-08-05
 

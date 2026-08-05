@@ -174,7 +174,7 @@ stage_anon_desktop_fx_into_skel() {
   local desk="$X47_ROOT/assets/desktop"
   run_sudo mkdir -p "$skel/.local/share/backgrounds"
   local wf
-  for wf in x47-circuit.png x47-circuit-pink.png x47-circuit-blue.png x47-circuit-lime.png; do
+  for wf in x47-circuit.png x47-circuit-pink.png x47-circuit-blue.png x47-circuit-green.png; do
     [[ -f "$desk/wallpapers/$wf" ]] || continue
     run_sudo install -m 0644 "$desk/wallpapers/$wf" "$skel/.local/share/backgrounds/$wf"
   done

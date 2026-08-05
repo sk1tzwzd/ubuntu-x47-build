@@ -2,9 +2,9 @@
 """Render the X47 knuckle-duster ASCII art onto the circuit wallpaper.
 
 By default writes the teal (workspace 1) wallpaper. Pass --all to also write
-the pink / blue / lime variants for workspaces 2–4 (used by the desktop-cube
-workspace wallpaper switcher). Those three use loud solid backgrounds so each
-workspace is unmistakable at a glance.
+the pink / blue / green variants for workspaces 2–4 (used by the desktop-cube
+workspace wallpaper switcher). All four share the exact same circuit pattern
+and crisp ASCII duster; only the colours differ.
 
 Usage:
   scripts/make-wallpaper.py               # teal only
@@ -17,7 +17,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 
 ROOT = Path(__file__).resolve().parent.parent
 ASCII_FILE = ROOT / "assets/desktop/x47-ascii.txt"
@@ -29,31 +29,32 @@ ART_WIDTH_FRAC = 0.315
 FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 
 # glow RGB (soft halo behind the art), sharp RGB (the art itself).
-# "bg" = solid background colour; without it the circuit image is used.
+# "recolor" = (shadow RGB, trace RGB): the circuit background is converted to
+# grayscale and remapped onto that ramp, keeping the exact same pattern.
+# Without "recolor" the original dark circuit image is used untouched.
 COLOURS = {
-    "teal": {
+    "teal": {  # workspace 1 — teal duster on the original dark circuit
         "glow": (64, 224, 208),
         "sharp": (214, 246, 242),
         "out": "x47-circuit.png",
     },
-    "pink": {  # workspace 2 — hot pink duster on white
-        "glow": (255, 100, 170),
-        "sharp": (235, 0, 110),
+    "pink": {  # workspace 2 — pink duster on white circuit
+        "glow": (255, 90, 160),
+        "sharp": (230, 20, 120),
         "out": "x47-circuit-pink.png",
-        "bg": (252, 250, 252),
-        "stroke": (170, 0, 80),
+        "recolor": ((250, 248, 250), (150, 145, 158)),
     },
-    "blue": {  # workspace 3 — white duster on light blue
-        "glow": (255, 255, 255),
-        "sharp": (255, 255, 255),
+    "blue": {  # workspace 3 — dark red duster on bright baby blue circuit
+        "glow": (200, 30, 40),
+        "sharp": (140, 10, 25),
         "out": "x47-circuit-blue.png",
-        "bg": (95, 190, 255),
+        "recolor": ((110, 195, 255), (225, 245, 255)),
     },
-    "lime": {  # workspace 4 — white duster on lime green
-        "glow": (255, 255, 255),
+    "green": {  # workspace 4 — white duster on medium-dark green circuit
+        "glow": (225, 255, 235),
         "sharp": (255, 255, 255),
-        "out": "x47-circuit-lime.png",
-        "bg": (105, 220, 40),
+        "out": "x47-circuit-green.png",
+        "recolor": ((20, 95, 45), (115, 205, 135)),
     },
 }
 
@@ -77,12 +78,15 @@ def fit_font(cols: int):
 
 
 def background(spec):
-    if "bg" in spec:
-        return Image.new("RGB", (W, H), spec["bg"])
-    return Image.open(BG).convert("RGB").resize((W, H), Image.LANCZOS)
+    img = Image.open(BG).convert("RGB").resize((W, H), Image.LANCZOS)
+    if "recolor" not in spec:
+        return img
+    shadow, trace = spec["recolor"]
+    gray = ImageOps.autocontrast(img.convert("L"))
+    return ImageOps.colorize(gray, black=shadow, white=trace)
 
 
-def draw_art(base, lines, font, glow_rgb, sharp_rgb, stroke_rgb=None):
+def draw_art(base, lines, font, glow_rgb, sharp_rgb):
     cw = font.getlength("M")
     ascent, descent = font.getmetrics()
     lh = ascent + descent
@@ -94,17 +98,13 @@ def draw_art(base, lines, font, glow_rgb, sharp_rgb, stroke_rgb=None):
     glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow)
     for i, ln in enumerate(lines):
-        gd.text((x0, y0 + i * lh), ln, font=font, fill=(*glow_rgb, 255),
-                stroke_width=3, stroke_fill=(*glow_rgb, 255))
+        gd.text((x0, y0 + i * lh), ln, font=font, fill=(*glow_rgb, 255))
     glow = glow.filter(ImageFilter.GaussianBlur(6))
 
     sharp = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     sd = ImageDraw.Draw(sharp)
-    stroke_kw = {}
-    if stroke_rgb is not None:
-        stroke_kw = {"stroke_width": 2, "stroke_fill": (*stroke_rgb, 255)}
     for i, ln in enumerate(lines):
-        sd.text((x0, y0 + i * lh), ln, font=font, fill=(*sharp_rgb, 255), **stroke_kw)
+        sd.text((x0, y0 + i * lh), ln, font=font, fill=(*sharp_rgb, 255))
 
     out = base.convert("RGBA")
     out = Image.alpha_composite(out, glow)
@@ -120,7 +120,6 @@ def render(name: str, lines, font):
         font,
         spec["glow"],
         spec["sharp"],
-        spec.get("stroke"),
     )
     out = OUT_DIR / spec["out"]
     OUT_DIR.mkdir(parents=True, exist_ok=True)
