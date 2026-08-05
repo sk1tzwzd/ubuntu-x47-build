@@ -43,6 +43,7 @@ COLOURS = {
     },
     "pink": {  # workspace 2 — bright pink duster on off-white circuit
         "sharp": (255, 25, 140),
+        "bold": True,  # thicken the glyphs so the art fills out on the light bg
         "out": "x47-circuit-pink.png",
         "recolor": ((248, 246, 242), (168, 160, 172)),
     },
@@ -116,7 +117,7 @@ def background(spec):
     return Image.composite(lower, base, mask)
 
 
-def draw_art(base, lines, font, sharp_rgb, glow_rgb=None):
+def draw_art(base, lines, font, sharp_rgb, glow_rgb=None, bold=False):
     cw = font.getlength("M")
     ascent, descent = font.getmetrics()
     lh = ascent + descent
@@ -137,8 +138,10 @@ def draw_art(base, lines, font, sharp_rgb, glow_rgb=None):
 
     sharp = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     sd = ImageDraw.Draw(sharp)
+    # A 1px same-colour stroke fattens the glyphs without any blur.
+    bold_kw = {"stroke_width": 1, "stroke_fill": (*sharp_rgb, 255)} if bold else {}
     for i, ln in enumerate(lines):
-        sd.text((x0, y0 + i * lh), ln, font=font, fill=(*sharp_rgb, 255))
+        sd.text((x0, y0 + i * lh), ln, font=font, fill=(*sharp_rgb, 255), **bold_kw)
     out = Image.alpha_composite(out, sharp)
     return out.convert("RGB")
 
@@ -151,6 +154,7 @@ def render(name: str, lines, font):
         font,
         spec["sharp"],
         spec.get("glow"),
+        spec.get("bold", False),
     )
     out = OUT_DIR / spec["out"]
     OUT_DIR.mkdir(parents=True, exist_ok=True)
