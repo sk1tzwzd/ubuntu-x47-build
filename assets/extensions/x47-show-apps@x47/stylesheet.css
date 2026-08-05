@@ -1,24 +1,5 @@
-/* Taller top bar so the Show Apps circle and status icons match. */
-#panel {
-  height: 58px;
-  font-size: 15px;
-}
-
-#panel .panel-button {
-  -natural-hpadding: 10px;
-  -minimum-hpadding: 6px;
-}
-
-/* Status / indicator icons scale with the taller bar. */
-#panel .system-status-icon,
-#panel .panel-status-indicators-box StIcon,
-#panel .panel-button StIcon {
-  icon-size: 28px;
-}
-
-/* Lime Ubuntu Show Apps mark (~50px). */
-#panel .x47-show-apps-icon,
+/* Keep the Show Apps mark readable in the panel (~2× default status icons). */
 .x47-show-apps-icon {
-  icon-size: 50px;
-  padding: 0 6px;
+  icon-size: 40px;
+  padding: 0 4px;
 }

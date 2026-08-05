@@ -1,21 +1,12 @@
 // Top-bar green Ubuntu circle → application grid (no dock required).
-// Also enlarges the panel + status icons so the circle fits.
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-const PANEL_HEIGHT = 58;
-const SHOW_APPS_ICON = 50;
-
 export default class X47ShowAppsExtension extends Extension {
     enable() {
-        this._origHeight = Main.panel.height;
-        try {
-            Main.panel.height = PANEL_HEIGHT;
-        } catch (_e) { /* ignore */ }
-
         this._button = new St.Button({
             name: 'x47ShowApps',
             style_class: 'panel-button',
@@ -27,7 +18,7 @@ export default class X47ShowAppsExtension extends Extension {
         const icon = new St.Icon({
             icon_name: 'view-app-grid-symbolic',
             style_class: 'x47-show-apps-icon',
-            icon_size: SHOW_APPS_ICON,
+            icon_size: 40,
         });
         this._button.set_child(icon);
         this._button.connect('clicked', () => this._toggleApps());
@@ -39,11 +30,6 @@ export default class X47ShowAppsExtension extends Extension {
     disable() {
         this._button?.destroy();
         this._button = null;
-        try {
-            if (this._origHeight != null)
-                Main.panel.height = this._origHeight;
-        } catch (_e) { /* ignore */ }
-        this._origHeight = null;
     }
 
     _toggleApps() {
