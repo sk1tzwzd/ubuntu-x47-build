@@ -137,9 +137,13 @@ fi
 ff_src="$HOME/.mozilla/firefox"
 ff_snap="$HOME/snap/firefox/common/.mozilla/firefox"
 if [[ -d "$ff_src/amnesia.default" ]]; then
-  mkdir -p "$ff_snap/amnesia.default"
+  mkdir -p "$ff_snap/amnesia.default/chrome"
   cp -a "$ff_src/profiles.ini" "$ff_snap/profiles.ini" 2>/dev/null || true
   cp -a "$ff_src/amnesia.default/user.js" "$ff_snap/amnesia.default/user.js" 2>/dev/null || true
+  if [[ -f "$ff_src/amnesia.default/chrome/userChrome.css" ]]; then
+    cp -a "$ff_src/amnesia.default/chrome/userChrome.css" \
+      "$ff_snap/amnesia.default/chrome/userChrome.css" 2>/dev/null || true
+  fi
 fi
 fav="$(gsettings get org.gnome.shell favorite-apps 2>/dev/null || echo "@as []")"
 fav="$(printf '%s' "$fav" | sed -E "s/'firefox_firefox\.desktop',? ?//g; s/'firefox\.desktop',? ?//g; s/, ]/]/g; s/\[,/[/g")"

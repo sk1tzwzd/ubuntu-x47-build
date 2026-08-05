@@ -1,0 +1,20 @@
+/* --- x47 autohide chrome (unmaximized) --- */
+/* Hide tabs + toolbar + titlebar when the window is not maximized;
+   reveal on hover / focus (e.g. Ctrl+L). Maximized & fullscreen stay normal. */
+:root:not([sizemode="maximized"]):not([sizemode="fullscreen"]):not([customizing]) #navigator-toolbox {
+  position: relative;
+  z-index: 2147483647;
+  max-height: 3px !important;
+  min-height: 0 !important;
+  opacity: 0;
+  overflow: clip;
+  transition: max-height 160ms ease, opacity 120ms ease !important;
+}
+
+:root:not([sizemode="maximized"]):not([sizemode="fullscreen"]):not([customizing]) #navigator-toolbox:hover,
+:root:not([sizemode="maximized"]):not([sizemode="fullscreen"]):not([customizing]) #navigator-toolbox:focus-within {
+  max-height: 320px !important;
+  opacity: 1;
+  overflow: visible;
+}
+/* --- end x47 autohide chrome --- */

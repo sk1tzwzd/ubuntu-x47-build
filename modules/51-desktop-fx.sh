@@ -219,19 +219,61 @@ replace_marked_block() {
   rm -f "$tmp"
 }
 
-# Strip the old Firefox hover-only min/max/close userChrome block.
-firefox_hover_buttons() {
-  local begin="/* --- x47 hover window buttons (Firefox) --- */"
-  local end="/* --- end x47 hover window buttons --- */"
-  local prof found=0
+# Firefox: enable userChrome + autohide top chrome when the window is not maximized.
+firefox_autohide_chrome() {
+  local begin_old="/* --- x47 hover window buttons (Firefox) --- */"
+  local end_old="/* --- end x47 hover window buttons --- */"
+  local begin="/* --- x47 autohide chrome (unmaximized) --- */"
+  local end="/* --- end x47 autohide chrome --- */"
+  local src="$X47_ROOT/assets/firefox/autohide-chrome.css"
+  local pref_begin="// --- x47 userChrome ---"
+  local pref_end="// --- end x47 userChrome ---"
+  local prof found=0 css userjs
+
+  [[ -f "$src" ]] || { warn "missing $src"; return 0; }
+
   for prof in "$HOME"/snap/firefox/common/.mozilla/firefox/*.default* \
-              "$HOME"/.mozilla/firefox/*.default*; do
+              "$HOME"/.mozilla/firefox/*.default* \
+              "$HOME"/snap/firefox/common/.mozilla/firefox/amnesia.default \
+              "$HOME"/.mozilla/firefox/amnesia.default; do
     [[ -d "$prof" ]] || continue
     found=1
-    strip_css_block "$prof/chrome/userChrome.css" "$begin" "$end"
+    css="$prof/chrome/userChrome.css"
+    strip_css_block "$css" "$begin_old" "$end_old"
+    replace_marked_block "$css" "$begin" "$end" "$src"
+
+    userjs="$prof/user.js"
+    mkdir -p "$(dirname "$userjs")"
+    local tmp
+    tmp="$(mktemp)"
+    if [[ -f "$userjs" ]]; then
+      # Drop prior marked block and any bare stylesheets pref we manage.
+      awk -v b="$pref_begin" -v e="$pref_end" '
+        index($0, b) { skip = 1; next }
+        index($0, e) { skip = 0; next }
+        skip { next }
+        /toolkit\.legacyUserProfileCustomizations\.stylesheets/ { next }
+        { print }
+      ' "$userjs" > "$tmp"
+    else
+      : > "$tmp"
+    fi
+    {
+      cat "$tmp"
+      [[ -s "$tmp" ]] && [[ "$(tail -c1 "$tmp" | wc -l)" -eq 0 ]] && printf '\n'
+      cat <<EOF
+$pref_begin
+user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
+$pref_end
+EOF
+    } > "$userjs"
+    rm -f "$tmp"
   done
+
   if [[ "$found" == "1" ]]; then
-    ok "Firefox hover-only window buttons removed (restart Firefox)"
+    ok "Firefox: unmaximized top bar autohides until hover (restart Firefox)"
+  else
+    warn "no Firefox profile found yet — autohide chrome will apply after first launch + re-run"
   fi
 }
 
@@ -529,7 +571,7 @@ module_desktop_fx() {
   show_apps_duster_icon
   screenshot_keybindings
   hover_window_controls
-  firefox_hover_buttons
+  firefox_autohide_chrome
   gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
   gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
   gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true

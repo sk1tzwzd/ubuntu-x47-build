@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.9.11 — 2026-08-05
+
+### Firefox
+- **Autohide chrome** — when the window is not maximized, the whole top bar (tabs/toolbar/titlebar) collapses to a thin hover strip until you mouse over it or focus the URL bar (`Ctrl+L`). Maximized/fullscreen unchanged. Applies to main + anon via `userChrome.css`.
+
 ## v1.9.10 — 2026-08-05
 
 ### Top bar

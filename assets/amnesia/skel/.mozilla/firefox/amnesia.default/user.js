@@ -114,6 +114,8 @@ user_pref("browser.newtabpage.activity-stream.telemetry", false);
 user_pref("browser.ping-centre.telemetry", false);
 
 // --- UI defaults ---
+// Allow chrome/userChrome.css (autohide top bar when unmaximized).
+user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 // API JSON works with JS disabled (Safest); the HTML check page does not.
 user_pref("browser.startup.homepage", "https://check.torproject.org/api/ip");
 user_pref("startup.homepage_welcome_url", "https://check.torproject.org/api/ip");
