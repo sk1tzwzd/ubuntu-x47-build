@@ -16,6 +16,7 @@ X47_FX_UUIDS=(
   "burn-my-windows@schneegans.github.com"
   "blur-my-shell@aunetx"
   "compiz-windows-effect@hermes83.github.com"
+  "tilingshell@ferrarodomenico.com"
 )
 
 dock_to_bottom() {
@@ -306,6 +307,27 @@ install_ws_walls_extension() {
 }
 
 # One click on a top banner focuses/opens the notifying app.
+# Windows 11-style snap layouts: drag a window to see zones (no modifier),
+# edges/corners tile halves and quarters, suggestions fill the rest.
+tiling_shell_tune() {
+  local sdir="$HOME/.local/share/gnome-shell/extensions/tilingshell@ferrarodomenico.com/schemas"
+  [[ -d "$sdir" ]] || { warn "tiling shell not installed; skipping tune"; return 0; }
+  # Ubuntu's built-in tiler fights Tiling Shell.
+  gnome-extensions disable tiling-assistant@ubuntu.com 2>/dev/null || true
+  local s="org.gnome.shell.extensions.tilingshell"
+  gsettings --schemadir "$sdir" set $s tiling-system-activation-key "['-1']" 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s enable-snap-assist true 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s enable-tiling-system true 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s enable-tiling-system-windows-suggestions true 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s enable-snap-assistant-windows-suggestions true 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s enable-screen-edges-windows-suggestions true 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s active-screen-edges true 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s top-edge-maximize true 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s quarter-tiling-threshold 40 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s inner-gaps 6 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s outer-gaps 4 2>/dev/null || true
+}
+
 notification_click_activate() {
   gsettings set org.gnome.desktop.notifications show-banners true 2>/dev/null || true
   install_local_extension "x47-notif-activate@x47" "notification click → open app"
@@ -341,6 +363,7 @@ module_desktop_fx() {
   cube_workspaces
   bmw_fx_profile
   coverflow_tune
+  tiling_shell_tune
   hover_window_controls
   firefox_hover_buttons
   screenshot_keybindings

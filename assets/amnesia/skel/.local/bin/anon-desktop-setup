@@ -44,22 +44,24 @@ gsettings set org.gnome.desktop.notifications show-banners true 2>/dev/null || t
 gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
 gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
 
-# Wallpaper (staged into skel).
-wp="$HOME/.local/share/backgrounds/x47-circuit.png"
+# Wallpaper: one look on every desktop — black circuit + "anon@x47".
+wp="$HOME/.local/share/backgrounds/x47-anon.png"
 if [[ -f "$wp" ]]; then
   gsettings set org.gnome.desktop.background picture-uri "file://$wp" 2>/dev/null || true
   gsettings set org.gnome.desktop.background picture-uri-dark "file://$wp" 2>/dev/null || true
   gsettings set org.gnome.desktop.background picture-options 'zoom' 2>/dev/null || true
 fi
 
-# Enable desktop-fx extensions (no x47-widgets).
+# Enable desktop-fx extensions (no x47-widgets, no per-workspace walls —
+# the anon status card and Tiling Shell instead).
 FX_UUIDS=(
   "CoverflowAltTab@palatis.blogspot.com"
   "desktop-cube@schneegans.github.com"
   "burn-my-windows@schneegans.github.com"
   "blur-my-shell@aunetx"
   "compiz-windows-effect@hermes83.github.com"
-  "x47-ws-walls@x47"
+  "tilingshell@ferrarodomenico.com"
+  "x47-anon-status@x47"
   "x47-notif-activate@x47"
 )
 
@@ -92,6 +94,35 @@ if [[ -f "$sdir/gschemas.compiled" ]]; then
   gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab bind-to-switch-windows true 2>/dev/null || true
   gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab bind-to-switch-applications true 2>/dev/null || true
   gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab hide-panel true 2>/dev/null || true
+fi
+
+# Tiling Shell: drag-to-snap zones without any modifier key.
+tdir="$HOME/.local/share/gnome-shell/extensions/tilingshell@ferrarodomenico.com/schemas"
+if [[ -d "$tdir" ]]; then
+  gnome-extensions disable tiling-assistant@ubuntu.com 2>/dev/null || true
+  ts="org.gnome.shell.extensions.tilingshell"
+  gsettings --schemadir "$tdir" set $ts tiling-system-activation-key "['-1']" 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts enable-snap-assist true 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts enable-tiling-system true 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts enable-tiling-system-windows-suggestions true 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts enable-snap-assistant-windows-suggestions true 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts enable-screen-edges-windows-suggestions true 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts active-screen-edges true 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts top-edge-maximize true 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts quarter-tiling-threshold 40 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts inner-gaps 6 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts outer-gaps 4 2>/dev/null || true
+fi
+
+# Tor Browser (if staged in this home): force built-in obfs4 bridges so its
+# bundled tor also never connects directly.
+tbprof="$HOME/tools/tor-browser/Browser/TorBrowser/Data/Browser/profile.default"
+if [[ -d "$tbprof" ]]; then
+  {
+    echo 'user_pref("torbrowser.settings.bridges.enabled", true);'
+    echo 'user_pref("torbrowser.settings.bridges.source", 0);'
+    echo 'user_pref("torbrowser.settings.bridges.builtin_type", "obfs4");'
+  } >> "$tbprof/user.js"
 fi
 
 # Enable MAC spoof + Nym-ready session unit (apply on login, restore on logout)

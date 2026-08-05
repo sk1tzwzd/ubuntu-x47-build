@@ -79,6 +79,18 @@ COLOURS = {
         "out": "x47-circuit-red.png",
         "recolor": ((125, 18, 25), (225, 95, 95)),
     },
+    # --- amnesia (anon) session: black circuit + "anon@x47" ASCII text ---
+    # Text is rendered with pyfiglet at build time (pip install pyfiglet);
+    # the PNG is committed, so installs never need pyfiglet.
+    "anon": {
+        "sharp": (240, 245, 250),
+        "bold": True,
+        "out": "x47-anon.png",
+        "recolor": ((2, 2, 4), (34, 38, 46)),
+        "text": "anon@x47",
+        "font": "chunky",
+        "frac": 0.55,
+    },
 }
 
 
@@ -88,10 +100,21 @@ def load_art(path: Path):
     return lines, cols, len(lines)
 
 
-def fit_font(cols: int):
-    target = W * ART_WIDTH_FRAC
+def art_for(spec):
+    if "text" in spec:
+        import pyfiglet  # build-time only; the rendered PNG is committed
+
+        art = pyfiglet.figlet_format(spec["text"], font=spec.get("font", "chunky"))
+        lines = art.rstrip("\n").split("\n")
+        return lines, max(len(ln) for ln in lines)
+    lines, cols, _rows = load_art(ASCII_FILE)
+    return lines, cols
+
+
+def fit_font(cols: int, frac: float = ART_WIDTH_FRAC):
+    target = W * frac
     best = 8
-    for size in range(8, 120):
+    for size in range(8, 200):
         f = ImageFont.truetype(FONT_PATH, size)
         if f.getlength("M") * cols <= target:
             best = size
@@ -146,8 +169,10 @@ def draw_art(base, lines, font, sharp_rgb, glow_rgb=None, bold=False):
     return out.convert("RGB")
 
 
-def render(name: str, lines, font):
+def render(name: str):
     spec = COLOURS[name]
+    lines, cols = art_for(spec)
+    font = fit_font(cols, spec.get("frac", ART_WIDTH_FRAC))
     img = draw_art(
         background(spec),
         lines,
@@ -169,11 +194,9 @@ def main(argv=None):
     p.add_argument("--color", choices=list(COLOURS), default="teal")
     args = p.parse_args(argv)
 
-    lines, cols, _rows = load_art(ASCII_FILE)
-    font = fit_font(cols)
     names = list(COLOURS) if args.all else [args.color]
     for name in names:
-        render(name, lines, font)
+        render(name)
 
 
 if __name__ == "__main__":

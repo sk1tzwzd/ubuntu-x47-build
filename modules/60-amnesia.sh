@@ -149,7 +149,7 @@ stage_anon_desktop_fx_into_skel() {
     "burn-my-windows@schneegans.github.com"
     "blur-my-shell@aunetx"
     "compiz-windows-effect@hermes83.github.com"
-    "x47-ws-walls@x47"
+    "tilingshell@ferrarodomenico.com"
     "x47-notif-activate@x47"
   )
   local uuid found=0
@@ -174,14 +174,14 @@ stage_anon_desktop_fx_into_skel() {
   local desk="$X47_ROOT/assets/desktop"
   run_sudo mkdir -p "$skel/.local/share/backgrounds"
   local wf
-  for wf in x47-circuit.png x47-circuit-pink.png x47-circuit-blue.png x47-circuit-green.png \
-            x47-circuit-orange.png x47-circuit-purple.png x47-circuit-yellow.png x47-circuit-red.png; do
+  # Anon gets ONE wallpaper: black circuit + "anon@x47" (no per-workspace colours).
+  for wf in x47-anon.png; do
     [[ -f "$desk/wallpapers/$wf" ]] || continue
     run_sudo install -m 0644 "$desk/wallpapers/$wf" "$skel/.local/share/backgrounds/$wf"
   done
   # Bundled X47 extensions (also copied from main user if present).
   local bund
-  for bund in x47-ws-walls@x47 x47-notif-activate@x47; do
+  for bund in x47-anon-status@x47 x47-notif-activate@x47; do
     if [[ -d "$X47_ROOT/assets/extensions/$bund" ]]; then
       run_sudo mkdir -p "$skel/.local/share/gnome-shell/extensions"
       run_sudo rm -rf "$skel/.local/share/gnome-shell/extensions/$bund"
@@ -374,7 +374,7 @@ module_amnesia() {
   # --- packages ---
   log "installing amnesia packages (tor, wallets, pgp, keepass, cryptsetup)"
   run_sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-    tor nftables rsync cryptsetup zenity \
+    tor obfs4proxy nftables rsync cryptsetup zenity \
     feather-wallet keepassxc-full kleopatra \
     >/dev/null || die "failed to install amnesia packages"
 

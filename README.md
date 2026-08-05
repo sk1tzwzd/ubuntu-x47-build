@@ -147,7 +147,7 @@ Files under `config/` are copied back to `/etc` (UFW rules, fail2ban jails, sysc
 
 - **RAM-only home** — `/home/anon` is a `tmpfs` mount. Wiped every reboot; skeleton re-copied from `/var/lib/anon-skel`.
 - **Forced Tor + kill-switch** — UID-scoped nftables; IPv6 dropped for `anon`. Tor config is inlined in `/etc/tor/torrc` (AppArmor blocks `torrc.d`).
-- **Desktop** — same looks as the main user (bottom dock, Coverflow, Cube, TV Glitch, blur, wobbly, wallpaper, hover controls) **without X47 Widgets**; dark `Yaru-prussiangreen-dark`, green accent, location off; first-run wizard skipped.
+- **Desktop** — same looks as the main user (bottom dock, Coverflow, Cube, TV Glitch, blur, wobbly, hover controls) with its own identity: **black-circuit `anon@x47` wallpaper on every desktop**, an **Anon Status card** (signal / VPN / `Tor Status: Connected w Bridge` / security verdict), **NymVPN opening on login**, and **Tor forced through obfs4 bridges**; dark `Yaru-prussiangreen-dark`, green accent, location off; first-run wizard skipped.
 - **Terminal** — WezTerm (`/usr/local/bin/wezterm`) as default; GNOME Terminal removed.
 - **Apps** — Firefox (Safest / JS off), Electrum (BTC), Feather (XMR), Kleopatra (PGP), KeePassXC, VulnScape, **NymVPN** (daemon + GUI; connect after login).
 - **Random MAC** — Tails-style spoof on anon login, restored on logout (`anon-mac-spoof`).

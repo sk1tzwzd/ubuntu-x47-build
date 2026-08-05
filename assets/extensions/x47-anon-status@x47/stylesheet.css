@@ -1,0 +1,77 @@
+/* X47 Anon Status — dark-glass card, teal accent, verdict colours. */
+
+.x47-anon-card {
+  background-color: rgba(6, 8, 12, 0.82);
+  border: 1px solid rgba(64, 224, 208, 0.28);
+  border-radius: 14px;
+  padding: 14px 16px 12px 16px;
+  spacing: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+.x47-anon-title-row {
+  spacing: 8px;
+}
+
+.x47-anon-dot {
+  color: #40e0d0;
+  font-size: 8pt;
+}
+
+.x47-anon-title {
+  color: rgba(230, 240, 240, 0.85);
+  font-size: 9pt;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.x47-anon-row {
+  spacing: 8px;
+}
+
+.x47-anon-key {
+  color: rgba(160, 175, 180, 0.75);
+  font-family: monospace;
+  font-size: 9pt;
+  min-width: 62px;
+}
+
+.x47-anon-val {
+  color: #d8e6e6;
+  font-family: monospace;
+  font-size: 9pt;
+}
+
+.x47-anon-verdict {
+  font-family: monospace;
+  font-size: 9pt;
+  font-weight: bold;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.x47-anon-good {
+  color: #4be3a7;
+  border-color: rgba(75, 227, 167, 0.35);
+  background-color: rgba(75, 227, 167, 0.10);
+}
+
+.x47-anon-warn {
+  color: #ffc857;
+  border-color: rgba(255, 200, 87, 0.35);
+  background-color: rgba(255, 200, 87, 0.10);
+}
+
+.x47-anon-bad {
+  color: #ff5c5c;
+  border-color: rgba(255, 92, 92, 0.4);
+  background-color: rgba(255, 92, 92, 0.12);
+}
+
+.x47-anon-hint {
+  color: rgba(200, 215, 215, 0.4);
+  font-size: 8pt;
+  letter-spacing: 0.5px;
+}

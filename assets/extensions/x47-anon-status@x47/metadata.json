@@ -1,0 +1,7 @@
+{
+  "uuid": "x47-anon-status@x47",
+  "name": "X47 Anon Status",
+  "description": "Amnesia-session desktop card: connection strength, VPN state, Tor bridge status and a one-line security verdict. Sits above desktop icons, under app windows.",
+  "shell-version": ["48", "49", "50"],
+  "url": "https://github.com/sk1tzwzd/ubuntu-x47-build"
+}

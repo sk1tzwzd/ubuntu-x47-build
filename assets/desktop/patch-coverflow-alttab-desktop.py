@@ -13,7 +13,8 @@ MARKER = "x47-alt-tab-desktop"
 SWITCHER_INIT = "        this._qPressed = false;"
 SWITCHER_INIT_X47 = (
     "        this._qPressed = false;\n"
-    f"        this._x47Desktop = false; // {MARKER}"
+    f"        this._x47Desktop = false; // {MARKER}\n"
+    f"        this._x47Advanced = false; // {MARKER}: guards quick single Alt+Tab"
 )
 
 ACTIVATE_OLD = """    _activateSelected(reset_current_window_title) {
@@ -59,12 +60,22 @@ PREVIEW_NEXT_NEW = f"""    _previewNext() {{
             }}
             return;
         }}
-        if (this._currentIndex === this._windows.length - 1) {{
+        if (this._currentIndex === this._windows.length - 1 && this._x47Advanced) {{
             this._x47Desktop = true;
             for (let p of this._allPreviews)
                 p.ease({{opacity: 0, duration: 150}});
             if (this._windowTitles[this._currentIndex])
                 this._windowTitles[this._currentIndex].text = 'Desktop';
+            return;
+        }}
+        this._x47Advanced = true;
+        if (this._currentIndex === this._windows.length - 1) {{
+            this._setCurrentIndex(0);
+            if (this._usingCarousel()) {{
+                this._updatePreviews(false)
+            }} else {{
+                this._flipStack(Direction.TO_LEFT);
+            }}
             return;
         }}
         this._setCurrentIndex(this._currentIndex + 1);
@@ -95,6 +106,7 @@ PREVIEW_PREV_NEW = f"""    _previewPrevious() {{
                 this._windowTitles[this._currentIndex].text = this._windows[this._currentIndex].get_title();
             return;
         }}
+        this._x47Advanced = true;
         if (this._currentIndex === 0) {{
             this._setCurrentIndex(this._windows.length-1);
             if (this._usingCarousel()) {{

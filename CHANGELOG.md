@@ -9,6 +9,16 @@
 ### Dock
 - **Click a pinned app cycles its windows** (`click-action=cycle-windows`), jumping to other workspaces when the next window lives there.
 
+### Windows-style tiling
+- **Tiling Shell** bundled + tuned: drag any window to get snap zones (no modifier key), screen edges tile halves, corners quarters (2x2 grid), top edge maximizes, and it suggests windows to fill the remaining tiles. Ubuntu's built-in tiling-assistant is disabled to avoid fights.
+- **Alt+Tab Desktop guard** — the Desktop entry no longer triggers on a quick first Alt+Tab (which was minimizing windows on single-window desktops); you now have to cycle past the last window deliberately.
+
+### Amnesia (anon) session
+- **anon@x47 wallpaper** — black circuit board with blocky ASCII `anon@x47`, same on all four desktops (`scripts/make-wallpaper.py --color anon`).
+- **Anon Status card** (`x47-anon-status@x47`) — desktop widget showing connection strength, VPN state (Mullvad / Nym / NetworkManager), `Tor Status: Connected w Bridge`, and a colour-coded security verdict. Refreshes every 10 s, click to refresh.
+- **Tor always via obfs4 bridges** — `obfs4proxy` installed, built-in public bridges baked into the anon transparent-Tor config; Tor Browser (if present) is forced onto built-in obfs4 bridges too.
+- **NymVPN opens on login** via autostart in the anon skel.
+
 ## v1.9.3 — 2026-08-05
 
 ### Fixes
