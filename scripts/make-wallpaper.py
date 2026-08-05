@@ -106,16 +106,13 @@ COLOURS = {
         "out": "x47-circuit-slate.png",
         "recolor": ((30, 40, 55), (90, 110, 140)),
     },
-    # --- amnesia (anon) session: black circuit + "anon@x47" ASCII text ---
-    # Text is rendered with pyfiglet at build time (pip install pyfiglet);
-    # the PNG is committed, so installs never need pyfiglet.
+    # --- amnesia (anon) session: carbon fibre + ASCII shrouded figure ---
     "anon": {
-        "sharp": (228, 234, 240),
+        "sharp": (200, 208, 216),
         "out": "x47-anon.png",
         "carbon": True,
-        "text": "anon@x47",
-        "font": "ansi_shadow",
-        "frac": 0.55,
+        "ascii": "x47-anon-ascii.txt",
+        "frac": 0.42,
     },
 }
 
@@ -133,7 +130,10 @@ def art_for(spec):
         art = pyfiglet.figlet_format(spec["text"], font=spec.get("font", "chunky"))
         lines = art.rstrip("\n").split("\n")
         return lines, max(len(ln) for ln in lines)
-    lines, cols, _rows = load_art(ASCII_FILE)
+    art_path = ASCII_FILE
+    if spec.get("ascii"):
+        art_path = ROOT / "assets/desktop" / spec["ascii"]
+    lines, cols, _rows = load_art(art_path)
     return lines, cols
 
 

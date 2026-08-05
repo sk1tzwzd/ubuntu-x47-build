@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.9.9 — 2026-08-05
+
+### Amnesia (`anon`)
+- **Wallpaper** — carbon-fibre ASCII shrouded figure (`x47-anon.png` / `x47-anon-ascii.txt`) instead of `anon@x47` text art.
+- **Anon Status** — panel shows only LINK / NYM / TOR (+ verdict); never SSID, Wi‑Fi name, interface, or VPN connection name.
+- **Lean parity** — skel/live anon match main: show-apps top bar, no dock / cube / blur / heavy FX.
+
 ## v1.9.8 — 2026-08-05
 
 ### Launcher
