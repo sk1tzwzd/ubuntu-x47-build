@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.9.10 — 2026-08-05
+
+### Top bar
+- **Show Apps** circle is **50px**; panel height **58px** with status icons ~28px so the bar matches on main and anon.
+
 ## v1.9.9 — 2026-08-05
 
 ### Amnesia (`anon`)
