@@ -35,6 +35,8 @@ gsettings set org.gnome.shell.extensions.dash-to-dock autohide false 2>/dev/null
 gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock autohide-in-fullscreen true 2>/dev/null || true
+gsettings set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
+gsettings set org.gnome.shell.extensions.dash-to-dock isolate-workspaces false 2>/dev/null || true
 gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
 gsettings set org.gnome.desktop.notifications show-banners true 2>/dev/null || true
 

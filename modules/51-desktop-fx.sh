@@ -28,6 +28,9 @@ dock_to_bottom() {
   gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock autohide-in-fullscreen true 2>/dev/null || true
+  # Click a pinned app: cycle through its windows, jumping workspaces to reach them.
+  gsettings set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock isolate-workspaces false 2>/dev/null || true
   # F11 toggles window fullscreen system-wide (apps that handle F11 themselves still work).
   gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
 }
