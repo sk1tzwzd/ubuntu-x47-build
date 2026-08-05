@@ -98,8 +98,10 @@ ego_install() {
 }
 
 cube_workspaces() {
-  # Desktop Cube needs fixed, horizontally-arranged workspaces.
-  log "configuring fixed workspaces for the desktop cube"
+  # Fixed floor of 4 desktops (teal/pink/carbon/green). Dynamic mode culls
+  # empty faces so carbon/green vanish — keep static and let x47-ws-walls'
+  # "+" button raise num-workspaces when you want more.
+  log "configuring workspaces for the desktop cube / swap bar (4 + add)"
   gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
   gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
   local cdir="$HOME/.local/share/gnome-shell/extensions/desktop-cube@schneegans.github.com/schemas"
@@ -184,15 +186,10 @@ hover_window_controls() {
   log "removing hover-only window controls (always-visible buttons)"
   local begin="/* --- x47 hover window controls --- */"
   local end="/* --- end x47 hover window controls --- */"
-  strip_css_block "$HOME/.config/gtk-3.0/gtk.css" "$begin" "$end"
-  strip_css_block "$HOME/.config/gtk-4.0/gtk.css" "$begin" "$end"
-  local snap_conf
-  for snap_conf in "$HOME"/snap/*/current/.config "$HOME"/snap/*/*/.config; do
-    [[ -d "$snap_conf" ]] || continue
-    [[ "$snap_conf" == */common/.config ]] && continue
-    strip_css_block "$snap_conf/gtk-3.0/gtk.css" "$begin" "$end"
-    strip_css_block "$snap_conf/gtk-4.0/gtk.css" "$begin" "$end"
-  done
+  local css
+  while IFS= read -r css; do
+    strip_css_block "$css" "$begin" "$end"
+  done < <(find "$HOME/.config" "$HOME/snap" -type f \( -path '*/gtk-3.0/gtk.css' -o -path '*/gtk-4.0/gtk.css' \) 2>/dev/null)
   ok "hover-only window controls removed (restart apps to pick it up)"
 }
 
@@ -255,14 +252,15 @@ screenshot_keybindings() {
 }
 
 set_wallpaper() {
-  # Teal (ws1) + green (ws2) + red (ws3) + purple (ws4) ASCII duster walls.
+  # Teal / pink / carbon / green presets + random extras for added workspaces.
   local dest_dir="$HOME/.local/share/backgrounds"
   local src_dir="$AM_DESKTOP/wallpapers"
   local f dest
   mkdir -p "$dest_dir"
-  log "installing X47 workspace wallpapers (teal/green/red/purple)"
-  for f in x47-circuit.png x47-circuit-pink.png x47-circuit-blue.png x47-circuit-green.png \
-           x47-circuit-orange.png x47-circuit-purple.png x47-circuit-yellow.png x47-circuit-red.png; do
+  log "installing X47 workspace wallpapers (4 presets + random extras)"
+  for f in x47-circuit.png x47-circuit-pink.png x47-circuit-carbon.png x47-circuit-green.png \
+           x47-circuit-orange.png x47-circuit-purple.png x47-circuit-yellow.png x47-circuit-red.png \
+           x47-circuit-cyan.png x47-circuit-lime.png x47-circuit-magenta.png x47-circuit-slate.png; do
     [[ -f "$src_dir/$f" ]] || { warn "missing $src_dir/$f"; continue; }
     install -m 0644 "$src_dir/$f" "$dest_dir/$f"
   done
@@ -273,7 +271,110 @@ set_wallpaper() {
     gsettings set org.gnome.desktop.background picture-options 'zoom' 2>/dev/null || true
     ok "wallpapers -> $dest_dir (active: teal / workspace 1)"
   fi
-  install_ws_walls_extension
+}
+
+install_power_desktop_sync() {
+  # Autostart watcher: GNOME Power Mode Performance ↔ High Performance desktop.
+  mkdir -p "$HOME/.config/autostart"
+  if [[ -f "$AM_DESKTOP/x47-power-desktop-sync.desktop" ]]; then
+    install -m 0644 "$AM_DESKTOP/x47-power-desktop-sync.desktop" \
+      "$HOME/.config/autostart/x47-power-desktop-sync.desktop"
+    # Point Exec at the installed binary (PATH may not include ~/.local/bin in autostart).
+    sed -i "s|^Exec=.*|Exec=$HOME/.local/bin/x47-power-desktop-sync|" \
+      "$HOME/.config/autostart/x47-power-desktop-sync.desktop"
+    ok "Power desktop sync autostart installed"
+  fi
+}
+
+apply_desktop_mode_helper() {
+  local mode="$1"
+  if [[ -x "$HOME/.local/bin/x47-desktop-mode" ]]; then
+    "$HOME/.local/bin/x47-desktop-mode" "$mode" || true
+  elif [[ -x "$X47_ROOT/scripts/x47-desktop-mode" ]]; then
+    "$X47_ROOT/scripts/x47-desktop-mode" "$mode" || true
+  else
+    warn "x47-desktop-mode not installed yet — lean/visual apply skipped"
+  fi
+}
+
+show_apps_duster_icon() {
+  # Original Ubuntu Show Apps mark in lime green via a thin theme that inherits
+  # Yaru-blue-dark for everything else.
+  local src="$X47_ROOT/assets/icons/show-apps-duster"
+  local theme_dir="$HOME/.local/share/icons/X47"
+  local size f
+  [[ -d "$src" ]] || { warn "missing $src — show-apps duster skipped"; return 0; }
+  log "installing lime Ubuntu mark as Show Apps icon"
+  rm -rf "$theme_dir"
+  mkdir -p "$theme_dir/scalable/actions"
+  cat > "$theme_dir/index.theme" <<'EOF'
+[Icon Theme]
+Name=X47
+Comment=Yaru-blue-dark with X47 Show Apps duster
+Inherits=Yaru-blue-dark,Yaru,hicolor
+Directories=scalable/actions,16x16/actions,22x22/actions,24x24/actions,32x32/actions,48x48/actions,64x64/actions,128x128/actions,256x256/actions
+
+[scalable/actions]
+Context=Actions
+Size=16
+MinSize=8
+MaxSize=512
+Type=Scalable
+
+[16x16/actions]
+Context=Actions
+Size=16
+Type=Fixed
+
+[22x22/actions]
+Context=Actions
+Size=22
+Type=Fixed
+
+[24x24/actions]
+Context=Actions
+Size=24
+Type=Fixed
+
+[32x32/actions]
+Context=Actions
+Size=32
+Type=Fixed
+
+[48x48/actions]
+Context=Actions
+Size=48
+Type=Fixed
+
+[64x64/actions]
+Context=Actions
+Size=64
+Type=Fixed
+
+[128x128/actions]
+Context=Actions
+Size=128
+Type=Fixed
+
+[256x256/actions]
+Context=Actions
+Size=256
+Type=Fixed
+EOF
+  for f in view-app-grid-ubuntu-symbolic.svg view-app-grid-symbolic.svg view-app-grid-ubiquity-symbolic.svg; do
+    [[ -f "$src/$f" ]] && install -m 0644 "$src/$f" "$theme_dir/scalable/actions/$f"
+  done
+  for size in 16 22 24 32 48 64 128 256; do
+    mkdir -p "$theme_dir/${size}x${size}/actions"
+    f="$src/view-app-grid-${size}.png"
+    [[ -f "$f" ]] || continue
+    install -m 0644 "$f" "$theme_dir/${size}x${size}/actions/view-app-grid.png"
+    install -m 0644 "$f" "$theme_dir/${size}x${size}/actions/view-app-grid-symbolic.png"
+    install -m 0644 "$f" "$theme_dir/${size}x${size}/actions/view-app-grid-ubuntu-symbolic.png"
+  done
+  gtk-update-icon-cache -f "$theme_dir" 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface icon-theme 'X47' 2>/dev/null || true
+  ok "Show Apps icon -> lime Ubuntu mark (theme X47)"
 }
 
 # Install a bundled extension from assets/extensions/<uuid> and enable it.
@@ -304,8 +405,8 @@ install_ws_walls_extension() {
 }
 
 # One click on a top banner focuses/opens the notifying app.
-# Windows 11-style snap layouts: drag a window to see zones (no modifier),
-# edges/corners tile halves and quarters, suggestions fill the rest.
+# Free drag by default; hold CTRL while dragging to show tile zones.
+# New windows open floating (never auto-tile on spawn).
 tiling_shell_tune() {
   local sdir="$HOME/.local/share/gnome-shell/extensions/tilingshell@ferrarodomenico.com/schemas"
   [[ -d "$sdir" ]] || { warn "tiling shell not installed; skipping tune"; return 0; }
@@ -318,34 +419,61 @@ tiling_shell_tune() {
     python3 "$AM_DESKTOP/patch-tilingshell-cursor.py" "$root" \
       || warn "tiling shell cursor patch failed"
   fi
-  # Clicking a layout template must also retile existing windows (upstream
-  # only changes the selection used for the next drag).
+  # Strip any old retile-on-layout-click hook (grid is drag-only).
   if [[ -f "$AM_DESKTOP/patch-tilingshell-apply-layout.py" ]]; then
     python3 "$AM_DESKTOP/patch-tilingshell-apply-layout.py" "$root" \
-      || warn "tiling shell apply-layout patch failed"
+      || warn "tiling shell apply-layout cleanup failed"
+  fi
+  # Null compositor actor mid-snap — otherwise overlays get stuck.
+  if [[ -f "$AM_DESKTOP/patch-tilingshell-null-actor.py" ]]; then
+    python3 "$AM_DESKTOP/patch-tilingshell-null-actor.py" "$root" \
+      || warn "tiling shell null-actor patch failed"
+  fi
+  # Dispose races + force-hide overlays + skip anim prep that fights wobbly.
+  if [[ -f "$AM_DESKTOP/patch-tilingshell-stability.py" ]]; then
+    python3 "$AM_DESKTOP/patch-tilingshell-stability.py" "$root" \
+      || warn "tiling shell stability patch failed"
+  fi
+  # Cube / workspace-switch mid-drag leaves the previous desktop's blue tile
+  # preview stuck — close every workspace layout + skip retile after a hop.
+  if [[ -f "$AM_DESKTOP/patch-tilingshell-workspace-drag.py" ]]; then
+    python3 "$AM_DESKTOP/patch-tilingshell-workspace-drag.py" "$root" \
+      || warn "tiling shell workspace-drag patch failed"
   fi
   local s="org.gnome.shell.extensions.tilingshell"
-  gsettings --schemadir "$sdir" set $s tiling-system-activation-key "['-1']" 2>/dev/null || true
-  gsettings --schemadir "$sdir" set $s enable-snap-assist true 2>/dev/null || true
+  # Hold CTRL while dragging to enter tile mode (0 = CTRL). Free drag otherwise.
+  gsettings --schemadir "$sdir" set $s tiling-system-activation-key "['0']" 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s tiling-system-deactivation-key "['-1']" 2>/dev/null || true
   gsettings --schemadir "$sdir" set $s enable-tiling-system true 2>/dev/null || true
-  gsettings --schemadir "$sdir" set $s enable-tiling-system-windows-suggestions true 2>/dev/null || true
-  gsettings --schemadir "$sdir" set $s enable-snap-assistant-windows-suggestions true 2>/dev/null || true
-  gsettings --schemadir "$sdir" set $s enable-screen-edges-windows-suggestions true 2>/dev/null || true
-  gsettings --schemadir "$sdir" set $s active-screen-edges true 2>/dev/null || true
-  gsettings --schemadir "$sdir" set $s top-edge-maximize true 2>/dev/null || true
+  # Snap-assist / edge snap fire without CTRL — keep off so plain drags stay free.
+  gsettings --schemadir "$sdir" set $s enable-snap-assist false 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s active-screen-edges false 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s top-edge-maximize false 2>/dev/null || true
+  # Window-suggestion popups leave stuck overlays on GNOME 50 — keep off.
+  gsettings --schemadir "$sdir" set $s enable-tiling-system-windows-suggestions false 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s enable-snap-assistant-windows-suggestions false 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s enable-screen-edges-windows-suggestions false 2>/dev/null || true
   gsettings --schemadir "$sdir" set $s quarter-tiling-threshold 40 2>/dev/null || true
   gsettings --schemadir "$sdir" set $s inner-gaps 6 2>/dev/null || true
   gsettings --schemadir "$sdir" set $s outer-gaps 4 2>/dev/null || true
-  # New windows fill empty tiles of the selected layout automatically.
-  gsettings --schemadir "$sdir" set $s enable-autotiling true 2>/dev/null || true
+  # Never auto-place new windows into tiles (dock / launcher / Alt+F2).
+  gsettings --schemadir "$sdir" set $s enable-autotiling false 2>/dev/null || true
   # Custom layouts: main+terminal strip (default), code+side stack, halves, 2x2 grid.
   # selected-layouts shape is [workspace][monitor], not the other way around.
   local layouts='[{"id":"x47-term","tiles":[{"x":0,"y":0,"width":1,"height":0.72,"groups":[1]},{"x":0,"y":0.72,"width":1,"height":0.28,"groups":[1]}]},{"id":"x47-code","tiles":[{"x":0,"y":0,"width":0.62,"height":1,"groups":[1]},{"x":0.62,"y":0,"width":0.38,"height":0.55,"groups":[1,2]},{"x":0.62,"y":0.55,"width":0.38,"height":0.45,"groups":[1,2]}]},{"id":"x47-halves","tiles":[{"x":0,"y":0,"width":0.5,"height":1,"groups":[1]},{"x":0.5,"y":0,"width":0.5,"height":1,"groups":[1]}]},{"id":"x47-grid","tiles":[{"x":0,"y":0,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0.5,"y":0,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0,"y":0.5,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0.5,"y":0.5,"width":0.5,"height":0.5,"groups":[1,2]}]}]'
   gsettings --schemadir "$sdir" set $s layouts-json "$layouts" 2>/dev/null || true
   gsettings --schemadir "$sdir" set $s selected-layouts "[['x47-term'], ['x47-term'], ['x47-term'], ['x47-term']]" 2>/dev/null || true
   gsettings --schemadir "$sdir" set $s snap-assist-sync-layout true 2>/dev/null || true
-  # Hold CTRL while dragging to bypass tiling (free placement / overlap).
-  gsettings --schemadir "$sdir" set $s tiling-system-deactivation-key "['0']" 2>/dev/null || true
+  # Instant overlay dismiss — animated close was a common stuck-overlay path.
+  gsettings --schemadir "$sdir" set $s snap-assistant-animation-time 0 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s tile-preview-animation-time 0 2>/dev/null || true
+  # Wobbly resize fights Tiling Shell's move_resize (size-change accounting errors).
+  local wdir="$HOME/.local/share/gnome-shell/extensions/compiz-windows-effect@hermes83.github.com/schemas"
+  if [[ -d "$wdir" ]]; then
+    gsettings --schemadir "$wdir" set \
+      org.gnome.shell.extensions.com.github.hermes83.compiz-windows-effect \
+      resize-effect false 2>/dev/null || true
+  fi
 }
 
 notification_click_activate() {
@@ -354,6 +482,11 @@ notification_click_activate() {
 }
 
 module_desktop_fx() {
+  # shellcheck disable=SC1091
+  . "$X47_ROOT/lib/desktop-mode.sh"
+  # shellcheck disable=SC1091
+  . "$X47_ROOT/lib/settings.sh"
+
   if [[ "${X47_SKIP_DESKTOP_FX:-0}" == "1" ]]; then
     warn "skipping desktop-fx module (--skip-desktop-fx)"
     return 0
@@ -366,16 +499,54 @@ module_desktop_fx() {
     warn "no graphical session detected — skipping desktop-fx"
     return 0
   fi
+
+  local dmode="${X47_DESKTOP_MODE:-both}"
+  dmode="$(x47_normalize_desktop_mode "$dmode" || echo both)"
+  x47_seed_desktop_mode_settings "$dmode"
+  log "desktop-fx mode: $dmode"
+
   if ! have gnome-extensions; then
-    warn "gnome-extensions CLI missing — dock + wallpaper only, skipping 3D effects"
-    dock_to_bottom
+    warn "gnome-extensions CLI missing — wallpaper / dock only"
     set_wallpaper
+    show_apps_duster_icon
+    if [[ "$dmode" == "performance" ]]; then
+      apply_desktop_mode_helper performance
+    else
+      dock_to_bottom
+    fi
     return 0
   fi
 
-  dock_to_bottom
+  # Shared light pieces for every mode.
+  set_wallpaper
+  show_apps_duster_icon
+  screenshot_keybindings
+  hover_window_controls
+  firefox_hover_buttons
+  gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
 
   local uuid ok_any=0
+
+  if [[ "$dmode" == "performance" ]]; then
+    # Lean install: tiling + notif only; no heavy FX downloads.
+    log "High Performance install — skipping cube / blur / wobbly / coverflow / BMW"
+    ego_install "tilingshell@ferrarodomenico.com" && ok_any=1 || true
+    tiling_shell_tune
+    notification_click_activate
+    # Static workspaces without cube.
+    gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
+    gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
+    apply_desktop_mode_helper performance
+    ok "desktop-fx module done (High Performance)"
+    if [[ "$ok_any" == "1" ]]; then
+      log "Log out and back in so GNOME picks up tiling (Wayland)."
+    fi
+    return 0
+  fi
+
+  # visual or both — full FX stack
+  dock_to_bottom
+
   for uuid in "${X47_FX_UUIDS[@]}"; do
     ego_install "$uuid" && ok_any=1 || true
   done
@@ -384,15 +555,24 @@ module_desktop_fx() {
   bmw_fx_profile
   coverflow_tune
   tiling_shell_tune
-  hover_window_controls
-  firefox_hover_buttons
-  screenshot_keybindings
   notification_click_activate
-  set_wallpaper
+  install_ws_walls_extension
 
-  ok "desktop-fx module done"
+  if [[ "$dmode" == "both" ]]; then
+    install_power_desktop_sync
+    # Leave Visual active after install; Power Mode Performance switches later.
+    apply_desktop_mode_helper visual
+    ok "desktop-fx module done (Visual + High Performance; switch via Power settings)"
+  else
+    apply_desktop_mode_helper visual
+    ok "desktop-fx module done (Visual only)"
+  fi
+
   if [[ "$ok_any" == "1" ]]; then
     log "Log out and back in to load the 3D effects (Wayland can't hot-reload extensions)."
+  fi
+  if [[ "$dmode" == "both" ]]; then
+    log "Tip: Settings → Power → Performance enables the High Performance desktop."
   fi
 }
 

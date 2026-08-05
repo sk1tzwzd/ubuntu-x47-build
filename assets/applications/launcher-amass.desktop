@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Amass
 Comment=Amass (terminal)
-Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class amass -- bash -lc "amass; exec bash"
+Exec=env X47_TERM_SIZE=tool $HOME/.local/bin/wezterm start --always-new-process --class amass -- bash -lc "amass; exec bash"
 Icon=kali-amass
 Terminal=false
 Type=Application

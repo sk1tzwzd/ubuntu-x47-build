@@ -11,7 +11,8 @@ module_gnome() {
   fi
 
   local settings="$X47_ROOT/assets/manifests/gnome-settings.txt"
-  local icon_theme='Yaru-blue-dark'
+  # X47 inherits Yaru-blue-dark and overrides Show Apps with the white duster.
+  local icon_theme='X47'
   local gtk_theme='Yaru-blue-dark'
   local color_scheme='prefer-dark'
   local picture_uri_dark="'file:///usr/share/backgrounds/mendhak-Red_Acer.jpg'"

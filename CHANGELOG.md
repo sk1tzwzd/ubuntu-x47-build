@@ -1,10 +1,18 @@
 # Changelog
 
+## v1.9.5 — 2026-08-05
+
+### High Performance desktop
+- **Install choice** — `--desktop-mode both|visual|performance` (first-boot chooser). `both` installs full FX and a lean profile.
+- **Power settings sync** — when both are installed, GNOME **Settings → Power → Performance** applies High Performance desktop; Balanced / Power Saver restores Visual. Autostart: `x47-power-desktop-sync`.
+- **High Performance cuts** — disables Desktop Cube, Coverflow, Burn My Windows, Blur My Shell, wobbly windows, `x47-ws-walls`, and `enable-animations`. Keeps the bottom dock, CTRL-only tiling, and wallpapers.
+- **CLI** — `x47-desktop-mode visual|performance|status|sync-power`; also `x47-settings set desktop_mode …`.
+
 ## v1.9.4 — 2026-08-05
 
 ### Desktop looks
 - **True per-desktop wallpapers** — `x47-ws-walls` now retargets the shell's per-workspace background actors, so the desktop-cube faces show each desktop's own colour *while you drag*, and the overview's previews and selector tabs always show the right one (previously everything showed the current wallpaper until you landed).
-- **Colour schemes** (same circuit pattern + crisp ASCII duster everywhere, glow only on teal): WS1 teal on dark, WS2 pink duster on white, WS3 dark red duster on baby blue, WS4 white duster on medium-dark green. Workspaces beyond 4 get a stable random pick from orange / purple / yellow / red colourways.
+- **Colour schemes** (same circuit pattern + crisp ASCII duster everywhere, glow only on teal): WS1 teal on dark, WS2 pink duster on white, WS3 silver duster on carbon fibre, WS4 white duster on medium-dark green. Workspaces beyond 4 get a stable random pick from orange / purple / yellow / red colourways.
 
 ### Dock
 - **Click a pinned app cycles its windows** (`click-action=cycle-windows`), jumping to other workspaces when the next window lives there.
@@ -12,15 +20,20 @@
 ### Windows-style tiling
 - **Tiling Shell** bundled + tuned: drag any window to get snap zones (no modifier key), screen edges tile halves, corners quarters (2x2 grid), top edge maximizes, and it suggests windows to fill the remaining tiles. Ubuntu's built-in tiling-assistant is disabled to avoid fights.
 - **Custom X47 layouts** — default is a big main area with a wide terminal strip along the bottom; also code+side-stack, halves, and a 2x2 grid. Pre-selected on all four workspaces (`[workspace][monitor]` shape).
-- **Layout templates actually apply** — clicking a grid style in the top-bar menu now retile existing windows into that layout (upstream only changed the selection for the next drag). New windows auto-fill empty tiles.
+- **CTRL+drag to tile** — plain window drags move freely (no snap zones / edge tiles). Hold **Ctrl** while dragging to show the tile grid. New windows from the dock/launcher open floating. Layout menu picks which zones apply on the next CTRL+drag.
 - **GNOME 50 fixes** — layout editor no longer crashes / leaves a stuck blue overlay (`Meta.Cursor` removed in Mutter 18); workspace-switch `_syncStacking` no longer throws when a window appears mid-animation.
-- **Easy off-switch** — hold **Ctrl while dragging** to bypass tiling for that drag (free overlap), or flip `tiling` in **X47 Settings** (`x47-settings set tiling off`) to kill snap zones + edge tiling entirely; applies instantly.
+- **Tiling stability** — null compositor actors, disposed SnapAssist during work-area changes, and failed preview fade-outs no longer leave stuck overlays; grab-end always tears down visuals; skip Mutter anim-prep that raced Compiz wobbly (`Error in size change accounting`); wobbly *resize* effect off; snap-assist close is instant.
+- **No stuck blue tile when dragging to another desktop** — workspace/cube switches mid-drag now close every workspace's tile preview (previously only the destination layout was cleared).
+- **Easy off-switch** — flip `tiling` in **X47 Settings** (`x47-settings set tiling off`) to disable CTRL+drag tiling entirely; applies instantly.
 
-### Desktop cube
-- Snappier rotation: lower edge-switch pressure, tighter workspace gap, brighter neighbour faces.
+### Terminal
+- **Sized WezTerm launches** — default terminal matches the reference window (~933×638 outer); app-grid tools open larger (~1340×720); VulnScape opens biggest (~1600×920). Override with `X47_TERM_SIZE=default|tool|large|vulnscape` or `X47_TERM_WIDTH`/`X47_TERM_HEIGHT` (pixels).
+
+### Widgets
+- **Linux CMD Helper / X47 Widgets removed** — purged from the build and live installs. `52-widgets.sh` is purge-only and will not reinstall them.
 
 ### Window controls
-- **Removed hover-only min/max/close** — invisible buttons were still stealing clicks. Normal always-visible window buttons restored (GTK + Firefox).
+- **Always-visible min/max/close** — removed hover-to-reveal window buttons everywhere (GTK, Firefox, snap sandboxes). WezTerm uses a normal title bar again (no integrated tab-bar buttons that hide until hover).
 - **Alt+Tab Desktop guard** — the Desktop entry no longer triggers on a quick first Alt+Tab (which was minimizing windows on single-window desktops); you now have to cycle past the last window deliberately.
 
 ### Amnesia (anon) session

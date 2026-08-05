@@ -197,19 +197,12 @@ stage_anon_desktop_fx_into_skel() {
     run_sudo install -m 0644 "$desk/burn-my-windows-x47-close.conf" \
       "$skel/.config/burn-my-windows/profiles/x47-close.conf"
   fi
-  if [[ -f "$desk/gtk-hover-controls.css" ]]; then
-    local begin="/* --- x47 hover window controls --- */"
-    local end="/* --- end x47 hover window controls --- */"
-    local d
-    for d in gtk-3.0 gtk-4.0; do
-      run_sudo mkdir -p "$skel/.config/$d"
-      {
-        printf '%s\n' "$begin"
-        cat "$desk/gtk-hover-controls.css"
-        printf '%s\n' "$end"
-      } | run_sudo tee "$skel/.config/$d/gtk.css" >/dev/null
-    done
-  fi
+  # Hover-only min/max/close was removed — leave anon GTK css alone / empty.
+  for d in gtk-3.0 gtk-4.0; do
+    if [[ -f "$skel/.config/$d/gtk.css" ]] && grep -qF 'x47 hover window controls' "$skel/.config/$d/gtk.css" 2>/dev/null; then
+      run_sudo rm -f "$skel/.config/$d/gtk.css"
+    fi
+  done
   if [[ -f "$X47_ROOT/assets/wezterm/wezterm.lua" ]]; then
     run_sudo mkdir -p "$skel/.config/wezterm" "$skel/.config/wzd"
     run_sudo install -m 0644 "$X47_ROOT/assets/wezterm/wezterm.lua" "$skel/.config/wezterm/wezterm.lua"

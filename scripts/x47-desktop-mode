@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+# Apply X47 Visual or High Performance desktop mode.
+#
+# Usage:
+#   x47-desktop-mode                # show current
+#   x47-desktop-mode status
+#   x47-desktop-mode visual
+#   x47-desktop-mode performance
+#   x47-desktop-mode sync-power     # map powerprofilesctl → desktop mode (both only)
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || realpath "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" && pwd)"
+
+X47_LIB=""
+if [[ -f "$HERE/../lib/settings.sh" ]]; then
+  X47_LIB="$(cd "$HERE/../lib" && pwd)"
+elif [[ -f "$HOME/.local/share/ubuntu-x47-build/lib/settings.sh" ]]; then
+  X47_LIB="$HOME/.local/share/ubuntu-x47-build/lib"
+fi
+[[ -n "$X47_LIB" ]] || { echo "x47-desktop-mode: cannot find lib/" >&2; exit 1; }
+
+# shellcheck disable=SC1091
+. "$X47_LIB/common.sh"
+# shellcheck disable=SC1091
+. "$X47_LIB/settings.sh"
+# shellcheck disable=SC1091
+. "$X47_LIB/desktop-mode.sh"
+
+_notify() {
+  local title="$1" body="$2"
+  if have notify-send; then
+    notify-send -a 'X47 Desktop' "$title" "$body" 2>/dev/null || true
+  fi
+  log "$title — $body"
+}
+
+_ext_enable() {
+  local uuid="$1"
+  [[ -d "$HOME/.local/share/gnome-shell/extensions/$uuid" ]] || return 0
+  gnome-extensions enable "$uuid" 2>/dev/null || true
+  local cur
+  cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
+  if [[ "$cur" != *"'$uuid'"* ]]; then
+    if [[ "$cur" == "@as []" || "$cur" == "[]" ]]; then
+      gsettings set org.gnome.shell enabled-extensions "['$uuid']" 2>/dev/null || true
+    else
+      gsettings set org.gnome.shell enabled-extensions "${cur%]}, '$uuid']" 2>/dev/null || true
+    fi
+  fi
+}
+
+_ext_disable() {
+  local uuid="$1"
+  gnome-extensions disable "$uuid" 2>/dev/null || true
+  local cur cleaned
+  cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
+  cleaned="$(printf '%s' "$cur" | sed -E "s/'$uuid',? ?//g; s/, ]/]/g; s/\[,/[/g")"
+  gsettings set org.gnome.shell enabled-extensions "$cleaned" 2>/dev/null || true
+}
+
+_dock_visual() {
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide-mode 'ALL_WINDOWS' 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock animation-time 0.15 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock autohide-in-fullscreen true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock isolate-workspaces false 2>/dev/null || true
+  local uuid
+  for uuid in "${X47_DOCK_UUIDS[@]}"; do
+    _ext_enable "$uuid"
+  done
+}
+
+_apply_performance() {
+  local uuid
+  for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
+    _ext_disable "$uuid"
+  done
+  for uuid in "${X47_LEAN_FX_UUIDS[@]}"; do
+    _ext_enable "$uuid"
+  done
+  # Keep the bottom dock/launcher — only heavy 3D FX and animations go away.
+  _dock_visual
+  gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
+  # Keep a static workspace floor (cheap without the cube).
+  gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
+  gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
+  x47_settings_set_str desktop_mode performance
+}
+
+_apply_visual() {
+  local installed uuid
+  installed="$(x47_settings_get_str desktop_modes_installed both)"
+  if [[ "$installed" == "performance" ]]; then
+    warn "Visual mode was not installed — staying on High Performance"
+    _apply_performance
+    return 1
+  fi
+  for uuid in "${X47_HEAVY_FX_UUIDS[@]}" "${X47_LEAN_FX_UUIDS[@]}"; do
+    _ext_enable "$uuid"
+  done
+  _dock_visual
+  gsettings set org.gnome.desktop.interface enable-animations true 2>/dev/null || true
+  gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
+  gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
+  x47_settings_set_str desktop_mode visual
+}
+
+cmd_status() {
+  x47_settings_ensure
+  local mode installed
+  mode="$(x47_settings_get_str desktop_mode visual)"
+  installed="$(x47_settings_get_str desktop_modes_installed both)"
+  echo "desktop_mode=$mode"
+  echo "desktop_modes_installed=$installed"
+  if have powerprofilesctl; then
+    echo "power_profile=$(powerprofilesctl get 2>/dev/null || echo unknown)"
+  fi
+  echo "animations=$(gsettings get org.gnome.desktop.interface enable-animations 2>/dev/null || echo '?')"
+}
+
+cmd_sync_power() {
+  local installed mode want profile
+  installed="$(x47_settings_get_str desktop_modes_installed both)"
+  mode="$(x47_settings_get_str desktop_mode visual)"
+
+  if [[ "$installed" == "performance" ]]; then
+    [[ "$mode" == "performance" ]] || _apply_performance
+    return 0
+  fi
+  if [[ "$installed" != "both" ]]; then
+    # visual-only: nothing to sync from Power Mode
+    return 0
+  fi
+
+  if ! have powerprofilesctl; then
+    warn "powerprofilesctl missing — cannot sync Power Mode"
+    return 0
+  fi
+  profile="$(powerprofilesctl get 2>/dev/null || echo balanced)"
+  case "$profile" in
+    performance) want=performance ;;
+    *) want=visual ;;
+  esac
+  if [[ "$mode" == "$want" ]]; then
+    return 0
+  fi
+  if [[ "$want" == "performance" ]]; then
+    _apply_performance
+    _notify 'High Performance desktop' \
+      'Cube and window FX off (dock kept). Log out/in if effects still linger (Wayland).'
+  else
+    _apply_visual
+    _notify 'Visual desktop' \
+      'Full FX restored. Log out/in if extensions still look wrong (Wayland).'
+  fi
+}
+
+usage() {
+  cat <<'EOF'
+X47 Desktop Mode — Visual vs High Performance
+
+  x47-desktop-mode                 Show status
+  x47-desktop-mode status
+  x47-desktop-mode visual          Enable cube / animations / heavy FX
+  x47-desktop-mode performance     Lean desktop (no cube / heavy FX; dock kept)
+  x47-desktop-mode sync-power      Apply from GNOME Power Mode (both installs)
+
+When both modes are installed:
+  Settings → Power → Performance  → High Performance desktop
+  Settings → Power → Balanced     → Visual desktop
+EOF
+}
+
+main() {
+  local cmd="${1:-status}"
+  case "$cmd" in
+    ""|status) cmd_status ;;
+    visual|v|full)
+      _apply_visual
+      _notify 'Visual desktop' 'Applied. Log out/in on Wayland if needed.'
+      cmd_status
+      ;;
+    performance|perf|hp)
+      _apply_performance
+      _notify 'High Performance desktop' 'Applied. Log out/in on Wayland if needed.'
+      cmd_status
+      ;;
+    sync-power|sync) cmd_sync_power ;;
+    -h|--help|help) usage ;;
+    *) echo "unknown command: $cmd" >&2; usage; exit 2 ;;
+  esac
+}
+
+main "$@"

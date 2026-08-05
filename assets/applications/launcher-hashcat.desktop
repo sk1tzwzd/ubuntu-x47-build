@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Hashcat
 Comment=Hashcat (terminal)
-Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class hashcat -- bash -lc "hashcat; exec bash"
+Exec=env X47_TERM_SIZE=tool $HOME/.local/bin/wezterm start --always-new-process --class hashcat -- bash -lc "hashcat; exec bash"
 Icon=kali-hashcat
 Terminal=false
 Type=Application

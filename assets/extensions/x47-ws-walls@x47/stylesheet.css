@@ -1,0 +1,20 @@
+.x47-add-workspace {
+    background-color: rgba(20, 24, 32, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 8px;
+    color: #f2f5f8;
+    font-weight: bold;
+    font-size: 22px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0;
+}
+
+.x47-add-workspace:hover {
+    background-color: rgba(40, 48, 64, 0.9);
+    border-color: rgba(255, 255, 255, 0.55);
+}
+
+.x47-add-workspace:active {
+    background-color: rgba(10, 14, 22, 0.95);
+}

@@ -98,30 +98,56 @@ if [[ -f "$sdir/gschemas.compiled" ]]; then
   gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab hide-panel true 2>/dev/null || true
 fi
 
-# Tiling Shell: drag-to-snap zones without any modifier key.
+# Tiling Shell: hold CTRL while dragging to tile (same as main session).
+# Snap-assist / edges / autotiling stay off so plain drags stay free.
+gsettings set org.gnome.mutter edge-tiling false 2>/dev/null || true
 tdir="$HOME/.local/share/gnome-shell/extensions/tilingshell@ferrarodomenico.com/schemas"
 if [[ -d "$tdir" ]]; then
   gnome-extensions disable tiling-assistant@ubuntu.com 2>/dev/null || true
   ts="org.gnome.shell.extensions.tilingshell"
-  gsettings --schemadir "$tdir" set $ts tiling-system-activation-key "['-1']" 2>/dev/null || true
-  gsettings --schemadir "$tdir" set $ts enable-snap-assist true 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts tiling-system-activation-key "['0']" 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts tiling-system-deactivation-key "['-1']" 2>/dev/null || true
   gsettings --schemadir "$tdir" set $ts enable-tiling-system true 2>/dev/null || true
-  gsettings --schemadir "$tdir" set $ts enable-tiling-system-windows-suggestions true 2>/dev/null || true
-  gsettings --schemadir "$tdir" set $ts enable-snap-assistant-windows-suggestions true 2>/dev/null || true
-  gsettings --schemadir "$tdir" set $ts enable-screen-edges-windows-suggestions true 2>/dev/null || true
-  gsettings --schemadir "$tdir" set $ts active-screen-edges true 2>/dev/null || true
-  gsettings --schemadir "$tdir" set $ts top-edge-maximize true 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts enable-snap-assist false 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts active-screen-edges false 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts top-edge-maximize false 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts enable-tiling-system-windows-suggestions false 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts enable-snap-assistant-windows-suggestions false 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts enable-screen-edges-windows-suggestions false 2>/dev/null || true
   gsettings --schemadir "$tdir" set $ts quarter-tiling-threshold 40 2>/dev/null || true
   gsettings --schemadir "$tdir" set $ts inner-gaps 6 2>/dev/null || true
   gsettings --schemadir "$tdir" set $ts outer-gaps 4 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts enable-autotiling false 2>/dev/null || true
   layouts='[{"id":"x47-term","tiles":[{"x":0,"y":0,"width":1,"height":0.72,"groups":[1]},{"x":0,"y":0.72,"width":1,"height":0.28,"groups":[1]}]},{"id":"x47-code","tiles":[{"x":0,"y":0,"width":0.62,"height":1,"groups":[1]},{"x":0.62,"y":0,"width":0.38,"height":0.55,"groups":[1,2]},{"x":0.62,"y":0.55,"width":0.38,"height":0.45,"groups":[1,2]}]},{"id":"x47-halves","tiles":[{"x":0,"y":0,"width":0.5,"height":1,"groups":[1]},{"x":0.5,"y":0,"width":0.5,"height":1,"groups":[1]}]},{"id":"x47-grid","tiles":[{"x":0,"y":0,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0.5,"y":0,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0,"y":0.5,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0.5,"y":0.5,"width":0.5,"height":0.5,"groups":[1,2]}]}]'
   gsettings --schemadir "$tdir" set $ts layouts-json "$layouts" 2>/dev/null || true
   # selected-layouts shape is [workspace][monitor]
   gsettings --schemadir "$tdir" set $ts selected-layouts "[['x47-term'], ['x47-term'], ['x47-term'], ['x47-term']]" 2>/dev/null || true
   gsettings --schemadir "$tdir" set $ts snap-assist-sync-layout true 2>/dev/null || true
-  gsettings --schemadir "$tdir" set $ts enable-autotiling true 2>/dev/null || true
-  gsettings --schemadir "$tdir" set $ts tiling-system-deactivation-key "['0']" 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts snap-assistant-animation-time 0 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts tile-preview-animation-time 0 2>/dev/null || true
 fi
+
+# Firefox (snap): keep the amnesia profile + SOCKS→local Tor visible in Settings.
+# Snap reads ~/snap/firefox/common/.mozilla — mirror the skel profile there every login.
+ff_src="$HOME/.mozilla/firefox"
+ff_snap="$HOME/snap/firefox/common/.mozilla/firefox"
+if [[ -d "$ff_src/amnesia.default" ]]; then
+  mkdir -p "$ff_snap/amnesia.default"
+  cp -a "$ff_src/profiles.ini" "$ff_snap/profiles.ini" 2>/dev/null || true
+  cp -a "$ff_src/amnesia.default/user.js" "$ff_snap/amnesia.default/user.js" 2>/dev/null || true
+fi
+# Prefer the Tor-hardened launcher over the stock snap icon.
+fav="$(gsettings get org.gnome.shell favorite-apps 2>/dev/null || echo "@as []")"
+fav="$(printf '%s' "$fav" | sed -E "s/'firefox_firefox\.desktop',? ?//g; s/'firefox\.desktop',? ?//g; s/, ]/]/g; s/\[,/[/g")"
+if [[ "$fav" != *"firefox-amnesia.desktop"* ]]; then
+  if [[ "$fav" == "@as []" || "$fav" == "[]" ]]; then
+    fav="['firefox-amnesia.desktop']"
+  else
+    fav="${fav%]}, 'firefox-amnesia.desktop']"
+  fi
+fi
+gsettings set org.gnome.shell favorite-apps "$fav" 2>/dev/null || true
+xdg-settings set default-web-browser firefox-amnesia.desktop 2>/dev/null || true
 # Desktop Cube feel (same as main session).
 cdir="$HOME/.local/share/gnome-shell/extensions/desktop-cube@schneegans.github.com/schemas"
 if [[ -d "$cdir" ]]; then

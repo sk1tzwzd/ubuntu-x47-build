@@ -86,6 +86,7 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
             <tr><td><code>--skip-debloat</code></td><td>Keep language packs and default desktop apps (no trimming)</td></tr>
             <tr><td><code>--skip-perf</code></td><td>Skip boot/service perf tweaks and the Firefox snap&rarr;deb swap</td></tr>
             <tr><td><code>--skip-desktop-fx</code></td><td>Skip bottom dock + 3D window/desktop effects</td></tr>
+            <tr><td><code>--desktop-mode both|visual|performance</code></td><td>Install Visual FX, High Performance only, or both (switch via Power settings)</td></tr>
             <tr><td><code>--skip-putty-clipboard</code></td><td>Disable PuTTY-style WezTerm clipboard (select copy / right-click paste / Ctrl+C·V)</td></tr>
             <tr><td><code>--skip-win-screenshot</code></td><td>Do not bind Super+Shift+S (Print still works)</td></tr>
             <tr><td><code>--with-amnesia</code></td><td>Create the amnesiac Tor-forced <code>anon</code> user</td></tr>
@@ -152,22 +153,18 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
         <h2>Desktop looks</h2>
         <p class="section-lead">
           Runs by default for the main user (opt out with <code>--skip-desktop-fx</code>).
-          User-level only; on Wayland, log out and back in once so the effects load.
+          First boot asks for <strong>Visual</strong>, <strong>High Performance</strong>, or <strong>Both</strong>
+          (<code>--desktop-mode</code>). User-level only; on Wayland, log out and back in once so extension
+          changes load. With <em>both</em>, <strong>Settings → Power → Performance</strong> switches to the lean desktop.
         </p>
         <ul class="clean">
-          <li><strong>Bottom dock</strong> — Ubuntu Dock moved to the bottom, always visible; hides in F11 fullscreen</li>
-          <li><strong>3D window switcher</strong> — Coverflow Alt-Tab, bound to window and application switching</li>
-          <li><strong>Rotating desktops</strong> — Desktop Cube (workspaces fixed at 4)</li>
-          <li><strong>Window animations</strong> — Burn My Windows: TV Glitch on open, Broken Glass on close</li>
-          <li><strong>Blur + wobble</strong> — Blur My Shell (panel/overview/dash) and Compiz-style wobbly windows</li>
-          <li><strong>Hover-only window controls</strong> — minimize/maximize/close stay invisible until you hover the titlebar (GTK3 + GTK4 apps, including snap Firefox)</li>
-          <li><strong>X47 wallpaper</strong> — the X47 knuckle-duster as glowing teal ASCII art, centered over a dark circuit background, set for light and dark modes</li>
-          <li><strong>Linux CMD Helper widget</strong> — ask in plain English, get just the Ubuntu terminal command (Anthropic Claude Haiku; key in <code>~/.config/x47-widgets/anthropic.key</code> or <code>X47_ANTHROPIC_KEY</code>). Above desktop icons, under app windows, hides in fullscreen, snaps to grid, click to copy</li>
+          <li><strong>Visual</strong> — bottom dock, Coverflow Alt-Tab, Desktop Cube, Burn My Windows, Blur My Shell, wobbly windows, per-desktop walls</li>
+          <li><strong>High Performance</strong> — no cube/heavy FX; animations off; bottom dock + CTRL-only tiling + wallpapers kept</li>
+          <li><strong>Shared</strong> — notification click-to-focus, tiling layouts, X47 circuit wallpapers / Show Apps icon</li>
         </ul>
         <div class="aside">
-          Extensions are pulled version-matched from extensions.gnome.org. On a
-          brand-new GNOME release any effect without a compatible build yet is
-          skipped with a warning; the bottom dock always applies.
+          Switch anytime with <code>x47-desktop-mode performance|visual</code> or Power Mode when both are installed.
+          Extensions are pulled version-matched from extensions.gnome.org.
         </div>
       </section>
 

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=fd
 Comment=fd (terminal)
-Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class fd -- bash -lc "fd; exec bash"
+Exec=env X47_TERM_SIZE=tool $HOME/.local/bin/wezterm start --always-new-process --class fd -- bash -lc "fd; exec bash"
 Icon=x47-fd
 Terminal=false
 Type=Application

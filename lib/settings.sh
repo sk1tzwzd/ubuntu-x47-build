@@ -9,6 +9,8 @@ X47_FEATURE_DEFAULTS=(
   "putty_clipboard=1"
   "win_screenshot=1"
   "tiling=1"
+  "desktop_mode=visual"
+  "desktop_modes_installed=both"
 )
 
 x47_settings_ensure() {
@@ -45,13 +47,16 @@ x47_settings_get() {
   esac
 }
 
-x47_settings_set() {
-  local key="$1" raw="$2" val
-  case "${raw,,}" in
-    1|true|on|yes|enable|enabled) val=1 ;;
-    0|false|off|no|disable|disabled) val=0 ;;
-    *) return 1 ;;
-  esac
+x47_settings_get_str() {
+  local key="$1" default="${2:-}" val
+  x47_settings_ensure
+  val="$(grep -E "^${key}=" "$X47_SETTINGS_FILE" 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d '[:space:]')"
+  [[ -n "$val" ]] || val="$default"
+  printf '%s\n' "$val"
+}
+
+x47_settings_set_str() {
+  local key="$1" val="$2"
   x47_settings_ensure
   if grep -qE "^${key}=" "$X47_SETTINGS_FILE" 2>/dev/null; then
     local tmp
@@ -64,6 +69,16 @@ x47_settings_set() {
   else
     echo "${key}=${val}" >> "$X47_SETTINGS_FILE"
   fi
+}
+
+x47_settings_set() {
+  local key="$1" raw="$2" val
+  case "${raw,,}" in
+    1|true|on|yes|enable|enabled) val=1 ;;
+    0|false|off|no|disable|disabled) val=0 ;;
+    *) return 1 ;;
+  esac
+  x47_settings_set_str "$key" "$val"
 }
 
 # Apply settings that need an immediate system action (gsettings, etc.).
@@ -80,15 +95,22 @@ x47_settings_apply() {
       gsettings set org.gnome.shell.keybindings show-screenshot-ui "['Print']" 2>/dev/null || true
     fi
 
-    # Window tiling (Tiling Shell): off = windows drag/overlap freely,
-    # no snap zones, no edge tiling. Applies live.
+    # Window tiling (Tiling Shell): off = no tile mode at all.
+    # On = free drag by default; hold CTRL while dragging for tile zones.
+    # New windows always open floating. Applies live.
     local tdir="$HOME/.local/share/gnome-shell/extensions/tilingshell@ferrarodomenico.com/schemas"
     if [[ -d "$tdir" ]]; then
       local ts="org.gnome.shell.extensions.tilingshell" onoff=false
       [[ "$tiling" == "1" ]] && onoff=true
       gsettings --schemadir "$tdir" set $ts enable-tiling-system $onoff 2>/dev/null || true
-      gsettings --schemadir "$tdir" set $ts enable-snap-assist $onoff 2>/dev/null || true
-      gsettings --schemadir "$tdir" set $ts active-screen-edges $onoff 2>/dev/null || true
+      # Snap/edges stay off — they fire without CTRL and would fight free-drag.
+      gsettings --schemadir "$tdir" set $ts enable-snap-assist false 2>/dev/null || true
+      gsettings --schemadir "$tdir" set $ts active-screen-edges false 2>/dev/null || true
+      gsettings --schemadir "$tdir" set $ts enable-autotiling false 2>/dev/null || true
+      if [[ "$onoff" == "true" ]]; then
+        gsettings --schemadir "$tdir" set $ts tiling-system-activation-key "['0']" 2>/dev/null || true
+        gsettings --schemadir "$tdir" set $ts tiling-system-deactivation-key "['-1']" 2>/dev/null || true
+      fi
     fi
   fi
 

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Aircrack-ng
 Comment=Aircrack-ng (terminal)
-Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class aircrack-ng -- bash -lc "aircrack-ng; exec bash"
+Exec=env X47_TERM_SIZE=tool $HOME/.local/bin/wezterm start --always-new-process --class aircrack-ng -- bash -lc "aircrack-ng; exec bash"
 Icon=kali-aircrack-ng
 Terminal=false
 Type=Application

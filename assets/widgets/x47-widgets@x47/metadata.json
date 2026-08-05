@@ -1,7 +1,0 @@
-{
-  "uuid": "x47-widgets@x47",
-  "name": "Linux CMD Helper",
-  "description": "Desktop card for the X47 build: ask in plain English, get back just the Ubuntu terminal command (Claude Haiku). Click to copy. Sits above desktop icons, under app windows.",
-  "shell-version": ["48", "49", "50"],
-  "url": "https://github.com/sk1tzwzd/ubuntu-x47-build"
-}

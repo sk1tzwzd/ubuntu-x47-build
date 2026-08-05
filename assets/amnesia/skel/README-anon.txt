@@ -66,9 +66,15 @@ IMPORTANT
 
 Browsing
 --------
-  * Use Firefox (Amnesia / Safest), not Chrome, not Tor Browser.
-  * Do NOT set a SOCKS proxy in Firefox (already torified; Tor-over-Tor is bad).
-  * Verify: https://check.torproject.org
+  * Use Firefox (Amnesia / Safest) from the dock — not the stock Firefox icon.
+  * Firefox is pre-set to SOCKS 127.0.0.1:9050 (local Tor). That is safe here:
+    localhost bypasses the TransPort redirect, so it is not Tor-over-Tor.
+    Other apps stay transparently torified by the kill-switch.
+  * .onion sites need that SOCKS path (system DNS refuses .onion by RFC 7686).
+    Prefer https://…onion when the service supports it; HTTP onions also work.
+  * Verify: homepage opens https://check.torproject.org/api/ip → "IsTor":true
+  * Many onions need JavaScript — Safest leaves JS off. Toggle it in
+    about:config → javascript.enabled if a site stays blank after it loads.
 
 What this is NOT
 ----------------

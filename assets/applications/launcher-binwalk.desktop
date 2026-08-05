@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Binwalk
 Comment=Binwalk (terminal)
-Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class binwalk -- bash -lc "binwalk; exec bash"
+Exec=env X47_TERM_SIZE=tool $HOME/.local/bin/wezterm start --always-new-process --class binwalk -- bash -lc "binwalk; exec bash"
 Icon=kali-binwalk
 Terminal=false
 Type=Application

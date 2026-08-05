@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=bat
 Comment=bat (terminal)
-Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class bat -- bash -lc "bat --paging=always; exec bash"
+Exec=env X47_TERM_SIZE=tool $HOME/.local/bin/wezterm start --always-new-process --class bat -- bash -lc "bat --paging=always; exec bash"
 Icon=x47-bat
 Terminal=false
 Type=Application

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Watch power-profiles-daemon and keep X47 desktop mode in sync when both
+# Visual and High Performance were installed.
+#
+# Autostart: ~/.config/autostart/x47-power-desktop-sync.desktop
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || realpath "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" && pwd)"
+
+MODE_BIN=""
+if [[ -x "$HERE/x47-desktop-mode" ]]; then
+  MODE_BIN="$HERE/x47-desktop-mode"
+elif [[ -x "$HOME/.local/bin/x47-desktop-mode" ]]; then
+  MODE_BIN="$HOME/.local/bin/x47-desktop-mode"
+elif [[ -x "$HOME/.local/share/ubuntu-x47-build/bin/x47-desktop-mode" ]]; then
+  MODE_BIN="$HOME/.local/share/ubuntu-x47-build/bin/x47-desktop-mode"
+fi
+[[ -n "$MODE_BIN" ]] || exit 0
+
+# Apply once at login.
+"$MODE_BIN" sync-power || true
+
+# Poll ActiveProfile. D-Bus monitor is flaky across PPD bus-name changes;
+# a short poll is enough for Power Settings clicks.
+last="$(powerprofilesctl get 2>/dev/null || echo "")"
+while true; do
+  sleep 2
+  cur="$(powerprofilesctl get 2>/dev/null || echo "")"
+  [[ -n "$cur" ]] || continue
+  if [[ "$cur" != "$last" ]]; then
+    last="$cur"
+    "$MODE_BIN" sync-power || true
+  fi
+done

@@ -1,12 +1,27 @@
 // X47 amnesia Firefox — Tor Browser "Safest"-style defaults.
-// Traffic is already transparently torified. Do NOT set a SOCKS proxy
-// (that would create Tor-over-Tor).
+// System nftables already kill-switches / transparently torifies anon's UID.
+// SOCKS here points at the *local* Tor SOCKSPort (127.0.0.1:9050). Localhost
+// is exempt from the TransPort redirect, so this is NOT Tor-over-Tor — it
+// makes Settings → Network show a Tor proxy and sends DNS through SOCKS.
 
-// --- Onion + network (transparent Tor) ---
+// --- Onion + network (local Tor SOCKS + transparent fallback for other apps) ---
 user_pref("network.dns.blockDotOnion", false);
 user_pref("network.dns.disableIPv6", true);
 user_pref("network.http.http3.enable", false);
-user_pref("network.proxy.type", 0);
+user_pref("network.proxy.type", 1);
+user_pref("network.proxy.socks", "127.0.0.1");
+user_pref("network.proxy.socks_port", 9050);
+user_pref("network.proxy.socks_remote_dns", true);
+user_pref("network.proxy.socks_version", 5);
+user_pref("network.proxy.no_proxies_on", "localhost, 127.0.0.1");
+user_pref("network.proxy.share_proxy_settings", false);
+// Do not fall back to direct clearnet if Tor SOCKS blips.
+user_pref("network.proxy.failover_direct", false);
+// Empty HTTP/SSL proxy fields — SOCKS handles every protocol (incl. .onion).
+user_pref("network.proxy.http", "");
+user_pref("network.proxy.http_port", 0);
+user_pref("network.proxy.ssl", "");
+user_pref("network.proxy.ssl_port", 0);
 user_pref("network.captive-portal-service.enabled", false);
 user_pref("network.connectivity-service.enabled", false);
 user_pref("network.prefetch-next", false);
@@ -67,12 +82,18 @@ user_pref("browser.formfill.enable", false);
 user_pref("signon.rememberSignons", false);
 user_pref("places.history.enabled", false);
 
-// --- HTTPS-only + mixed content ---
-user_pref("dom.security.https_only_mode", true);
-user_pref("dom.security.https_only_mode_pbm", true);
+// --- HTTPS / mixed content ---
+// HTTPS-Only + javascript.enabled=false traps HTTP .onion sites: the
+// "Continue to HTTP site" interstitial needs JS, so onions look dead.
+// Prefer allowing plain HTTP onions; mixed active content stays blocked.
+user_pref("dom.security.https_only_mode", false);
+user_pref("dom.security.https_only_mode_pbm", false);
+user_pref("dom.security.https_only_mode_ever_enabled", false);
+user_pref("dom.security.https_only_mode_ever_enabled_pbm", false);
 user_pref("security.mixed_content.block_active_content", true);
 user_pref("security.mixed_content.block_display_content", true);
-user_pref("security.ssl.require_safe_negotiation", true);
+// Many onion TLS stacks fail "safe negotiation"; Tor Browser does not force this.
+user_pref("security.ssl.require_safe_negotiation", false);
 
 // --- Extra leak / fingerprint surface reduction ---
 user_pref("beacon.enabled", false);
@@ -93,8 +114,9 @@ user_pref("browser.newtabpage.activity-stream.telemetry", false);
 user_pref("browser.ping-centre.telemetry", false);
 
 // --- UI defaults ---
-user_pref("browser.startup.homepage", "https://check.torproject.org");
-user_pref("startup.homepage_welcome_url", "https://check.torproject.org");
+// API JSON works with JS disabled (Safest); the HTML check page does not.
+user_pref("browser.startup.homepage", "https://check.torproject.org/api/ip");
+user_pref("startup.homepage_welcome_url", "https://check.torproject.org/api/ip");
 user_pref("browser.startup.page", 1);
 user_pref("browser.aboutConfig.showWarning", false);
 user_pref("browser.shell.checkDefaultBrowser", false);

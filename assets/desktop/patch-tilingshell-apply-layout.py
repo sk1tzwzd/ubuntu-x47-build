@@ -1,70 +1,29 @@
 #!/usr/bin/env python3
-"""Make Tiling Shell layout templates actually retile windows when clicked.
+"""Keep layout-menu clicks as selection-only (no retile on click).
 
-By default, clicking a layout in the top-bar menu only *selects* it for the
-next drag — existing windows stay put, so it feels broken. Patch
-`selectLayoutOnClick` to also place the current workspace's windows into
-that layout's tiles (left-to-right, top-to-bottom).
+Earlier X47 builds retilled every open window when a layout was chosen.
+That fought the desired model: windows open floating; the grid only
+applies while a window is being moved. This script strips that retile
+hook if present, and is a no-op on a clean upstream install.
 
 Idempotent. Re-run after Tiling Shell updates.
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
 MARKER = "x47-apply-layout-on-click"
 
-OLD = """  selectLayoutOnClick(monitorIndex, layoutToSelectId) {
+# Upstream / desired behaviour
+SELECT_ONLY = """  selectLayoutOnClick(monitorIndex, layoutToSelectId) {
     GlobalState.get().setSelectedLayoutOfMonitor(
       layoutToSelectId,
       monitorIndex
     );
     this.menu.toggle();
   }"""
-
-NEW = f"""  selectLayoutOnClick(monitorIndex, layoutToSelectId) {{
-    GlobalState.get().setSelectedLayoutOfMonitor(
-      layoutToSelectId,
-      monitorIndex
-    );
-    // {MARKER}: also place existing windows into the chosen layout tiles
-    try {{
-      const layout = GlobalState.get().getSelectedLayoutOfMonitor(
-        monitorIndex,
-        global.workspaceManager.get_active_workspace_index()
-      );
-      if (layout && layout.tiles && layout.tiles.length) {{
-        const workArea = Main.layoutManager.getWorkAreaForMonitor(monitorIndex);
-        const ws = global.workspaceManager.get_active_workspace();
-        const wins = global.display.get_tab_list(0 /* Meta.TabList.NORMAL */, ws).filter(
-          (w) => w && w.get_monitor() === monitorIndex && !w.minimized
-            && !w.is_override_redirect()
-        );
-        const tiles = layout.tiles.slice().sort(
-          (a, b) => (a.y - b.y) || (a.x - b.x)
-        );
-        for (let i = 0; i < wins.length && i < tiles.length; i++) {{
-          const win = wins[i];
-          const t = tiles[i];
-          const x = Math.round(workArea.x + t.x * workArea.width);
-          const y = Math.round(workArea.y + t.y * workArea.height);
-          const w = Math.round(t.width * workArea.width);
-          const h = Math.round(t.height * workArea.height);
-          if (w <= 0 || h <= 0) continue;
-          try {{
-            if (win.maximizedHorizontally || win.maximizedVertically)
-              win.unmaximize(3 /* Meta.MaximizeFlags.BOTH */);
-          }} catch (_) {{ /* ignore */ }}
-          win.move_resize_frame(true, x, y, w, h);
-          win.assignedTile = t;
-        }}
-      }}
-    }} catch (e) {{
-      console.warn(`tilingshell apply-layout: ${{e}}`);
-    }}
-    this.menu.toggle();
-  }}"""
 
 
 def main() -> int:
@@ -79,14 +38,23 @@ def main() -> int:
         print(f"indicator.js not found at {path}", file=sys.stderr)
         return 1
     text = path.read_text(encoding="utf-8")
-    if MARKER in text:
-        print("  skip apply-layout (already patched)")
+    if MARKER not in text:
+        print("  skip apply-layout (no retile hook present)")
         return 0
-    if OLD not in text:
-        print("  WARN: selectLayoutOnClick pattern not found", file=sys.stderr)
+    # Remove the whole selectLayoutOnClick that contains our marker
+    new_text, n = re.subn(
+        r"  selectLayoutOnClick\(monitorIndex, layoutToSelectId\) \{.*?"
+        r"this\.menu\.toggle\(\);\n  \}",
+        SELECT_ONLY,
+        text,
+        count=1,
+        flags=re.DOTALL,
+    )
+    if n != 1 or MARKER in new_text:
+        print("  WARN: could not strip apply-layout retile hook", file=sys.stderr)
         return 1
-    path.write_text(text.replace(OLD, NEW, 1), encoding="utf-8")
-    print(f"  patched {path}")
+    path.write_text(new_text, encoding="utf-8")
+    print(f"  stripped retile-on-click from {path}")
     return 0
 
 

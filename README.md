@@ -2,7 +2,7 @@
 
 Idempotent installer that reproduces a custom Ubuntu 24.04 / 26 desktop:
 
-- **WezTerm** as the default terminal (compact spawn size, **X47 watermark** on the right, no OS title bar — minimize/maximize/close live on the tab bar); GNOME Terminal is removed
+- **WezTerm** as the default terminal (compact spawn size, **X47 watermark** on the right, tab-bar chrome with always-visible Gnome-style min/max/close); GNOME Terminal is removed
 - **Mullvad VPN** (apt) and **Tor Browser** (latest from Tor Project, registered in the app menu)
 - Pentest + developer toolchain (apt, Go, pipx, cargo, GitHub release binaries, gems)
 - Custom **app-grid launchers** and icons (`kali-*` pack, custom `kali-cool-*`, `x47duster` fallback — no Kali dragon)
@@ -34,12 +34,28 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 | `--skip-debloat` | Keep language packs and default desktop apps (no trimming) |
 | `--skip-perf` | Skip boot/service perf tweaks and the Firefox snap→deb swap |
 | `--skip-desktop-fx` | Skip bottom dock + 3D window/desktop effects |
+| `--desktop-mode both\|visual\|performance` | Desktop experience: Visual FX, High Performance only, or both (default: ask, else `both`) |
 | `--skip-putty-clipboard` | Disable PuTTY-style WezTerm clipboard (select copy / right-click paste / Ctrl+C·V) |
 | `--skip-win-screenshot` | Do not bind Super+Shift+S (Print still works) |
 | `--with-amnesia` | Also create the amnesiac, Tor-forced `anon` user (opt-in) |
 | `--only 10-terminal,30-icons` | Run a subset of modules |
 
 Optional features default **on**. Change them anytime with **X47 Settings** (`x47-settings` in the app menu, or `x47-settings list` / `set KEY on|off`).
+
+### Desktop mode (Visual / High Performance)
+
+| Mode | What you get |
+|------|----------------|
+| `visual` | Full FX: cube, dock, Coverflow, Burn My Windows, blur, wobbly, per-desktop walls |
+| `performance` | Lean desktop: no cube/heavy FX; animations off; bottom dock + tiling + wallpapers kept |
+| `both` | Installs Visual FX **and** High Performance; switch anytime |
+
+When **both** are installed, GNOME **Settings → Power → Power Mode** drives the desktop:
+
+- **Performance** → High Performance desktop (cube / dock / animations / heavy FX off)
+- **Balanced** or **Power Saver** → Visual desktop restored
+
+You can also run `x47-desktop-mode performance` / `visual`, or `x47-settings set desktop_mode …`. On Wayland, log out/in once if extensions still look wrong after a switch.
 
 ## Performance / debloat
 
@@ -70,7 +86,7 @@ Firefox is left as the hardened snap (the earlier snap→deb swap was removed). 
 ## Firefox hardening
 
 - **Main browser** — a system-wide enterprise policy at `/etc/firefox/policies/policies.json` (honored by the Firefox snap and deb): telemetry/studies/Pocket/sponsored content off, tracking protection with cryptomining + fingerprinting blocking, HTTPS-only, DNS-over-HTTPS, no prefetch/speculative connections. JavaScript stays on for normal browsing. The installer also sets **hardened Firefox as the default browser** (over Chrome).
-- **Anon browser** — stays Tor Browser "Safest": JavaScript off, no SOCKS proxy (transparent Tor), and DoH hard-off (`network.trr.mode=5`) so DNS can never bypass Tor.
+- **Anon browser** — Tor Browser "Safest" defaults (JS off, DoH hard-off). Firefox uses local Tor SOCKS (`127.0.0.1:9050`); other apps stay transparently torified by the UID kill-switch.
 
 ## Updating Cursor
 
@@ -85,21 +101,30 @@ If the GUI says an update is available but apt says you already have the newest 
 
 ## Desktop looks
 
-By default the installer tunes the GNOME desktop for the main user (opt out with `--skip-desktop-fx`):
+By default the installer tunes the GNOME desktop for the main user (opt out with `--skip-desktop-fx`). First boot asks for **Visual**, **High Performance**, or **Both** (`--desktop-mode`).
 
-- **Bottom dock** — Ubuntu Dock moved to the bottom, always visible; hides in F11 fullscreen.
-- **3D effects** — Coverflow Alt-Tab (Alt+Tab past the last window → Desktop), Desktop Cube, Burn My Windows (**TV Glitch** open/close), Blur My Shell, Compiz-style wobbly windows.
+**Visual mode** (and the Visual side of *both*):
+
+- **Bottom dock** — Ubuntu Dock moved to the bottom; intellihide / autohide; hides in F11 fullscreen.
+- **3D effects** — Coverflow Alt-Tab (Alt+Tab past the last window → Desktop), Desktop Cube, Burn My Windows (**TV Glitch** open / **Broken Glass** close), Blur My Shell, Compiz-style wobbly windows.
+- **X47 wallpapers** — ASCII knuckle-duster colourways per workspace; `x47-ws-walls@x47` paints cube faces / overview / tabs. Reproducible with `scripts/make-wallpaper.py --all`.
+
+**High Performance mode** (and Power Mode → Performance when *both* are installed):
+
+- Disables cube, Coverflow, Burn My Windows, blur, wobbly, and per-desktop wall switching.
+- `enable-animations` off.
+- Keeps the bottom dock, CTRL-only tiling, notification click-to-focus, wallpapers, and the X47 icon theme.
+
+**Shared:**
+
 - **Notifications** — click a top banner once to jump to the app that needs attention.
-- **Window tiling** — Tiling Shell with X47 layouts (terminal strip, code stack, halves, 2×2). Click a template in the top-bar menu to retile open windows; hold Ctrl while dragging to place freely; toggle off via `x47-settings set tiling off`.
+- **Window tiling** — Tiling Shell with X47 layouts; hold Ctrl while dragging; toggle via `x47-settings set tiling off`.
 - **Screenshot** — `Super+Shift+S` or `Print` (optional via X47 Settings / `--skip-win-screenshot`).
 - **WezTerm (PuTTY-style)** — left-drag select copies; right-click pastes; `Ctrl+C` / `Ctrl+V` (optional via X47 Settings / `--skip-putty-clipboard`).
-- **X47 wallpapers** — ASCII knuckle-duster on the same circuit pattern, one colourway per workspace: **teal on dark, pink on white, dark red on baby blue, white on green**, plus random orange/purple/yellow/red for extra workspaces. `x47-ws-walls@x47` shows each desktop's own colour on the cube faces while dragging, in the overview previews, and on the selector tabs. Reproducible with `scripts/make-wallpaper.py --all`.
-- **Window animations** — open uses **TV Glitch**, close uses **Broken Glass** (split Burn My Windows profiles `x47-open.conf` / `x47-close.conf`).
-- **Linux CMD Helper widget** — a single sleek desktop card: type a question in plain English (e.g. "how do I install notepad++") and get back just the Ubuntu terminal command (Anthropic Claude Haiku); click to copy. It sits **above the desktop icons but under app windows**, **hides in fullscreen**, **snaps to a 16px grid**, and drags from its **title**. Position: `~/.config/x47-widgets/layout.json`.
 
-  The helper needs an Anthropic API key at `~/.config/x47-widgets/anthropic.key` (chmod 600), or pass `X47_ANTHROPIC_KEY=sk-ant-…` when running `./install.sh`. The key is never stored in this repo.
+User-level only (no sudo). On Wayland you must **log out and back in** once for extension changes to load fully.
 
-User-level only (no sudo). On Wayland you must **log out and back in** once for the effects to load. Reverse with `gnome-extensions disable <uuid>`, delete `~/.config/burn-my-windows/profiles/x47-*.conf`, remove the marked block from `~/.config/gtk-{3.0,4.0}/gtk.css`, or `gsettings reset org.gnome.desktop.background picture-uri`.
+> **Removed:** the Linux CMD Helper / X47 Widgets desktop cards are retired. `modules/52-widgets.sh` only purges leftover UUIDs and never reinstalls them.
 
 ## Install from ISO
 
@@ -119,7 +144,7 @@ To build it yourself: `sudo apt install xorriso`, then `./scripts/build-iso.sh` 
 ### Terminal
 - WezTerm AppImage under `~/tools/wezterm`
 - Wrapper at `~/.local/bin/wezterm`
-- Config: `~/.config/wezterm/wezterm.lua` (compact spawn, `INTEGRATED_BUTTONS` tab-bar chrome) + watermark `~/.config/wzd/watermark.png`
+- Config: `~/.config/wezterm/wezterm.lua` (default ~1008×450; tools/VulnScape open larger via `X47_TERM_SIZE`; always-visible title-bar buttons) + watermark `~/.config/wzd/watermark.png`
 - Default terminal via `xdg-terminals.list` + GNOME gsettings; GNOME Terminal purged / hidden
 
 ### Privacy
@@ -165,7 +190,7 @@ By default wallets/PGP/passwords die with the tmpfs home. To keep selected secre
 
 The vault has its **own passphrase** on top of full-disk encryption. See `~/README-anon.txt` in the anon session.
 
-Usage: log in as `anon` (default password `anon`, change on first login). Do **not** run Tor Browser as `anon` (Tor-over-Tor). Verify Tor at https://check.torproject.org.
+Usage: log in as `anon` (default password `anon`, change on first login). Do **not** run Tor Browser as `anon` (Tor-over-Tor). Verify Tor via the Firefox homepage (`check.torproject.org/api/ip` → `"IsTor":true`).
 
 ### Limitations
 

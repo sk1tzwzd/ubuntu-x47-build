@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=HTTPie
 Comment=HTTPie (terminal)
-Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class http -- bash -lc "http; exec bash"
+Exec=env X47_TERM_SIZE=tool $HOME/.local/bin/wezterm start --always-new-process --class http -- bash -lc "http; exec bash"
 Icon=x47-http
 Terminal=false
 Type=Application

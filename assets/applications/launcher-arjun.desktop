@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Arjun
 Comment=Arjun (terminal)
-Exec=$HOME/.local/bin/wezterm --config initial_cols=170 --config initial_rows=45 start --always-new-process --class arjun -- bash -lc "arjun; exec bash"
+Exec=env X47_TERM_SIZE=tool $HOME/.local/bin/wezterm start --always-new-process --class arjun -- bash -lc "arjun; exec bash"
 Icon=kali-arjun
 Terminal=false
 Type=Application
