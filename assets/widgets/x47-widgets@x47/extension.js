@@ -2,15 +2,13 @@
 // install notepad++"), get back just the Ubuntu terminal command (Claude
 // Haiku via the Anthropic API). Click the result to copy it.
 //
-// Layering: the card lives inside window_group just above the DESKTOP-type
-// window (DING desktop icons), so it is visible on the desktop but app
-// windows always cover it. Hidden while a fullscreen window is up.
-// API key: ~/.config/x47-widgets/anthropic.key (chmod 600, never in git).
+// Layering: chrome overlay (always clickable / focusable on Wayland). Hides
+// in true fullscreen. API key: ~/.config/x47-widgets/anthropic.key
+// (chmod 600, never in git).
 
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
-import Meta from 'gi://Meta';
 import Soup from 'gi://Soup';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -32,29 +30,24 @@ const DRAG_THRESHOLD = 4;
 
 export default class LinuxCmdHelperExtension extends Extension {
     enable() {
-        this._session = new Soup.Session({timeout: 30});
+        this._session = new Soup.Session();
+        try {
+            this._session.timeout = 30;
+        } catch { /* soup variant without timeout prop */ }
         this._layout = this._loadLayout();
         this._drag = null;
         this._dragMonId = 0;
-        this._hiddenForFullscreen = false;
         this._requestSeq = 0;
+        this._chrome = false;
 
         this._buildCard();
-        this._restack();
 
-        this._restackedId = global.display.connect('restacked', () => this._restack());
         this._monitorsChangedId = Main.layoutManager.connect(
             'monitors-changed', () => this._placeCard());
-        try {
-            this._fsChangedId = global.display.connect(
-                'in-fullscreen-changed', () => this._updateFullscreenVisibility());
-        } catch {
-            this._fsChangedId = 0;
-        }
 
         this._placeIdle = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._placeCard();
-            this._restack();
+            this._focusEntry();
             this._placeIdle = 0;
             return GLib.SOURCE_REMOVE;
         });
@@ -68,14 +61,6 @@ export default class LinuxCmdHelperExtension extends Extension {
         if (this._statusTimer) {
             GLib.source_remove(this._statusTimer);
             this._statusTimer = 0;
-        }
-        if (this._restackedId) {
-            global.display.disconnect(this._restackedId);
-            this._restackedId = 0;
-        }
-        if (this._fsChangedId) {
-            global.display.disconnect(this._fsChangedId);
-            this._fsChangedId = 0;
         }
         if (this._monitorsChangedId) {
             Main.layoutManager.disconnect(this._monitorsChangedId);
@@ -91,9 +76,16 @@ export default class LinuxCmdHelperExtension extends Extension {
             this._session = null;
         }
         if (this._card) {
-            const parent = this._card.get_parent();
-            if (parent)
-                parent.remove_child(this._card);
+            if (this._chrome) {
+                try {
+                    Main.layoutManager.removeChrome(this._card);
+                } catch {
+                    this._card.get_parent()?.remove_child(this._card);
+                }
+                this._chrome = false;
+            } else {
+                this._card.get_parent()?.remove_child(this._card);
+            }
             this._card.destroy();
             this._card = null;
         }
@@ -108,13 +100,27 @@ export default class LinuxCmdHelperExtension extends Extension {
             orientation: Clutter.Orientation.VERTICAL,
             reactive: true,
             track_hover: true,
+            can_focus: true,
             width: CARD_WIDTH,
+            visible: true,
         });
-        global.window_group.add_child(this._card);
 
-        const titleRow = new St.BoxLayout({style_class: 'x47-cmd-title-row', reactive: true, track_hover: true});
+        // Chrome overlay: reliable clicks + keyboard focus on Wayland.
+        // trackFullscreen hides it during F11 / true fullscreen apps.
+        Main.layoutManager.addChrome(this._card, {
+            affectsInputRegion: true,
+            affectsStruts: false,
+            trackFullscreen: true,
+        });
+        this._chrome = true;
+
+        const titleRow = new St.BoxLayout({
+            style_class: 'x47-cmd-title-row', reactive: true, track_hover: true,
+        });
         const dot = new St.Label({text: '●', style_class: 'x47-cmd-dot'});
-        const title = new St.Label({text: 'LINUX CMD HELPER', style_class: 'x47-cmd-title', x_expand: true});
+        const title = new St.Label({
+            text: 'LINUX CMD HELPER', style_class: 'x47-cmd-title', x_expand: true,
+        });
         titleRow.add_child(dot);
         titleRow.add_child(title);
         this._attachDrag(titleRow);
@@ -125,10 +131,24 @@ export default class LinuxCmdHelperExtension extends Extension {
             style_class: 'x47-cmd-entry',
             hint_text: 'how do I install notepad++ …',
             can_focus: true,
+            reactive: true,
+            track_hover: true,
             x_expand: true,
         });
         this._entry.clutter_text.connect('activate', () => this._ask());
-        const go = new St.Button({label: '➜', style_class: 'x47-cmd-go', reactive: true, can_focus: true, track_hover: true});
+        // Wayland: St.Entry often won't take focus unless we force it on click.
+        this._entry.connect('button-press-event', () => {
+            this._focusEntry();
+            return Clutter.EVENT_PROPAGATE;
+        });
+        this._card.connect('button-press-event', () => {
+            this._focusEntry();
+            return Clutter.EVENT_PROPAGATE;
+        });
+        const go = new St.Button({
+            label: '➜', style_class: 'x47-cmd-go',
+            reactive: true, can_focus: true, track_hover: true,
+        });
         go.connect('clicked', () => this._ask());
         inputRow.add_child(this._entry);
         inputRow.add_child(go);
@@ -142,14 +162,30 @@ export default class LinuxCmdHelperExtension extends Extension {
             x_expand: true,
             visible: false,
         });
-        this._resultLabel = new St.Label({text: '', style_class: 'x47-cmd-result-text', x_expand: true});
+        this._resultLabel = new St.Label({
+            text: '', style_class: 'x47-cmd-result-text', x_expand: true,
+        });
         this._resultLabel.clutter_text.set_line_wrap(true);
         this._resultBtn.set_child(this._resultLabel);
         this._resultBtn.connect('clicked', () => this._copyResult());
         this._card.add_child(this._resultBtn);
 
-        this._status = new St.Label({text: 'ask for a command — click result to copy', style_class: 'x47-cmd-status'});
+        this._status = new St.Label({
+            text: 'ask for a command — click result to copy',
+            style_class: 'x47-cmd-status',
+        });
         this._card.add_child(this._status);
+    }
+
+    _focusEntry() {
+        if (!this._entry)
+            return;
+        try {
+            this._entry.grab_key_focus();
+        } catch { /* older shell */ }
+        try {
+            global.stage.set_key_focus(this._entry.clutter_text);
+        } catch { /* ignore */ }
     }
 
     _setStatus(text, revertAfter = 0) {
@@ -193,10 +229,27 @@ export default class LinuxCmdHelperExtension extends Extension {
         return null;
     }
 
+    _cleanCommand(text) {
+        let t = (text || '').trim();
+        // Strip markdown fences / backticks the model sometimes ignores.
+        t = t.replace(/^```[a-zA-Z0-9_-]*\s*/m, '').replace(/\s*```$/m, '');
+        t = t.replace(/^`+|`+$/g, '').trim();
+        // If multiple lines of prose slipped through, keep the first command-looking line.
+        const lines = t.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length > 1) {
+            const cmdLike = lines.find(l =>
+                !/^(here|the|this|you|to|run|use|try)\b/i.test(l));
+            if (cmdLike)
+                t = cmdLike.replace(/^`+|`+$/g, '').trim();
+        }
+        return t;
+    }
+
     _ask() {
         const q = (this._entry?.get_text() || '').trim();
         if (!q) {
             this._setStatus('type a question first', 3);
+            this._focusEntry();
             return;
         }
         const key = this._readKey();
@@ -241,10 +294,7 @@ export default class LinuxCmdHelperExtension extends Extension {
                         return;
                     }
                     const data = JSON.parse(body);
-                    let text = (data?.content?.[0]?.text || '').trim();
-                    // Strip fences/backticks in case the model ignores the prompt.
-                    text = text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '')
-                        .replace(/^`|`$/g, '').trim();
+                    const text = this._cleanCommand(data?.content?.[0]?.text || '');
                     if (!text) {
                         this._setStatus('empty reply — try rephrasing');
                         return;
@@ -261,59 +311,6 @@ export default class LinuxCmdHelperExtension extends Extension {
                     this._setStatus('request failed — check network');
                 }
             });
-    }
-
-    // --- stacking: above desktop icons, below app windows -----------------
-
-    _restack() {
-        const wg = global.window_group;
-        if (!this._card || this._card.get_parent() !== wg)
-            return;
-
-        // Place the card directly below the lowest *real* app window, so it
-        // sits under every application window but above the wallpaper and the
-        // desktop-icons (DESKTOP-type) window. This does not depend on
-        // identifying DING's actor, and it never hides the card at the bottom.
-        const appTypes = new Set([
-            Meta.WindowType.NORMAL,
-            Meta.WindowType.DIALOG,
-            Meta.WindowType.MODAL_DIALOG,
-            Meta.WindowType.UTILITY,
-            Meta.WindowType.SPLASHSCREEN,
-        ]);
-        const children = wg.get_children();
-        let lowestApp = null;
-        for (const child of children) {
-            if (child === this._card)
-                continue;
-            const win = typeof child.meta_window !== 'undefined'
-                ? child.meta_window : null;
-            if (win && appTypes.has(win.get_window_type())) {
-                lowestApp = child;
-                break; // children are bottom-to-top; first match is lowest
-            }
-        }
-
-        if (lowestApp)
-            wg.set_child_below_sibling(this._card, lowestApp);
-        else
-            wg.set_child_above_sibling(this._card, null); // no app windows: top, visible on desktop
-
-        this._updateFullscreenVisibility();
-    }
-
-    _updateFullscreenVisibility() {
-        if (!this._card)
-            return;
-        const mon = Main.layoutManager.primaryMonitor;
-        let hide = false;
-        try {
-            hide = !!(mon && global.display.get_monitor_in_fullscreen(mon.index));
-        } catch { /* keep visible */ }
-        if (hide !== this._hiddenForFullscreen) {
-            this._hiddenForFullscreen = hide;
-            this._card.visible = !hide;
-        }
     }
 
     // --- drag / snap / layout ---------------------------------------------
@@ -377,12 +374,16 @@ export default class LinuxCmdHelperExtension extends Extension {
             return [x, y];
         const w = Math.max(this._card.width || CARD_WIDTH, 1);
         const h = Math.max(this._card.height || 80, 1);
+        const panel = Main.panel?.height || 32;
         let sx = mon.x + MARGIN + Math.round((x - mon.x - MARGIN) / CELL) * CELL;
-        let sy = mon.y + MARGIN + Math.round((y - mon.y - MARGIN) / CELL) * CELL;
+        let sy = mon.y + panel + MARGIN +
+            Math.round((y - mon.y - panel - MARGIN) / CELL) * CELL;
         sx = Math.max(mon.x + MARGIN, Math.min(sx, mon.x + mon.width - w - MARGIN));
-        sy = Math.max(mon.y + MARGIN, Math.min(sy, mon.y + mon.height - h - MARGIN));
+        sy = Math.max(mon.y + panel + MARGIN,
+            Math.min(sy, mon.y + mon.height - h - MARGIN));
         sx = mon.x + MARGIN + Math.round((sx - mon.x - MARGIN) / CELL) * CELL;
-        sy = mon.y + MARGIN + Math.round((sy - mon.y - MARGIN) / CELL) * CELL;
+        sy = mon.y + panel + MARGIN +
+            Math.round((sy - mon.y - panel - MARGIN) / CELL) * CELL;
         return [sx, sy];
     }
 
@@ -390,6 +391,7 @@ export default class LinuxCmdHelperExtension extends Extension {
         const mon = Main.layoutManager.primaryMonitor;
         if (!mon || !this._card)
             return;
+        const panel = Main.panel?.height || 32;
         const saved = this._layout[CARD_ID];
         let x, y;
         if (saved) {
@@ -397,9 +399,10 @@ export default class LinuxCmdHelperExtension extends Extension {
         } else {
             [x, y] = this._snapClamp(
                 mon.x + mon.width - CARD_WIDTH - MARGIN,
-                mon.y + MARGIN + CELL * 2);
+                mon.y + panel + MARGIN + CELL);
         }
         this._card.set_position(x, y);
+        this._card.visible = true;
     }
 
     _clampToMonitor() {
