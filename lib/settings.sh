@@ -9,8 +9,8 @@ X47_FEATURE_DEFAULTS=(
   "putty_clipboard=1"
   "win_screenshot=1"
   "tiling=1"
-  "desktop_mode=visual"
-  "desktop_modes_installed=both"
+  "desktop_mode=performance"
+  "desktop_modes_installed=performance"
 )
 
 x47_settings_ensure() {

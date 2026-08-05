@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.9.6 — 2026-08-05
+
+### Lean desktop (default)
+- **Removed entirely** from main + anon: Desktop Cube, Coverflow Alt-Tab, Burn My Windows, Blur My Shell, wobbly windows, `x47-ws-walls`, and GNOME animations (`enable-animations=false`).
+- **Dual Visual/HP mode removed** — installer is lean-only; `--desktop-mode` accepted but ignored. Power desktop sync autostart dropped.
+- **Kept:** bottom dock (animation-time 0), CTRL-only tiling, notification click-to-focus, X47 wallpapers / Show Apps icon.
+
 ## v1.9.5 — 2026-08-05
 
 ### High Performance desktop

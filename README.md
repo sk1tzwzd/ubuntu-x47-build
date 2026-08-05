@@ -33,29 +33,13 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 | `--skip-hardening` | Skip UFW / fail2ban / sysctl / auditd restore |
 | `--skip-debloat` | Keep language packs and default desktop apps (no trimming) |
 | `--skip-perf` | Skip boot/service perf tweaks and the Firefox snap→deb swap |
-| `--skip-desktop-fx` | Skip bottom dock + 3D window/desktop effects |
-| `--desktop-mode both\|visual\|performance` | Desktop experience: Visual FX, High Performance only, or both (default: ask, else `both`) |
+| `--skip-desktop-fx` | Skip bottom dock / tiling / wallpapers |
 | `--skip-putty-clipboard` | Disable PuTTY-style WezTerm clipboard (select copy / right-click paste / Ctrl+C·V) |
 | `--skip-win-screenshot` | Do not bind Super+Shift+S (Print still works) |
 | `--with-amnesia` | Also create the amnesiac, Tor-forced `anon` user (opt-in) |
 | `--only 10-terminal,30-icons` | Run a subset of modules |
 
 Optional features default **on**. Change them anytime with **X47 Settings** (`x47-settings` in the app menu, or `x47-settings list` / `set KEY on|off`).
-
-### Desktop mode (Visual / High Performance)
-
-| Mode | What you get |
-|------|----------------|
-| `visual` | Full FX: cube, dock, Coverflow, Burn My Windows, blur, wobbly, per-desktop walls |
-| `performance` | Lean desktop: no cube/heavy FX; animations off; bottom dock + tiling + wallpapers kept |
-| `both` | Installs Visual FX **and** High Performance; switch anytime |
-
-When **both** are installed, GNOME **Settings → Power → Power Mode** drives the desktop:
-
-- **Performance** → High Performance desktop (cube / dock / animations / heavy FX off)
-- **Balanced** or **Power Saver** → Visual desktop restored
-
-You can also run `x47-desktop-mode performance` / `visual`, or `x47-settings set desktop_mode …`. On Wayland, log out/in once if extensions still look wrong after a switch.
 
 ## Performance / debloat
 
@@ -101,28 +85,17 @@ If the GUI says an update is available but apt says you already have the newest 
 
 ## Desktop looks
 
-By default the installer tunes the GNOME desktop for the main user (opt out with `--skip-desktop-fx`). First boot asks for **Visual**, **High Performance**, or **Both** (`--desktop-mode`).
+Lean GNOME desktop for the main user and `anon` (opt out with `--skip-desktop-fx`):
 
-**Visual mode** (and the Visual side of *both*):
+- **No heavy FX** — Desktop Cube, Coverflow Alt-Tab, Burn My Windows, Blur My Shell, wobbly windows, and per-desktop wall switching are **not installed**. GNOME animations are off.
+- **Bottom dock** — Ubuntu Dock (intellihide; animation-time 0; hides in F11 fullscreen).
+- **X47 wallpapers** — ASCII knuckle-duster circuit colourways (regen with `scripts/make-wallpaper.py --all`). Anon uses a single `anon@x47` wallpaper.
+- **Notifications** — click a top banner once to jump to the app.
+- **Window tiling** — Tiling Shell; hold Ctrl while dragging; toggle via `x47-settings set tiling off`.
+- **Screenshot** — `Super+Shift+S` or `Print` (optional via X47 Settings).
+- **WezTerm (PuTTY-style)** — select copy / right-click paste / `Ctrl+C`·`V` (optional via X47 Settings).
 
-- **Bottom dock** — Ubuntu Dock moved to the bottom; intellihide / autohide; hides in F11 fullscreen.
-- **3D effects** — Coverflow Alt-Tab (Alt+Tab past the last window → Desktop), Desktop Cube, Burn My Windows (**TV Glitch** open / **Broken Glass** close), Blur My Shell, Compiz-style wobbly windows.
-- **X47 wallpapers** — ASCII knuckle-duster colourways per workspace; `x47-ws-walls@x47` paints cube faces / overview / tabs. Reproducible with `scripts/make-wallpaper.py --all`.
-
-**High Performance mode** (and Power Mode → Performance when *both* are installed):
-
-- Disables cube, Coverflow, Burn My Windows, blur, wobbly, and per-desktop wall switching.
-- `enable-animations` off.
-- Keeps the bottom dock, CTRL-only tiling, notification click-to-focus, wallpapers, and the X47 icon theme.
-
-**Shared:**
-
-- **Notifications** — click a top banner once to jump to the app that needs attention.
-- **Window tiling** — Tiling Shell with X47 layouts; hold Ctrl while dragging; toggle via `x47-settings set tiling off`.
-- **Screenshot** — `Super+Shift+S` or `Print` (optional via X47 Settings / `--skip-win-screenshot`).
-- **WezTerm (PuTTY-style)** — left-drag select copies; right-click pastes; `Ctrl+C` / `Ctrl+V` (optional via X47 Settings / `--skip-putty-clipboard`).
-
-User-level only (no sudo). On Wayland you must **log out and back in** once for extension changes to load fully.
+User-level only (no sudo). On Wayland, **log out and back in** once after install so extension changes load.
 
 > **Removed:** the Linux CMD Helper / X47 Widgets desktop cards are retired. `modules/52-widgets.sh` only purges leftover UUIDs and never reinstalls them.
 

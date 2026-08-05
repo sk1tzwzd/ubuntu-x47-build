@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
-# Desktop looks: bottom dock, 3D window/desktop effects (Coverflow Alt-Tab,
-# Desktop Cube, Burn My Windows "Matrix"), Blur My Shell, wobbly windows, and a
-# custom X47 wallpaper. User-level only (no sudo). On Wayland the extensions
-# load after a log out / log back in.
+# Desktop looks (lean): bottom dock, CTRL-only tiling, X47 wallpapers,
+# notification click-to-focus. No cube / blur / wobbly / Coverflow / Burn My
+# Windows / per-desktop wall switcher. Animations off. User-level only.
 set -euo pipefail
 # shellcheck disable=SC1091
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/common.sh"
 
 AM_DESKTOP="$X47_ROOT/assets/desktop"
 
-# Extensions to install (version-matched from extensions.gnome.org)
-X47_FX_UUIDS=(
+# Heavy FX — never installed; disabled if leftovers remain from older builds.
+X47_HEAVY_FX_UUIDS=(
   "CoverflowAltTab@palatis.blogspot.com"
   "desktop-cube@schneegans.github.com"
   "burn-my-windows@schneegans.github.com"
   "blur-my-shell@aunetx"
   "compiz-windows-effect@hermes83.github.com"
+  "x47-ws-walls@x47"
+)
+
+# Lean extensions only (version-matched from extensions.gnome.org / bundled).
+X47_FX_UUIDS=(
   "tilingshell@ferrarodomenico.com"
 )
 
@@ -32,7 +36,7 @@ dock_to_bottom() {
   gsettings set org.gnome.shell.extensions.dash-to-dock intellihide-mode 'ALL_WINDOWS' 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock animation-time 0.15 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock animation-time 0 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock autohide-in-fullscreen true 2>/dev/null || true
   # Click a pinned app: cycle through its windows, jumping workspaces to reach them.
   gsettings set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
@@ -481,6 +485,22 @@ notification_click_activate() {
   install_local_extension "x47-notif-activate@x47" "notification click → open app"
 }
 
+disable_heavy_fx() {
+  local uuid cur cleaned
+  for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
+    gnome-extensions disable "$uuid" 2>/dev/null || true
+  done
+  cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
+  cleaned="$cur"
+  for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
+    cleaned="$(printf '%s' "$cleaned" | sed -E "s/'$uuid',? ?//g; s/, ]/]/g; s/\[,/[/g")"
+  done
+  gsettings set org.gnome.shell enabled-extensions "$cleaned" 2>/dev/null || true
+  # Drop Power↔desktop sync — Visual/HP dual mode is gone.
+  rm -f "$HOME/.config/autostart/x47-power-desktop-sync.desktop"
+  gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
+}
+
 module_desktop_fx() {
   # shellcheck disable=SC1091
   . "$X47_ROOT/lib/desktop-mode.sh"
@@ -500,79 +520,41 @@ module_desktop_fx() {
     return 0
   fi
 
-  local dmode="${X47_DESKTOP_MODE:-both}"
-  dmode="$(x47_normalize_desktop_mode "$dmode" || echo both)"
-  x47_seed_desktop_mode_settings "$dmode"
-  log "desktop-fx mode: $dmode"
+  # Build is lean-only (no Visual / dual-mode stack).
+  x47_seed_desktop_mode_settings performance performance
+  log "desktop-fx: lean (no cube / blur / wobbly / Coverflow / Burn My Windows)"
 
-  if ! have gnome-extensions; then
-    warn "gnome-extensions CLI missing — wallpaper / dock only"
-    set_wallpaper
-    show_apps_duster_icon
-    if [[ "$dmode" == "performance" ]]; then
-      apply_desktop_mode_helper performance
-    else
-      dock_to_bottom
-    fi
-    return 0
-  fi
-
-  # Shared light pieces for every mode.
   set_wallpaper
   show_apps_duster_icon
   screenshot_keybindings
   hover_window_controls
   firefox_hover_buttons
   gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
+  gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
+  gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
 
-  local uuid ok_any=0
-
-  if [[ "$dmode" == "performance" ]]; then
-    # Lean install: tiling + notif only; no heavy FX downloads.
-    log "High Performance install — skipping cube / blur / wobbly / coverflow / BMW"
-    ego_install "tilingshell@ferrarodomenico.com" && ok_any=1 || true
-    tiling_shell_tune
-    notification_click_activate
-    # Static workspaces without cube.
-    gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
-    gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
-    apply_desktop_mode_helper performance
-    ok "desktop-fx module done (High Performance)"
-    if [[ "$ok_any" == "1" ]]; then
-      log "Log out and back in so GNOME picks up tiling (Wayland)."
-    fi
+  if ! have gnome-extensions; then
+    warn "gnome-extensions CLI missing — wallpaper / dock only"
+    dock_to_bottom
+    disable_heavy_fx
     return 0
   fi
 
-  # visual or both — full FX stack
   dock_to_bottom
+  disable_heavy_fx
 
+  local uuid ok_any=0
   for uuid in "${X47_FX_UUIDS[@]}"; do
     ego_install "$uuid" && ok_any=1 || true
   done
-
-  cube_workspaces
-  bmw_fx_profile
-  coverflow_tune
   tiling_shell_tune
   notification_click_activate
-  install_ws_walls_extension
+  apply_desktop_mode_helper performance
 
-  if [[ "$dmode" == "both" ]]; then
-    install_power_desktop_sync
-    # Leave Visual active after install; Power Mode Performance switches later.
-    apply_desktop_mode_helper visual
-    ok "desktop-fx module done (Visual + High Performance; switch via Power settings)"
-  else
-    apply_desktop_mode_helper visual
-    ok "desktop-fx module done (Visual only)"
-  fi
-
+  ok "desktop-fx module done (lean)"
   if [[ "$ok_any" == "1" ]]; then
-    log "Log out and back in to load the 3D effects (Wayland can't hot-reload extensions)."
-  fi
-  if [[ "$dmode" == "both" ]]; then
-    log "Tip: Settings → Power → Performance enables the High Performance desktop."
+    log "Log out and back in so GNOME picks up tiling (Wayland)."
   fi
 }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Apply amnesia desktop look + privacy defaults every login (tmpfs home).
-# Matches main X47 desktop FX (dock, cube, coverflow, BMW, blur, wobbly) —
-# but does NOT enable X47 Widgets.
+# Lean desktop (same as main): dock, CTRL-only tiling, no cube/blur/wobbly/
+# Coverflow/Burn My Windows. Animations off. No X47 Widgets.
 set -euo pipefail
 
 gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
@@ -9,6 +9,7 @@ gsettings set org.gnome.desktop.interface gtk-theme 'Yaru-prussiangreen-dark' 2>
 gsettings set org.gnome.desktop.interface icon-theme 'Yaru-prussiangreen-dark' 2>/dev/null || true
 gsettings set org.gnome.desktop.interface accent-color 'green' 2>/dev/null || true
 gsettings set org.gnome.desktop.interface cursor-theme 'Yaru' 2>/dev/null || true
+gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
 gsettings set org.gnome.system.location enabled false 2>/dev/null || true
 gsettings set org.gnome.shell.ubuntu color-scheme 'prefer-dark' 2>/dev/null || true
 
@@ -27,7 +28,7 @@ if [[ "$cur" == *"Terminal"* || "$cur" == *"gnome-terminal"* || "$cur" == *"org.
   gsettings set org.gnome.shell favorite-apps "$cleaned" 2>/dev/null || true
 fi
 
-# Dock: bottom, always visible; hide only in F11 fullscreen (same as main).
+# Dock: bottom; zero animation time; hide only in F11 fullscreen.
 gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed false 2>/dev/null || true
@@ -35,16 +36,17 @@ gsettings set org.gnome.shell.extensions.dash-to-dock intellihide true 2>/dev/nu
 gsettings set org.gnome.shell.extensions.dash-to-dock intellihide-mode 'ALL_WINDOWS' 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock animation-time 0.15 2>/dev/null || true
+gsettings set org.gnome.shell.extensions.dash-to-dock animation-time 0 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock autohide-in-fullscreen true 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock isolate-workspaces false 2>/dev/null || true
 gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
 gsettings set org.gnome.desktop.notifications show-banners true 2>/dev/null || true
 
-# Fixed workspaces for Desktop Cube.
+# Fixed workspaces (no cube).
 gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
 gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
+gsettings set org.gnome.mutter edge-tiling false 2>/dev/null || true
 
 # Wallpaper: one look on every desktop — black circuit + "anon@x47".
 wp="$HOME/.local/share/backgrounds/x47-anon.png"
@@ -54,17 +56,20 @@ if [[ -f "$wp" ]]; then
   gsettings set org.gnome.desktop.background picture-options 'zoom' 2>/dev/null || true
 fi
 
-# Enable desktop-fx extensions (no x47-widgets, no per-workspace walls —
-# the anon status card and Tiling Shell instead).
+# Lean extensions only (+ anon status card).
 FX_UUIDS=(
+  "tilingshell@ferrarodomenico.com"
+  "x47-anon-status@x47"
+  "x47-notif-activate@x47"
+)
+
+HEAVY_UUIDS=(
   "CoverflowAltTab@palatis.blogspot.com"
   "desktop-cube@schneegans.github.com"
   "burn-my-windows@schneegans.github.com"
   "blur-my-shell@aunetx"
   "compiz-windows-effect@hermes83.github.com"
-  "tilingshell@ferrarodomenico.com"
-  "x47-anon-status@x47"
-  "x47-notif-activate@x47"
+  "x47-ws-walls@x47"
 )
 
 enable_uuid() {
@@ -83,24 +88,28 @@ enable_uuid() {
   fi
 }
 
+disable_uuid() {
+  local uuid="$1"
+  if command -v gnome-extensions >/dev/null 2>&1; then
+    gnome-extensions disable "$uuid" 2>/dev/null || true
+  fi
+  local cur
+  cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
+  cur="$(printf '%s' "$cur" | sed -E "s/'$uuid',? ?//g; s/, ]/]/g; s/\[,/[/g")"
+  gsettings set org.gnome.shell enabled-extensions "$cur" 2>/dev/null || true
+}
+
+for uuid in "${HEAVY_UUIDS[@]}"; do
+  disable_uuid "$uuid"
+done
+
 for uuid in "${FX_UUIDS[@]}"; do
   if [[ -d "$HOME/.local/share/gnome-shell/extensions/$uuid" ]]; then
     enable_uuid "$uuid"
   fi
 done
 
-# Coverflow tuning (schema ships with the extension).
-sdir="$HOME/.local/share/gnome-shell/extensions/CoverflowAltTab@palatis.blogspot.com/schemas"
-if [[ -f "$sdir/gschemas.compiled" ]]; then
-  gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab switcher-style 'Coverflow' 2>/dev/null || true
-  gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab bind-to-switch-windows true 2>/dev/null || true
-  gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab bind-to-switch-applications true 2>/dev/null || true
-  gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab hide-panel true 2>/dev/null || true
-fi
-
 # Tiling Shell: hold CTRL while dragging to tile (same as main session).
-# Snap-assist / edges / autotiling stay off so plain drags stay free.
-gsettings set org.gnome.mutter edge-tiling false 2>/dev/null || true
 tdir="$HOME/.local/share/gnome-shell/extensions/tilingshell@ferrarodomenico.com/schemas"
 if [[ -d "$tdir" ]]; then
   gnome-extensions disable tiling-assistant@ubuntu.com 2>/dev/null || true
@@ -120,7 +129,6 @@ if [[ -d "$tdir" ]]; then
   gsettings --schemadir "$tdir" set $ts enable-autotiling false 2>/dev/null || true
   layouts='[{"id":"x47-term","tiles":[{"x":0,"y":0,"width":1,"height":0.72,"groups":[1]},{"x":0,"y":0.72,"width":1,"height":0.28,"groups":[1]}]},{"id":"x47-code","tiles":[{"x":0,"y":0,"width":0.62,"height":1,"groups":[1]},{"x":0.62,"y":0,"width":0.38,"height":0.55,"groups":[1,2]},{"x":0.62,"y":0.55,"width":0.38,"height":0.45,"groups":[1,2]}]},{"id":"x47-halves","tiles":[{"x":0,"y":0,"width":0.5,"height":1,"groups":[1]},{"x":0.5,"y":0,"width":0.5,"height":1,"groups":[1]}]},{"id":"x47-grid","tiles":[{"x":0,"y":0,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0.5,"y":0,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0,"y":0.5,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0.5,"y":0.5,"width":0.5,"height":0.5,"groups":[1,2]}]}]'
   gsettings --schemadir "$tdir" set $ts layouts-json "$layouts" 2>/dev/null || true
-  # selected-layouts shape is [workspace][monitor]
   gsettings --schemadir "$tdir" set $ts selected-layouts "[['x47-term'], ['x47-term'], ['x47-term'], ['x47-term']]" 2>/dev/null || true
   gsettings --schemadir "$tdir" set $ts snap-assist-sync-layout true 2>/dev/null || true
   gsettings --schemadir "$tdir" set $ts snap-assistant-animation-time 0 2>/dev/null || true
@@ -128,7 +136,6 @@ if [[ -d "$tdir" ]]; then
 fi
 
 # Firefox (snap): keep the amnesia profile + SOCKS→local Tor visible in Settings.
-# Snap reads ~/snap/firefox/common/.mozilla — mirror the skel profile there every login.
 ff_src="$HOME/.mozilla/firefox"
 ff_snap="$HOME/snap/firefox/common/.mozilla/firefox"
 if [[ -d "$ff_src/amnesia.default" ]]; then
@@ -136,7 +143,6 @@ if [[ -d "$ff_src/amnesia.default" ]]; then
   cp -a "$ff_src/profiles.ini" "$ff_snap/profiles.ini" 2>/dev/null || true
   cp -a "$ff_src/amnesia.default/user.js" "$ff_snap/amnesia.default/user.js" 2>/dev/null || true
 fi
-# Prefer the Tor-hardened launcher over the stock snap icon.
 fav="$(gsettings get org.gnome.shell favorite-apps 2>/dev/null || echo "@as []")"
 fav="$(printf '%s' "$fav" | sed -E "s/'firefox_firefox\.desktop',? ?//g; s/'firefox\.desktop',? ?//g; s/, ]/]/g; s/\[,/[/g")"
 if [[ "$fav" != *"firefox-amnesia.desktop"* ]]; then
@@ -148,19 +154,8 @@ if [[ "$fav" != *"firefox-amnesia.desktop"* ]]; then
 fi
 gsettings set org.gnome.shell favorite-apps "$fav" 2>/dev/null || true
 xdg-settings set default-web-browser firefox-amnesia.desktop 2>/dev/null || true
-# Desktop Cube feel (same as main session).
-cdir="$HOME/.local/share/gnome-shell/extensions/desktop-cube@schneegans.github.com/schemas"
-if [[ -d "$cdir" ]]; then
-  c="org.gnome.shell.extensions.desktop-cube"
-  gsettings --schemadir "$cdir" set $c edge-switch-pressure 120 2>/dev/null || true
-  gsettings --schemadir "$cdir" set $c mouse-rotation-speed 2.5 2>/dev/null || true
-  gsettings --schemadir "$cdir" set $c workpace-separation 60 2>/dev/null || true
-  gsettings --schemadir "$cdir" set $c horizontal-stretch 70 2>/dev/null || true
-  gsettings --schemadir "$cdir" set $c inactive-workpace-opacity 220 2>/dev/null || true
-fi
 
-# Tor Browser (if staged in this home): force built-in obfs4 bridges so its
-# bundled tor also never connects directly.
+# Tor Browser (if staged in this home): force built-in obfs4 bridges.
 tbprof="$HOME/tools/tor-browser/Browser/TorBrowser/Data/Browser/profile.default"
 if [[ -d "$tbprof" ]]; then
   {

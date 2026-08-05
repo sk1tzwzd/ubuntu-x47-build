@@ -66,7 +66,7 @@ _dock_visual() {
   gsettings set org.gnome.shell.extensions.dash-to-dock intellihide-mode 'ALL_WINDOWS' 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock animation-time 0.15 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock animation-time 0 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock autohide-in-fullscreen true 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock isolate-workspaces false 2>/dev/null || true
@@ -94,21 +94,9 @@ _apply_performance() {
 }
 
 _apply_visual() {
-  local installed uuid
-  installed="$(x47_settings_get_str desktop_modes_installed both)"
-  if [[ "$installed" == "performance" ]]; then
-    warn "Visual mode was not installed — staying on High Performance"
-    _apply_performance
-    return 1
-  fi
-  for uuid in "${X47_HEAVY_FX_UUIDS[@]}" "${X47_LEAN_FX_UUIDS[@]}"; do
-    _ext_enable "$uuid"
-  done
-  _dock_visual
-  gsettings set org.gnome.desktop.interface enable-animations true 2>/dev/null || true
-  gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
-  gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
-  x47_settings_set_str desktop_mode visual
+  # Visual / heavy FX stack removed from the build — always lean.
+  warn "Visual desktop FX were removed from X47 — applying lean desktop"
+  _apply_performance
 }
 
 cmd_status() {

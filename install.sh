@@ -12,25 +12,20 @@
 #   ./install.sh --skip-hardening # skip ufw/fail2ban/sysctl restore
 #   ./install.sh --skip-debloat   # keep language packs + default desktop apps
 #   ./install.sh --skip-perf      # skip boot/service perf tweaks + Firefox deb swap
-#   ./install.sh --skip-desktop-fx # skip dock/3D effects + wallpaper switcher
-#   ./install.sh --desktop-mode both|visual|performance
-#                              # both = Visual + High Performance (Power Mode switch)
-#                              # visual = full FX only; performance = lean only
+#   ./install.sh --skip-desktop-fx # skip dock / tiling / wallpapers
 #   ./install.sh --skip-putty-clipboard  # classic terminal clipboard (no PuTTY mouse/Ctrl+C/V)
 #   ./install.sh --skip-win-screenshot   # no Super+Shift+S (Print still works)
 #   ./install.sh --with-amnesia   # also create the amnesiac Tor-forced 'anon' user
 #   ./install.sh --only 10-terminal,30-icons
 #
 # Optional features default ON and can be changed later with: x47-settings
-# Desktop mode can be switched later with: x47-desktop-mode / Power settings
+# Desktop is lean-only (no cube / blur / wobbly / Coverflow / Burn My Windows).
 #
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/lib/common.sh"
-# shellcheck disable=SC1091
-. "$SCRIPT_DIR/lib/desktop-mode.sh"
 
 X47_SKIP_APT=0
 X47_SKIP_HARDENING=0
@@ -41,11 +36,12 @@ X47_USER_ONLY=0
 X47_WITH_AMNESIA=0
 X47_PUTTY_CLIPBOARD=1
 X47_WIN_SCREENSHOT=1
-X47_DESKTOP_MODE=""
+# Always lean — kept for older docs/scripts that still pass --desktop-mode.
+X47_DESKTOP_MODE=performance
 X47_ONLY=""
 
 usage() {
-  sed -n '2,25p' "$0" | sed 's/^# \?//'
+  sed -n '2,22p' "$0" | sed 's/^# \?//'
   exit 0
 }
 
@@ -57,7 +53,8 @@ while [[ $# -gt 0 ]]; do
     --skip-perf) X47_SKIP_PERF=1; shift ;;
     --skip-desktop-fx) X47_SKIP_DESKTOP_FX=1; shift ;;
     --desktop-mode)
-      X47_DESKTOP_MODE="$(x47_normalize_desktop_mode "${2:-}" || die "invalid --desktop-mode (use both|visual|performance)")"
+      # Deprecated: build is lean-only. Accept and ignore for compatibility.
+      warn "--desktop-mode is deprecated (desktop is always lean); ignoring '$2'"
       shift 2
       ;;
     --skip-putty-clipboard) X47_PUTTY_CLIPBOARD=0; shift ;;
@@ -72,12 +69,6 @@ while [[ $# -gt 0 ]]; do
     *) die "unknown flag: $1 (try --help)" ;;
   esac
 done
-
-# Interactive chooser when not passed on the CLI (first-boot / local install).
-if [[ -z "$X47_DESKTOP_MODE" && "${X47_SKIP_DESKTOP_FX:-0}" != "1" ]]; then
-  X47_DESKTOP_MODE="$(x47_choose_desktop_mode)"
-fi
-X47_DESKTOP_MODE="${X47_DESKTOP_MODE:-both}"
 
 export X47_SKIP_APT X47_SKIP_HARDENING X47_SKIP_DEBLOAT X47_SKIP_PERF X47_SKIP_DESKTOP_FX \
   X47_USER_ONLY X47_WITH_AMNESIA X47_PUTTY_CLIPBOARD X47_WIN_SCREENSHOT X47_DESKTOP_MODE
@@ -124,7 +115,7 @@ should_run() {
 log "X47 Ubuntu Custom Build installer"
 log "repo: $X47_ROOT"
 log "home: $HOME"
-log "desktop mode: $X47_DESKTOP_MODE"
+log "desktop: lean (animations off, no cube/heavy FX)"
 bootstrap_path
 ensure_bashrc_path
 

@@ -133,8 +133,8 @@ EOF
   fi
 }
 
-# Copy main-user desktop-fx extensions into a shared cache and the anon skel
-# so each tmpfs login gets Coverflow/Cube/BMW/blur/wobbly — never widgets.
+# Copy lean desktop-fx extensions into a shared cache and the anon skel
+# (tiling + notif only — never cube/blur/wobbly/Coverflow/BMW/widgets).
 stage_anon_desktop_fx_into_skel() {
   local skel="${1:?skel dest}"
   local cache=/opt/x47-amnesia/gnome-shell-extensions
@@ -144,16 +144,24 @@ stage_anon_desktop_fx_into_skel() {
   fi
   local src_ext="$src_root/.local/share/gnome-shell/extensions"
   local uuids=(
+    "tilingshell@ferrarodomenico.com"
+    "x47-notif-activate@x47"
+  )
+  local heavy=(
     "CoverflowAltTab@palatis.blogspot.com"
     "desktop-cube@schneegans.github.com"
     "burn-my-windows@schneegans.github.com"
     "blur-my-shell@aunetx"
     "compiz-windows-effect@hermes83.github.com"
-    "tilingshell@ferrarodomenico.com"
-    "x47-notif-activate@x47"
+    "x47-ws-walls@x47"
   )
   local uuid found=0
   run_sudo mkdir -p "$cache" "$skel/.local/share/gnome-shell/extensions"
+  # Purge heavy FX leftovers from older installs.
+  for uuid in "${heavy[@]}"; do
+    run_sudo rm -rf "$cache/$uuid" "$skel/.local/share/gnome-shell/extensions/$uuid"
+  done
+  run_sudo rm -rf "$skel/.config/burn-my-windows"
   for uuid in "${uuids[@]}"; do
     if [[ -d "$src_ext/$uuid" ]]; then
       log "staging extension for anon: $uuid"
@@ -170,7 +178,7 @@ stage_anon_desktop_fx_into_skel() {
       warn "desktop-fx extension missing for anon skel: $uuid (run 51-desktop-fx first)"
     fi
   done
-  # Refresh wallpaper / BMW / hover CSS from build assets (skel may already have them).
+  # Refresh wallpaper from build assets (skel may already have them).
   local desk="$X47_ROOT/assets/desktop"
   run_sudo mkdir -p "$skel/.local/share/backgrounds"
   local wf
@@ -189,14 +197,6 @@ stage_anon_desktop_fx_into_skel() {
         "$skel/.local/share/gnome-shell/extensions/"
     fi
   done
-  if [[ -f "$desk/burn-my-windows-x47-open.conf" && -f "$desk/burn-my-windows-x47-close.conf" ]]; then
-    run_sudo mkdir -p "$skel/.config/burn-my-windows/profiles"
-    run_sudo rm -f "$skel/.config/burn-my-windows/profiles/x47.conf"
-    run_sudo install -m 0644 "$desk/burn-my-windows-x47-open.conf" \
-      "$skel/.config/burn-my-windows/profiles/x47-open.conf"
-    run_sudo install -m 0644 "$desk/burn-my-windows-x47-close.conf" \
-      "$skel/.config/burn-my-windows/profiles/x47-close.conf"
-  fi
   # Hover-only min/max/close was removed — leave anon GTK css alone / empty.
   for d in gtk-3.0 gtk-4.0; do
     if [[ -f "$skel/.config/$d/gtk.css" ]] && grep -qF 'x47 hover window controls' "$skel/.config/$d/gtk.css" 2>/dev/null; then
@@ -210,7 +210,7 @@ stage_anon_desktop_fx_into_skel() {
       && run_sudo install -m 0644 "$X47_ROOT/assets/wzd/watermark.png" "$skel/.config/wzd/watermark.png"
   fi
   if [[ "$found" == "1" ]]; then
-    ok "anon desktop-fx extensions staged (no widgets)"
+    ok "anon lean desktop-fx extensions staged (no heavy FX / widgets)"
   else
     warn "no desktop-fx extensions staged — anon still gets wallpaper/dock/WezTerm"
   fi
