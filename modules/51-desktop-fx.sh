@@ -23,13 +23,16 @@ dock_to_bottom() {
   log "moving Ubuntu Dock to the bottom (always visible; hides in fullscreen)"
   gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || warn "dock-position failed"
   gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false 2>/dev/null || true
-  # Dock always on screen but FLOATING: it overlays windows instead of
-  # reserving screen space (maximized windows extend behind it). Hidden only
-  # by F11 fullscreen.
+  # Floating dock: windows maximize to the FULL screen (no reserved strip).
+  # The dock stays visible whenever nothing overlaps it, dodges out of the way
+  # of overlapping windows, and slides back over them when the mouse hits the
+  # bottom edge. (An always-on-top overlay dock is not a dash-to-dock mode.)
   gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock autohide false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide-mode 'ALL_WINDOWS' 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock animation-time 0.15 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock autohide-in-fullscreen true 2>/dev/null || true
   # Click a pinned app: cycle through its windows, jumping workspaces to reach them.
   gsettings set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true

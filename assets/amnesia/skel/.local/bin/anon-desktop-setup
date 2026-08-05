@@ -31,9 +31,11 @@ fi
 gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed false 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock autohide false 2>/dev/null || true
-gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
+gsettings set org.gnome.shell.extensions.dash-to-dock intellihide true 2>/dev/null || true
+gsettings set org.gnome.shell.extensions.dash-to-dock intellihide-mode 'ALL_WINDOWS' 2>/dev/null || true
+gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true
+gsettings set org.gnome.shell.extensions.dash-to-dock animation-time 0.15 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock autohide-in-fullscreen true 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
 gsettings set org.gnome.shell.extensions.dash-to-dock isolate-workspaces false 2>/dev/null || true
