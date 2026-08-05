@@ -8,9 +8,9 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const FILES = [
     'x47-circuit.png',         // workspace 1 — teal
-    'x47-circuit-green.png',   // workspace 2 — green
-    'x47-circuit-red.png',     // workspace 3 — red
-    'x47-circuit-purple.png',  // workspace 4 — purple
+    'x47-circuit-pink.png',    // workspace 2 — pink on white
+    'x47-circuit-blue.png',    // workspace 3 — white on light blue
+    'x47-circuit-lime.png',    // workspace 4 — white on lime
 ];
 
 export default class X47WsWallsExtension extends Extension {

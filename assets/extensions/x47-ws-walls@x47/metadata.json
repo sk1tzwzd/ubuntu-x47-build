@@ -1,7 +1,7 @@
 {
   "uuid": "x47-ws-walls@x47",
   "name": "X47 Workspace Walls",
-  "description": "Switches the X47 ASCII knuckle-duster wallpaper colour per desktop cube workspace (teal / green / red / purple).",
+  "description": "Switches the X47 ASCII knuckle-duster wallpaper per desktop cube workspace (teal on dark / pink on white / white on blue / white on lime).",
   "shell-version": ["48", "49", "50"],
   "url": "https://github.com/sk1tzwzd/ubuntu-x47-build"
 }

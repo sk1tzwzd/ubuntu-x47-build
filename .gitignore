@@ -17,6 +17,9 @@
 
 # Build / cache noise
 __pycache__/
+
+# Token lacks workflow scope — can't push this from here
+.github/workflows/
 *.AppImage
 *.deb
 *.tar.gz

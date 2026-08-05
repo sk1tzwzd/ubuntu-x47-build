@@ -2,13 +2,14 @@
 """Render the X47 knuckle-duster ASCII art onto the circuit wallpaper.
 
 By default writes the teal (workspace 1) wallpaper. Pass --all to also write
-green / red / purple variants for workspaces 2–4 (used by the desktop-cube
-workspace wallpaper switcher).
+the pink / blue / lime variants for workspaces 2–4 (used by the desktop-cube
+workspace wallpaper switcher). Those three use loud solid backgrounds so each
+workspace is unmistakable at a glance.
 
 Usage:
-  scripts/make-wallpaper.py              # teal only
-  scripts/make-wallpaper.py --all        # teal + green + red + purple
-  scripts/make-wallpaper.py --color red  # one colour
+  scripts/make-wallpaper.py               # teal only
+  scripts/make-wallpaper.py --all         # all four
+  scripts/make-wallpaper.py --color pink  # one colour
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
 ASCII_FILE = ROOT / "assets/desktop/x47-ascii.txt"
@@ -27,31 +28,32 @@ W, H = 3840, 2160
 ART_WIDTH_FRAC = 0.315
 FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 
-# glow RGB, sharp RGB, optional background colourize (hue factor 0–1, None=skip)
+# glow RGB (soft halo behind the art), sharp RGB (the art itself).
+# "bg" = solid background colour; without it the circuit image is used.
 COLOURS = {
     "teal": {
         "glow": (64, 224, 208),
         "sharp": (214, 246, 242),
         "out": "x47-circuit.png",
-        "tint": None,  # keep original circuit
     },
-    "green": {
-        "glow": (48, 220, 96),
-        "sharp": (200, 255, 210),
-        "out": "x47-circuit-green.png",
-        "tint": (0.33, 1.15),  # hue toward green, slight sat boost
+    "pink": {  # workspace 2 — hot pink duster on white
+        "glow": (255, 100, 170),
+        "sharp": (235, 0, 110),
+        "out": "x47-circuit-pink.png",
+        "bg": (252, 250, 252),
+        "stroke": (170, 0, 80),
     },
-    "red": {
-        "glow": (255, 64, 72),
-        "sharp": (255, 210, 210),
-        "out": "x47-circuit-red.png",
-        "tint": (0.0, 1.2),
+    "blue": {  # workspace 3 — white duster on light blue
+        "glow": (255, 255, 255),
+        "sharp": (255, 255, 255),
+        "out": "x47-circuit-blue.png",
+        "bg": (95, 190, 255),
     },
-    "purple": {
-        "glow": (180, 96, 255),
-        "sharp": (230, 210, 255),
-        "out": "x47-circuit-purple.png",
-        "tint": (0.78, 1.15),
+    "lime": {  # workspace 4 — white duster on lime green
+        "glow": (255, 255, 255),
+        "sharp": (255, 255, 255),
+        "out": "x47-circuit-lime.png",
+        "bg": (105, 220, 40),
     },
 }
 
@@ -74,26 +76,13 @@ def fit_font(cols: int):
     return ImageFont.truetype(FONT_PATH, best)
 
 
-def background(tint):
-    img = Image.open(BG).convert("RGB").resize((W, H), Image.LANCZOS)
-    if tint is None:
-        return img
-    # Cheap colour wash: blend a translucent colour overlay matching the theme.
-    hue_hint, sat = tint
-    # Map hue hint to an RGB wash colour.
-    if hue_hint < 0.1:  # red
-        wash = (90, 18, 22)
-    elif hue_hint < 0.4:  # green
-        wash = (12, 70, 28)
-    else:  # purple
-        wash = (48, 16, 80)
-    overlay = Image.new("RGB", (W, H), wash)
-    img = Image.blend(img, overlay, 0.28)
-    img = ImageEnhance.Color(img).enhance(sat)
-    return img
+def background(spec):
+    if "bg" in spec:
+        return Image.new("RGB", (W, H), spec["bg"])
+    return Image.open(BG).convert("RGB").resize((W, H), Image.LANCZOS)
 
 
-def draw_art(base, lines, font, glow_rgb, sharp_rgb):
+def draw_art(base, lines, font, glow_rgb, sharp_rgb, stroke_rgb=None):
     cw = font.getlength("M")
     ascent, descent = font.getmetrics()
     lh = ascent + descent
@@ -105,13 +94,17 @@ def draw_art(base, lines, font, glow_rgb, sharp_rgb):
     glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow)
     for i, ln in enumerate(lines):
-        gd.text((x0, y0 + i * lh), ln, font=font, fill=(*glow_rgb, 255))
+        gd.text((x0, y0 + i * lh), ln, font=font, fill=(*glow_rgb, 255),
+                stroke_width=3, stroke_fill=(*glow_rgb, 255))
     glow = glow.filter(ImageFilter.GaussianBlur(6))
 
     sharp = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     sd = ImageDraw.Draw(sharp)
+    stroke_kw = {}
+    if stroke_rgb is not None:
+        stroke_kw = {"stroke_width": 2, "stroke_fill": (*stroke_rgb, 255)}
     for i, ln in enumerate(lines):
-        sd.text((x0, y0 + i * lh), ln, font=font, fill=(*sharp_rgb, 255))
+        sd.text((x0, y0 + i * lh), ln, font=font, fill=(*sharp_rgb, 255), **stroke_kw)
 
     out = base.convert("RGBA")
     out = Image.alpha_composite(out, glow)
@@ -122,11 +115,12 @@ def draw_art(base, lines, font, glow_rgb, sharp_rgb):
 def render(name: str, lines, font):
     spec = COLOURS[name]
     img = draw_art(
-        background(spec["tint"]),
+        background(spec),
         lines,
         font,
         spec["glow"],
         spec["sharp"],
+        spec.get("stroke"),
     )
     out = OUT_DIR / spec["out"]
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -137,7 +131,7 @@ def render(name: str, lines, font):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--all", action="store_true", help="render teal+green+red+purple")
+    p.add_argument("--all", action="store_true", help="render all four variants")
     p.add_argument("--color", choices=list(COLOURS), default="teal")
     args = p.parse_args(argv)
 

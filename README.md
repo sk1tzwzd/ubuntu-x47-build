@@ -93,7 +93,7 @@ By default the installer tunes the GNOME desktop for the main user (opt out with
 - **Hover-only window controls** — minimize/maximize/close stay invisible until you hover the titlebar (GTK3 + GTK4 css + Firefox `userChrome.css`; pointer-events disabled while hidden so they cannot block app menus).
 - **Screenshot** — `Super+Shift+S` or `Print` (optional via X47 Settings / `--skip-win-screenshot`).
 - **WezTerm (PuTTY-style)** — left-drag select copies; right-click pastes; `Ctrl+C` / `Ctrl+V` (optional via X47 Settings / `--skip-putty-clipboard`).
-- **X47 wallpapers** — ASCII knuckle-duster in **teal / green / red / purple**, one colour per desktop-cube workspace (switched by `x47-ws-walls@x47`). Reproducible with `scripts/make-wallpaper.py --all`.
+- **X47 wallpapers** — ASCII knuckle-duster, one look per desktop-cube workspace: **teal on dark, hot pink on white, white on light blue, white on lime** (switched by `x47-ws-walls@x47`). Reproducible with `scripts/make-wallpaper.py --all`.
 - **Window animations** — open uses **TV Glitch**, close uses **Broken Glass** (split Burn My Windows profiles `x47-open.conf` / `x47-close.conf`).
 - **Linux CMD Helper widget** — a single sleek desktop card: type a question in plain English (e.g. "how do I install notepad++") and get back just the Ubuntu terminal command (Anthropic Claude Haiku); click to copy. It sits **above the desktop icons but under app windows**, **hides in fullscreen**, **snaps to a 16px grid**, and drags from its **title**. Position: `~/.config/x47-widgets/layout.json`.
 
