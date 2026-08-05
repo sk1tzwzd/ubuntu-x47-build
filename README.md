@@ -90,7 +90,7 @@ By default the installer tunes the GNOME desktop for the main user (opt out with
 - **Bottom dock** — Ubuntu Dock moved to the bottom, always visible; hides in F11 fullscreen.
 - **3D effects** — Coverflow Alt-Tab (Alt+Tab past the last window → Desktop), Desktop Cube, Burn My Windows (**TV Glitch** open/close), Blur My Shell, Compiz-style wobbly windows.
 - **Notifications** — click a top banner once to jump to the app that needs attention.
-- **Hover-only window controls** — minimize/maximize/close stay invisible until you hover the titlebar (GTK3 + GTK4 css + Firefox `userChrome.css`; pointer-events disabled while hidden so they cannot block app menus).
+- **Window tiling** — Tiling Shell with X47 layouts (terminal strip, code stack, halves, 2×2). Click a template in the top-bar menu to retile open windows; hold Ctrl while dragging to place freely; toggle off via `x47-settings set tiling off`.
 - **Screenshot** — `Super+Shift+S` or `Print` (optional via X47 Settings / `--skip-win-screenshot`).
 - **WezTerm (PuTTY-style)** — left-drag select copies; right-click pastes; `Ctrl+C` / `Ctrl+V` (optional via X47 Settings / `--skip-putty-clipboard`).
 - **X47 wallpapers** — ASCII knuckle-duster on the same circuit pattern, one colourway per workspace: **teal on dark, pink on white, dark red on baby blue, white on green**, plus random orange/purple/yellow/red for extra workspaces. `x47-ws-walls@x47` shows each desktop's own colour on the cube faces while dragging, in the overview previews, and on the selector tabs. Reproducible with `scripts/make-wallpaper.py --all`.
@@ -147,7 +147,7 @@ Files under `config/` are copied back to `/etc` (UFW rules, fail2ban jails, sysc
 
 - **RAM-only home** — `/home/anon` is a `tmpfs` mount. Wiped every reboot; skeleton re-copied from `/var/lib/anon-skel`.
 - **Forced Tor + kill-switch** — UID-scoped nftables; IPv6 dropped for `anon`. Tor config is inlined in `/etc/tor/torrc` (AppArmor blocks `torrc.d`).
-- **Desktop** — same looks as the main user (bottom dock, Coverflow, Cube, TV Glitch, blur, wobbly, hover controls) with its own identity: **black-circuit `anon@x47` wallpaper on every desktop**, an **Anon Status card** (signal / VPN / `Tor Status: Connected w Bridge` / security verdict), **NymVPN opening on login**, and **Tor forced through obfs4 bridges**; dark `Yaru-prussiangreen-dark`, green accent, location off; first-run wizard skipped.
+- **Desktop** — same looks as the main user (bottom dock, Coverflow, Cube, TV Glitch, blur, wobbly, tiling) with its own identity: **black-circuit `anon@x47` wallpaper on every desktop**, an **Anon Status card** (signal / VPN / `Tor Status: Connected w Bridge` / security verdict), **NymVPN opening on login**, and **Tor forced through obfs4 bridges**; dark `Yaru-prussiangreen-dark`, green accent, location off; first-run wizard skipped.
 - **Terminal** — WezTerm (`/usr/local/bin/wezterm`) as default; GNOME Terminal removed.
 - **Apps** — Firefox (Safest / JS off), Electrum (BTC), Feather (XMR), Kleopatra (PGP), KeePassXC, VulnScape, **NymVPN** (daemon + GUI; connect after login).
 - **Random MAC** — Tails-style spoof on anon login, restored on logout (`anon-mac-spoof`).

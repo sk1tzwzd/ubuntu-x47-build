@@ -56,6 +56,27 @@ export default class X47WsWallsExtension extends Extension {
             self._retarget(this._bgManager, this._workspace?.index());
         };
 
+        // 2b. Stock-shell fix: _syncStacking assumes every currently-showing
+        // window has a clone record, but windows can start showing mid-switch
+        // (map/unminimize) — then `record.clone` throws. Same loop, guarded.
+        this._origSyncStacking =
+            WorkspaceAnimation.WorkspaceGroup.prototype._syncStacking;
+        WorkspaceAnimation.WorkspaceGroup.prototype._syncStacking = function () {
+            const windowActors = global.get_window_actors().filter(w =>
+                this._shouldShowWindow(w.meta_window));
+            let lastRecord;
+            const bottomActor = this._background ?? null;
+            for (const windowActor of windowActors) {
+                const record = this._windowRecords.find(
+                    r => r.windowActor === windowActor);
+                if (!record)
+                    continue; // appeared after this group was built
+                this.set_child_above_sibling(record.clone,
+                    lastRecord ? lastRecord.clone : bottomActor);
+                lastRecord = record;
+            }
+        };
+
         // 3. Overview big workspace previews.
         this._origWsInit = Workspace.Workspace.prototype._init;
         Workspace.Workspace.prototype._init = function (metaWorkspace, ...args) {
@@ -106,6 +127,11 @@ export default class X47WsWallsExtension extends Extension {
             WorkspaceAnimation.WorkspaceBackground.prototype._createBackground =
                 this._origAnimCreateBg;
             this._origAnimCreateBg = null;
+        }
+        if (this._origSyncStacking) {
+            WorkspaceAnimation.WorkspaceGroup.prototype._syncStacking =
+                this._origSyncStacking;
+            this._origSyncStacking = null;
         }
         if (this._origWsInit) {
             Workspace.Workspace.prototype._init = this._origWsInit;

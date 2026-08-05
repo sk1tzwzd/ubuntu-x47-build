@@ -11,8 +11,16 @@
 
 ### Windows-style tiling
 - **Tiling Shell** bundled + tuned: drag any window to get snap zones (no modifier key), screen edges tile halves, corners quarters (2x2 grid), top edge maximizes, and it suggests windows to fill the remaining tiles. Ubuntu's built-in tiling-assistant is disabled to avoid fights.
-- **Custom X47 layouts** — default is a big main area with a wide terminal strip along the bottom; also code+side-stack, halves, and a 2x2 grid. The same layout is pre-selected on all four workspaces so the picker isn't per-desktop-fickle.
+- **Custom X47 layouts** — default is a big main area with a wide terminal strip along the bottom; also code+side-stack, halves, and a 2x2 grid. Pre-selected on all four workspaces (`[workspace][monitor]` shape).
+- **Layout templates actually apply** — clicking a grid style in the top-bar menu now retile existing windows into that layout (upstream only changed the selection for the next drag). New windows auto-fill empty tiles.
+- **GNOME 50 fixes** — layout editor no longer crashes / leaves a stuck blue overlay (`Meta.Cursor` removed in Mutter 18); workspace-switch `_syncStacking` no longer throws when a window appears mid-animation.
 - **Easy off-switch** — hold **Ctrl while dragging** to bypass tiling for that drag (free overlap), or flip `tiling` in **X47 Settings** (`x47-settings set tiling off`) to kill snap zones + edge tiling entirely; applies instantly.
+
+### Desktop cube
+- Snappier rotation: lower edge-switch pressure, tighter workspace gap, brighter neighbour faces.
+
+### Window controls
+- **Removed hover-only min/max/close** — invisible buttons were still stealing clicks. Normal always-visible window buttons restored (GTK + Firefox).
 - **Alt+Tab Desktop guard** — the Desktop entry no longer triggers on a quick first Alt+Tab (which was minimizing windows on single-window desktops); you now have to cycle past the last window deliberately.
 
 ### Amnesia (anon) session

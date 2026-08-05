@@ -102,6 +102,19 @@ cube_workspaces() {
   log "configuring fixed workspaces for the desktop cube"
   gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
   gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
+  local cdir="$HOME/.local/share/gnome-shell/extensions/desktop-cube@schneegans.github.com/schemas"
+  if [[ -d "$cdir" ]]; then
+    local c="org.gnome.shell.extensions.desktop-cube"
+    # Snappier cube: lower edge pressure, tighter gap, brighter neighbour faces.
+    gsettings --schemadir "$cdir" set $c edge-switch-pressure 120 2>/dev/null || true
+    gsettings --schemadir "$cdir" set $c mouse-rotation-speed 2.5 2>/dev/null || true
+    gsettings --schemadir "$cdir" set $c workpace-separation 60 2>/dev/null || true
+    gsettings --schemadir "$cdir" set $c horizontal-stretch 70 2>/dev/null || true
+    gsettings --schemadir "$cdir" set $c inactive-workpace-opacity 220 2>/dev/null || true
+    gsettings --schemadir "$cdir" set $c do-explode true 2>/dev/null || true
+    gsettings --schemadir "$cdir" set $c enable-desktop-dragging true 2>/dev/null || true
+    gsettings --schemadir "$cdir" set $c enable-desktop-edge-switch true 2>/dev/null || true
+  fi
 }
 
 bmw_fx_profile() {
@@ -149,49 +162,38 @@ coverflow_tune() {
   fi
 }
 
-# Append the hover-only window-controls CSS to a gtk.css (idempotent via
-# marker block; replaces the block if the asset changed).
-install_hover_css_into() {
-  local css_dir="$1" src="$2"
-  local css="$css_dir/gtk.css"
-  local begin="/* --- x47 hover window controls --- */"
-  local end="/* --- end x47 hover window controls --- */"
-  mkdir -p "$css_dir"
-  if [[ -f "$css" ]] && grep -qF "$begin" "$css"; then
-    # Drop the old managed block before re-adding it.
-    local tmp
-    tmp="$(mktemp)"
-    awk -v b="$begin" -v e="$end" '
-      index($0, b) { skip = 1 }
-      !skip { print }
-      index($0, e) { skip = 0 }
-    ' "$css" > "$tmp"
-    mv "$tmp" "$css"
-  fi
-  {
-    printf '%s\n' "$begin"
-    cat "$src"
-    printf '%s\n' "$end"
-  } >> "$css"
+# Strip a marked CSS block from gtk.css (used to remove the old hover-only
+# window-controls hack that left invisible X/max buttons stealing clicks).
+strip_css_block() {
+  local css="$1" begin="$2" end="$3"
+  [[ -f "$css" ]] || return 0
+  grep -qF "$begin" "$css" 2>/dev/null || return 0
+  local tmp
+  tmp="$(mktemp)"
+  awk -v b="$begin" -v e="$end" '
+    index($0, b) { skip = 1; next }
+    index($0, e) { skip = 0; next }
+    !skip { print }
+  ' "$css" > "$tmp"
+  mv "$tmp" "$css"
 }
 
 hover_window_controls() {
-  local src="$AM_DESKTOP/gtk-hover-controls.css"
-  [[ -f "$src" ]] || { warn "missing $src — skipping hover window controls"; return 0; }
-  log "hiding window controls until hover (GTK3 + GTK4 css)"
-  install_hover_css_into "$HOME/.config/gtk-3.0" "$src"
-  install_hover_css_into "$HOME/.config/gtk-4.0" "$src"
-  # Snap apps (e.g. Firefox) read gtk.css from their own sandboxed config dir.
-  # Prefer the `current` symlink; also refresh any revision dirs that already
-  # have our managed block (older installs wrote there directly).
+  # Removed: opacity:0 min/max/close buttons still stole clicks (GTK ignores
+  # pointer-events). Always show normal window controls.
+  log "removing hover-only window controls (always-visible buttons)"
+  local begin="/* --- x47 hover window controls --- */"
+  local end="/* --- end x47 hover window controls --- */"
+  strip_css_block "$HOME/.config/gtk-3.0/gtk.css" "$begin" "$end"
+  strip_css_block "$HOME/.config/gtk-4.0/gtk.css" "$begin" "$end"
   local snap_conf
   for snap_conf in "$HOME"/snap/*/current/.config "$HOME"/snap/*/*/.config; do
     [[ -d "$snap_conf" ]] || continue
     [[ "$snap_conf" == */common/.config ]] && continue
-    install_hover_css_into "$snap_conf/gtk-3.0" "$src"
-    install_hover_css_into "$snap_conf/gtk-4.0" "$src"
+    strip_css_block "$snap_conf/gtk-3.0/gtk.css" "$begin" "$end"
+    strip_css_block "$snap_conf/gtk-4.0/gtk.css" "$begin" "$end"
   done
-  ok "hover-only window controls installed (restart apps to pick it up)"
+  ok "hover-only window controls removed (restart apps to pick it up)"
 }
 
 # Replace a marked block in a text file (or append if missing).
@@ -220,11 +222,8 @@ replace_marked_block() {
   rm -f "$tmp"
 }
 
-# Firefox renders its own min/max/close buttons, so it needs a userChrome.css
-# (plus the legacy-stylesheets pref) instead of GTK css.
+# Strip the old Firefox hover-only min/max/close userChrome block.
 firefox_hover_buttons() {
-  local src="$AM_DESKTOP/firefox-userChrome.css"
-  [[ -f "$src" ]] || { warn "missing $src — skipping Firefox hover buttons"; return 0; }
   local begin="/* --- x47 hover window buttons (Firefox) --- */"
   local end="/* --- end x47 hover window buttons --- */"
   local prof found=0
@@ -232,17 +231,10 @@ firefox_hover_buttons() {
               "$HOME"/.mozilla/firefox/*.default*; do
     [[ -d "$prof" ]] || continue
     found=1
-    mkdir -p "$prof/chrome"
-    local dest="$prof/chrome/userChrome.css"
-    replace_marked_block "$dest" "$begin" "$end" "$src"
-    if ! grep -qF "toolkit.legacyUserProfileCustomizations.stylesheets" "$prof/user.js" 2>/dev/null; then
-      echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$prof/user.js"
-    fi
+    strip_css_block "$prof/chrome/userChrome.css" "$begin" "$end"
   done
   if [[ "$found" == "1" ]]; then
-    ok "Firefox hover-only window buttons installed (restart Firefox)"
-  else
-    warn "no Firefox profile found — hover buttons will apply after Firefox first run + rerun"
+    ok "Firefox hover-only window buttons removed (restart Firefox)"
   fi
 }
 
@@ -319,6 +311,19 @@ tiling_shell_tune() {
   [[ -d "$sdir" ]] || { warn "tiling shell not installed; skipping tune"; return 0; }
   # Ubuntu's built-in tiler fights Tiling Shell.
   gnome-extensions disable tiling-assistant@ubuntu.com 2>/dev/null || true
+  local root="${sdir%/schemas}"
+  # GNOME 50: Meta.Cursor is gone — patch the layout editor or it crashes and
+  # leaves its blue overlay stuck on screen.
+  if [[ -f "$AM_DESKTOP/patch-tilingshell-cursor.py" ]]; then
+    python3 "$AM_DESKTOP/patch-tilingshell-cursor.py" "$root" \
+      || warn "tiling shell cursor patch failed"
+  fi
+  # Clicking a layout template must also retile existing windows (upstream
+  # only changes the selection used for the next drag).
+  if [[ -f "$AM_DESKTOP/patch-tilingshell-apply-layout.py" ]]; then
+    python3 "$AM_DESKTOP/patch-tilingshell-apply-layout.py" "$root" \
+      || warn "tiling shell apply-layout patch failed"
+  fi
   local s="org.gnome.shell.extensions.tilingshell"
   gsettings --schemadir "$sdir" set $s tiling-system-activation-key "['-1']" 2>/dev/null || true
   gsettings --schemadir "$sdir" set $s enable-snap-assist true 2>/dev/null || true
@@ -331,10 +336,13 @@ tiling_shell_tune() {
   gsettings --schemadir "$sdir" set $s quarter-tiling-threshold 40 2>/dev/null || true
   gsettings --schemadir "$sdir" set $s inner-gaps 6 2>/dev/null || true
   gsettings --schemadir "$sdir" set $s outer-gaps 4 2>/dev/null || true
+  # New windows fill empty tiles of the selected layout automatically.
+  gsettings --schemadir "$sdir" set $s enable-autotiling true 2>/dev/null || true
   # Custom layouts: main+terminal strip (default), code+side stack, halves, 2x2 grid.
+  # selected-layouts shape is [workspace][monitor], not the other way around.
   local layouts='[{"id":"x47-term","tiles":[{"x":0,"y":0,"width":1,"height":0.72,"groups":[1]},{"x":0,"y":0.72,"width":1,"height":0.28,"groups":[1]}]},{"id":"x47-code","tiles":[{"x":0,"y":0,"width":0.62,"height":1,"groups":[1]},{"x":0.62,"y":0,"width":0.38,"height":0.55,"groups":[1,2]},{"x":0.62,"y":0.55,"width":0.38,"height":0.45,"groups":[1,2]}]},{"id":"x47-halves","tiles":[{"x":0,"y":0,"width":0.5,"height":1,"groups":[1]},{"x":0.5,"y":0,"width":0.5,"height":1,"groups":[1]}]},{"id":"x47-grid","tiles":[{"x":0,"y":0,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0.5,"y":0,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0,"y":0.5,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0.5,"y":0.5,"width":0.5,"height":0.5,"groups":[1,2]}]}]'
   gsettings --schemadir "$sdir" set $s layouts-json "$layouts" 2>/dev/null || true
-  gsettings --schemadir "$sdir" set $s selected-layouts "[['x47-term','x47-term','x47-term','x47-term']]" 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s selected-layouts "[['x47-term'], ['x47-term'], ['x47-term'], ['x47-term']]" 2>/dev/null || true
   gsettings --schemadir "$sdir" set $s snap-assist-sync-layout true 2>/dev/null || true
   # Hold CTRL while dragging to bypass tiling (free placement / overlap).
   gsettings --schemadir "$sdir" set $s tiling-system-deactivation-key "['0']" 2>/dev/null || true
