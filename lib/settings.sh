@@ -8,6 +8,7 @@ X47_SETTINGS_FILE="${X47_SETTINGS_FILE:-$X47_SETTINGS_DIR/settings.conf}"
 X47_FEATURE_DEFAULTS=(
   "putty_clipboard=1"
   "win_screenshot=1"
+  "tiling=1"
 )
 
 x47_settings_ensure() {
@@ -67,15 +68,27 @@ x47_settings_set() {
 
 # Apply settings that need an immediate system action (gsettings, etc.).
 x47_settings_apply() {
-  local putty shot
+  local putty shot tiling
   putty="$(x47_settings_get putty_clipboard 1)"
   shot="$(x47_settings_get win_screenshot 1)"
+  tiling="$(x47_settings_get tiling 1)"
 
   if have gsettings; then
     if [[ "$shot" == "1" ]]; then
       gsettings set org.gnome.shell.keybindings show-screenshot-ui "['Print', '<Super><Shift>s']" 2>/dev/null || true
     else
       gsettings set org.gnome.shell.keybindings show-screenshot-ui "['Print']" 2>/dev/null || true
+    fi
+
+    # Window tiling (Tiling Shell): off = windows drag/overlap freely,
+    # no snap zones, no edge tiling. Applies live.
+    local tdir="$HOME/.local/share/gnome-shell/extensions/tilingshell@ferrarodomenico.com/schemas"
+    if [[ -d "$tdir" ]]; then
+      local ts="org.gnome.shell.extensions.tilingshell" onoff=false
+      [[ "$tiling" == "1" ]] && onoff=true
+      gsettings --schemadir "$tdir" set $ts enable-tiling-system $onoff 2>/dev/null || true
+      gsettings --schemadir "$tdir" set $ts enable-snap-assist $onoff 2>/dev/null || true
+      gsettings --schemadir "$tdir" set $ts active-screen-edges $onoff 2>/dev/null || true
     fi
   fi
 

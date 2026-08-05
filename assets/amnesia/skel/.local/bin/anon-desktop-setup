@@ -114,6 +114,11 @@ if [[ -d "$tdir" ]]; then
   gsettings --schemadir "$tdir" set $ts quarter-tiling-threshold 40 2>/dev/null || true
   gsettings --schemadir "$tdir" set $ts inner-gaps 6 2>/dev/null || true
   gsettings --schemadir "$tdir" set $ts outer-gaps 4 2>/dev/null || true
+  layouts='[{"id":"x47-term","tiles":[{"x":0,"y":0,"width":1,"height":0.72,"groups":[1]},{"x":0,"y":0.72,"width":1,"height":0.28,"groups":[1]}]},{"id":"x47-code","tiles":[{"x":0,"y":0,"width":0.62,"height":1,"groups":[1]},{"x":0.62,"y":0,"width":0.38,"height":0.55,"groups":[1,2]},{"x":0.62,"y":0.55,"width":0.38,"height":0.45,"groups":[1,2]}]},{"id":"x47-halves","tiles":[{"x":0,"y":0,"width":0.5,"height":1,"groups":[1]},{"x":0.5,"y":0,"width":0.5,"height":1,"groups":[1]}]},{"id":"x47-grid","tiles":[{"x":0,"y":0,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0.5,"y":0,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0,"y":0.5,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0.5,"y":0.5,"width":0.5,"height":0.5,"groups":[1,2]}]}]'
+  gsettings --schemadir "$tdir" set $ts layouts-json "$layouts" 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts selected-layouts "[['x47-term','x47-term','x47-term','x47-term']]" 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts snap-assist-sync-layout true 2>/dev/null || true
+  gsettings --schemadir "$tdir" set $ts tiling-system-deactivation-key "['0']" 2>/dev/null || true
 fi
 
 # Tor Browser (if staged in this home): force built-in obfs4 bridges so its

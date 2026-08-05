@@ -331,6 +331,13 @@ tiling_shell_tune() {
   gsettings --schemadir "$sdir" set $s quarter-tiling-threshold 40 2>/dev/null || true
   gsettings --schemadir "$sdir" set $s inner-gaps 6 2>/dev/null || true
   gsettings --schemadir "$sdir" set $s outer-gaps 4 2>/dev/null || true
+  # Custom layouts: main+terminal strip (default), code+side stack, halves, 2x2 grid.
+  local layouts='[{"id":"x47-term","tiles":[{"x":0,"y":0,"width":1,"height":0.72,"groups":[1]},{"x":0,"y":0.72,"width":1,"height":0.28,"groups":[1]}]},{"id":"x47-code","tiles":[{"x":0,"y":0,"width":0.62,"height":1,"groups":[1]},{"x":0.62,"y":0,"width":0.38,"height":0.55,"groups":[1,2]},{"x":0.62,"y":0.55,"width":0.38,"height":0.45,"groups":[1,2]}]},{"id":"x47-halves","tiles":[{"x":0,"y":0,"width":0.5,"height":1,"groups":[1]},{"x":0.5,"y":0,"width":0.5,"height":1,"groups":[1]}]},{"id":"x47-grid","tiles":[{"x":0,"y":0,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0.5,"y":0,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0,"y":0.5,"width":0.5,"height":0.5,"groups":[1,2]},{"x":0.5,"y":0.5,"width":0.5,"height":0.5,"groups":[1,2]}]}]'
+  gsettings --schemadir "$sdir" set $s layouts-json "$layouts" 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s selected-layouts "[['x47-term','x47-term','x47-term','x47-term']]" 2>/dev/null || true
+  gsettings --schemadir "$sdir" set $s snap-assist-sync-layout true 2>/dev/null || true
+  # Hold CTRL while dragging to bypass tiling (free placement / overlap).
+  gsettings --schemadir "$sdir" set $s tiling-system-deactivation-key "['0']" 2>/dev/null || true
 }
 
 notification_click_activate() {

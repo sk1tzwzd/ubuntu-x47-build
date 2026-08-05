@@ -29,6 +29,7 @@ fi
 FEATURES=(
   "putty_clipboard|PuTTY-style terminal clipboard (select copy, right-click paste, Ctrl+C/V)"
   "win_screenshot|Windows-style Super+Shift+S screenshot (Print always works)"
+  "tiling|Window tiling: drag-to-snap zones + edge tiling (off = windows overlap freely)"
 )
 
 usage() {
@@ -45,6 +46,7 @@ X47 Settings — toggle optional features
 Keys:
   putty_clipboard   PuTTY mouse/keyboard clipboard in WezTerm (restart terminal after change)
   win_screenshot    Super+Shift+S opens the GNOME screenshot UI
+  tiling            Drag-to-snap window tiling (off = free window placement; applies instantly)
 EOF
 }
 
