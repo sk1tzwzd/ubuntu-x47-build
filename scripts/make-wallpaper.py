@@ -41,15 +41,16 @@ COLOURS = {
         "sharp": (214, 246, 242),
         "out": "x47-circuit.png",
     },
-    "pink": {  # workspace 2 — pink duster on white circuit
-        "sharp": (230, 20, 120),
+    "pink": {  # workspace 2 — bright pink duster on off-white circuit
+        "sharp": (255, 25, 140),
         "out": "x47-circuit-pink.png",
-        "recolor": ((250, 248, 250), (150, 145, 158)),
+        "recolor": ((248, 246, 242), (168, 160, 172)),
     },
-    "blue": {  # workspace 3 — dark red duster on bright baby blue circuit
-        "sharp": (140, 10, 25),
+    "blue": {  # workspace 3 — crisp white duster on graded dark blue circuit
+        "sharp": (255, 255, 255),
         "out": "x47-circuit-blue.png",
-        "recolor": ((110, 195, 255), (225, 245, 255)),
+        "recolor": ((12, 40, 90), (58, 108, 185)),
+        "grade": ((28, 80, 158), (105, 165, 235)),
     },
     "green": {  # workspace 4 — white duster on medium-dark green circuit
         "sharp": (255, 255, 255),
@@ -104,7 +105,15 @@ def background(spec):
         return img
     shadow, trace = spec["recolor"]
     gray = ImageOps.autocontrast(img.convert("L"))
-    return ImageOps.colorize(gray, black=shadow, white=trace)
+    base = ImageOps.colorize(gray, black=shadow, white=trace)
+    grade = spec.get("grade")
+    if grade is None:
+        return base
+    # "grade" = second (shadow, trace) ramp blended in from top to bottom,
+    # giving a smooth vertical colour gradient that keeps the circuit pattern.
+    lower = ImageOps.colorize(gray, black=grade[0], white=grade[1])
+    mask = Image.linear_gradient("L").resize((W, H))
+    return Image.composite(lower, base, mask)
 
 
 def draw_art(base, lines, font, sharp_rgb, glow_rgb=None):
