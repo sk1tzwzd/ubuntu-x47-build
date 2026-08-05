@@ -88,7 +88,7 @@ If the GUI says an update is available but apt says you already have the newest 
 Lean GNOME desktop for the main user and `anon` (opt out with `--skip-desktop-fx`):
 
 - **No heavy FX** — Desktop Cube, Coverflow Alt-Tab, Burn My Windows, Blur My Shell, wobbly windows, and per-desktop wall switching are **not installed**. GNOME animations are off.
-- **No dock** — Ubuntu Dock disabled; use **Super** for Activities / app grid, and **Super+1…9** for favorites.
+- **No dock** — Ubuntu Dock disabled. A lime Ubuntu circle in the **top bar** opens the app grid (`x47-show-apps@x47`); **Super** still opens Activities; **Super+1…9** launches favorites.
 - **X47 wallpapers** — ASCII knuckle-duster circuit colourways (regen with `scripts/make-wallpaper.py --all`). Anon uses a single `anon@x47` wallpaper.
 - **Notifications** — click a top banner once to jump to the app.
 - **Window tiling** — Tiling Shell; hold Ctrl while dragging; toggle via `x47-settings set tiling off`.

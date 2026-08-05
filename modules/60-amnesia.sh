@@ -146,6 +146,7 @@ stage_anon_desktop_fx_into_skel() {
   local uuids=(
     "tilingshell@ferrarodomenico.com"
     "x47-notif-activate@x47"
+    "x47-show-apps@x47"
   )
   local heavy=(
     "CoverflowAltTab@palatis.blogspot.com"
@@ -189,7 +190,7 @@ stage_anon_desktop_fx_into_skel() {
   done
   # Bundled X47 extensions (also copied from main user if present).
   local bund
-  for bund in x47-anon-status@x47 x47-notif-activate@x47; do
+  for bund in x47-anon-status@x47 x47-notif-activate@x47 x47-show-apps@x47; do
     if [[ -d "$X47_ROOT/assets/extensions/$bund" ]]; then
       run_sudo mkdir -p "$skel/.local/share/gnome-shell/extensions"
       run_sudo rm -rf "$skel/.local/share/gnome-shell/extensions/$bund"

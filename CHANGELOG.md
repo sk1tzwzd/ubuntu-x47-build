@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.9.8 — 2026-08-05
+
+### Launcher
+- **Top-bar Show Apps** — lime Ubuntu circle (`x47-show-apps@x47`) opens the application grid on main and anon (dock stays off).
+
 ## v1.9.7 — 2026-08-05
 
 ### Launcher

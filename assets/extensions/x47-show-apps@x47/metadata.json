@@ -1,0 +1,7 @@
+{
+  "uuid": "x47-show-apps@x47",
+  "name": "X47 Show Apps",
+  "description": "Lime Ubuntu circle in the top bar that opens the application grid (dock-free launcher).",
+  "shell-version": ["48", "49", "50"],
+  "url": "https://github.com/sk1tzwzd/ubuntu-x47-build"
+}

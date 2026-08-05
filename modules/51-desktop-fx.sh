@@ -481,6 +481,11 @@ notification_click_activate() {
   install_local_extension "x47-notif-activate@x47" "notification click → open app"
 }
 
+show_apps_top_bar() {
+  # Lime Ubuntu circle in the top bar → application grid (dock-free).
+  install_local_extension "x47-show-apps@x47" "top-bar Show Apps (green Ubuntu circle)"
+}
+
 disable_heavy_fx() {
   local uuid cur cleaned
   for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
@@ -546,6 +551,7 @@ module_desktop_fx() {
   done
   tiling_shell_tune
   notification_click_activate
+  show_apps_top_bar
   apply_desktop_mode_helper performance
 
   ok "desktop-fx module done (lean)"

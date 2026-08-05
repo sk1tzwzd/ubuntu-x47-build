@@ -14,6 +14,7 @@ X47_HEAVY_FX_UUIDS=(
 X47_LEAN_FX_UUIDS=(
   "tilingshell@ferrarodomenico.com"
   "x47-notif-activate@x47"
+  "x47-show-apps@x47"
 )
 
 X47_DOCK_UUIDS=(
