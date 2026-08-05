@@ -3,7 +3,8 @@
 ## v1.9.4 — 2026-08-05
 
 ### Desktop looks
-- **High-contrast workspace wallpapers** — same circuit pattern and crisp ASCII duster on every workspace, recoloured so you can tell them apart: WS1 teal on dark, WS2 pink duster on white, WS3 dark red duster on baby blue, WS4 white duster on medium-dark green.
+- **True per-desktop wallpapers** — `x47-ws-walls` now retargets the shell's per-workspace background actors, so the desktop-cube faces show each desktop's own colour *while you drag*, and the overview's previews and selector tabs always show the right one (previously everything showed the current wallpaper until you landed).
+- **Colour schemes** (same circuit pattern + crisp ASCII duster everywhere, glow only on teal): WS1 teal on dark, WS2 pink duster on white, WS3 dark red duster on baby blue, WS4 white duster on medium-dark green. Workspaces beyond 4 get a stable random pick from orange / purple / yellow / red colourways.
 
 ## v1.9.3 — 2026-08-05
 

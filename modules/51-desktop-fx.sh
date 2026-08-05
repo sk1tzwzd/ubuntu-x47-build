@@ -260,7 +260,8 @@ set_wallpaper() {
   local f dest
   mkdir -p "$dest_dir"
   log "installing X47 workspace wallpapers (teal/green/red/purple)"
-  for f in x47-circuit.png x47-circuit-pink.png x47-circuit-blue.png x47-circuit-green.png; do
+  for f in x47-circuit.png x47-circuit-pink.png x47-circuit-blue.png x47-circuit-green.png \
+           x47-circuit-orange.png x47-circuit-purple.png x47-circuit-yellow.png x47-circuit-red.png; do
     [[ -f "$src_dir/$f" ]] || { warn "missing $src_dir/$f"; continue; }
     install -m 0644 "$src_dir/$f" "$dest_dir/$f"
   done

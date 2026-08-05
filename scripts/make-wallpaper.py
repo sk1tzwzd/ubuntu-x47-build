@@ -28,33 +28,54 @@ W, H = 3840, 2160
 ART_WIDTH_FRAC = 0.315
 FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 
-# glow RGB (soft halo behind the art), sharp RGB (the art itself).
+# sharp RGB = the ASCII art itself; "glow" (optional) adds the soft halo the
+# original teal wallpaper has — omitted on the light variants so the duster
+# stays razor sharp.
 # "recolor" = (shadow RGB, trace RGB): the circuit background is converted to
 # grayscale and remapped onto that ramp, keeping the exact same pattern.
 # Without "recolor" the original dark circuit image is used untouched.
 COLOURS = {
+    # --- preset workspaces 1-4 ---
     "teal": {  # workspace 1 — teal duster on the original dark circuit
         "glow": (64, 224, 208),
         "sharp": (214, 246, 242),
         "out": "x47-circuit.png",
     },
     "pink": {  # workspace 2 — pink duster on white circuit
-        "glow": (255, 90, 160),
         "sharp": (230, 20, 120),
         "out": "x47-circuit-pink.png",
         "recolor": ((250, 248, 250), (150, 145, 158)),
     },
     "blue": {  # workspace 3 — dark red duster on bright baby blue circuit
-        "glow": (200, 30, 40),
         "sharp": (140, 10, 25),
         "out": "x47-circuit-blue.png",
         "recolor": ((110, 195, 255), (225, 245, 255)),
     },
     "green": {  # workspace 4 — white duster on medium-dark green circuit
-        "glow": (225, 255, 235),
         "sharp": (255, 255, 255),
         "out": "x47-circuit-green.png",
         "recolor": ((20, 95, 45), (115, 205, 135)),
+    },
+    # --- extra colourways, assigned randomly to workspaces beyond 4 ---
+    "orange": {
+        "sharp": (255, 255, 255),
+        "out": "x47-circuit-orange.png",
+        "recolor": ((205, 105, 15), (255, 190, 110)),
+    },
+    "purple": {
+        "sharp": (255, 255, 255),
+        "out": "x47-circuit-purple.png",
+        "recolor": ((70, 30, 110), (165, 115, 225)),
+    },
+    "yellow": {
+        "sharp": (45, 45, 55),
+        "out": "x47-circuit-yellow.png",
+        "recolor": ((235, 200, 30), (255, 240, 150)),
+    },
+    "red": {
+        "sharp": (255, 255, 255),
+        "out": "x47-circuit-red.png",
+        "recolor": ((125, 18, 25), (225, 95, 95)),
     },
 }
 
@@ -86,7 +107,7 @@ def background(spec):
     return ImageOps.colorize(gray, black=shadow, white=trace)
 
 
-def draw_art(base, lines, font, glow_rgb, sharp_rgb):
+def draw_art(base, lines, font, sharp_rgb, glow_rgb=None):
     cw = font.getlength("M")
     ascent, descent = font.getmetrics()
     lh = ascent + descent
@@ -95,19 +116,20 @@ def draw_art(base, lines, font, glow_rgb, sharp_rgb):
     x0 = (W - block_w) / 2
     y0 = (H - block_h) / 2
 
-    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    gd = ImageDraw.Draw(glow)
-    for i, ln in enumerate(lines):
-        gd.text((x0, y0 + i * lh), ln, font=font, fill=(*glow_rgb, 255))
-    glow = glow.filter(ImageFilter.GaussianBlur(6))
+    out = base.convert("RGBA")
+
+    if glow_rgb is not None:
+        glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        gd = ImageDraw.Draw(glow)
+        for i, ln in enumerate(lines):
+            gd.text((x0, y0 + i * lh), ln, font=font, fill=(*glow_rgb, 255))
+        glow = glow.filter(ImageFilter.GaussianBlur(6))
+        out = Image.alpha_composite(out, glow)
 
     sharp = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     sd = ImageDraw.Draw(sharp)
     for i, ln in enumerate(lines):
         sd.text((x0, y0 + i * lh), ln, font=font, fill=(*sharp_rgb, 255))
-
-    out = base.convert("RGBA")
-    out = Image.alpha_composite(out, glow)
     out = Image.alpha_composite(out, sharp)
     return out.convert("RGB")
 
@@ -118,8 +140,8 @@ def render(name: str, lines, font):
         background(spec),
         lines,
         font,
-        spec["glow"],
         spec["sharp"],
+        spec.get("glow"),
     )
     out = OUT_DIR / spec["out"]
     OUT_DIR.mkdir(parents=True, exist_ok=True)
