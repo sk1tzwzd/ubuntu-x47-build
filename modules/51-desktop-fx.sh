@@ -23,8 +23,10 @@ dock_to_bottom() {
   log "moving Ubuntu Dock to the bottom (always visible; hides in fullscreen)"
   gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || warn "dock-position failed"
   gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false 2>/dev/null || true
-  # Static dock: always on screen, only hide when a window is fullscreen (F11).
-  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed true 2>/dev/null || true
+  # Dock always on screen but FLOATING: it overlays windows instead of
+  # reserving screen space (maximized windows extend behind it). Hidden only
+  # by F11 fullscreen.
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed false 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock autohide false 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
   gsettings set org.gnome.shell.extensions.dash-to-dock require-pressure-to-show false 2>/dev/null || true

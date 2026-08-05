@@ -83,12 +83,11 @@ COLOURS = {
     # Text is rendered with pyfiglet at build time (pip install pyfiglet);
     # the PNG is committed, so installs never need pyfiglet.
     "anon": {
-        "sharp": (240, 245, 250),
-        "bold": True,
+        "sharp": (228, 234, 240),
         "out": "x47-anon.png",
-        "recolor": ((2, 2, 4), (34, 38, 46)),
+        "carbon": True,
         "text": "anon@x47",
-        "font": "chunky",
+        "font": "ansi_shadow",
         "frac": 0.55,
     },
 }
@@ -123,7 +122,45 @@ def fit_font(cols: int, frac: float = ART_WIDTH_FRAC):
     return ImageFont.truetype(FONT_PATH, best)
 
 
+def carbon_background():
+    """Dark carbon-fibre twill: 2x2 weave of alternating strand directions."""
+    import math
+
+    s = 26  # strand cell size at 4K
+    shadow, base, sheen = (6, 6, 8), (13, 14, 16), (40, 43, 49)
+
+    def strand(horizontal):
+        cell = Image.new("RGB", (s, s))
+        d = ImageDraw.Draw(cell)
+        for i in range(s):
+            t = math.sin(math.pi * (i + 0.5) / s)
+            c = tuple(round(sh + (hi - sh) * t) for sh, hi in zip(shadow, sheen))
+            if horizontal:
+                d.line([(0, i), (s, i)], fill=c)
+            else:
+                d.line([(i, 0), (i, s)], fill=c)
+        return cell
+
+    h, v = strand(True), strand(False)
+    tile = Image.new("RGB", (2 * s, 2 * s), base)
+    tile.paste(h, (0, 0)); tile.paste(v, (s, 0))
+    tile.paste(v, (0, s)); tile.paste(h, (s, s))
+
+    img = Image.new("RGB", (W, H))
+    for x in range(0, W, 2 * s):
+        for y in range(0, H, 2 * s):
+            img.paste(tile, (x, y))
+    img = img.filter(ImageFilter.GaussianBlur(0.6))
+
+    # Soft vignette so the centre (behind the text) reads slightly lifted.
+    mask = Image.radial_gradient("L").resize((W, H))
+    return Image.composite(Image.new("RGB", (W, H), (2, 2, 3)), img,
+                           mask.point(lambda p: min(255, int(p * 0.55))))
+
+
 def background(spec):
+    if spec.get("carbon"):
+        return carbon_background()
     img = Image.open(BG).convert("RGB").resize((W, H), Image.LANCZOS)
     if "recolor" not in spec:
         return img
