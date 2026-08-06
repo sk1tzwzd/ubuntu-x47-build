@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.10.1 — 2026-08-06
+
+### Docs
+- **Screenshots** — hero uses the fullscreen ASCII-duster desktop; gallery/install/releases also show the tiled windowed workflow shot.
+
 ## v1.10.0 — 2026-08-06
 
 ### Release hygiene

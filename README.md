@@ -14,6 +14,10 @@ Part of the [VulnScape](https://vulnscape.net) cybersecurity suite.
 
 **Support (optional):** [buymeacoffee.com/sk1tzwzd](https://buymeacoffee.com/sk1tzwzd)
 
+![X47 desktop](docs/images/x47-desktop.png)
+
+![X47 windowed tiling](docs/images/x47-windowed.png)
+
 ## Quick start (fresh machine)
 
 ```bash

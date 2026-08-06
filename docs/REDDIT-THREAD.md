@@ -61,6 +61,8 @@ Toolchain stays installable/reversible through the build modules (dev + security
 - WezTerm with PuTTY-style copy/paste when you want it
 - Floating Firefox chrome when windowed — hover the top edge to get tabs/URL back
 
+Screenshots (fullscreen + tiled windowed): https://sk1tzwzd.github.io/ubuntu-x47-build/
+
 ### Install
 
 ```bash
