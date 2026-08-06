@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Session daemon: re-apply time/ambient display comfort while Adaptive is on.
+# Visual-stack only (both|visual). No-op on Performance-only installs.
+set -euo pipefail
+
+INTERVAL="${X47_DISPLAY_ADAPTIVE_INTERVAL:-120}"
+
+_bin() {
+  local home="${HOME}"
+  for p in \
+    "$home/.local/bin/x47-display" \
+    "$home/.local/share/ubuntu-x47-build/bin/x47-display"; do
+    [[ -x "$p" ]] && { printf '%s' "$p"; return 0; }
+  done
+  command -v x47-display 2>/dev/null || true
+}
+
+main() {
+  local bin
+  bin="$(_bin)"
+  [[ -n "$bin" ]] || exit 0
+
+  # One immediate tick, then periodic.
+  "$bin" tick >/dev/null 2>&1 || true
+  while true; do
+    sleep "$INTERVAL"
+    # Exit quietly if adaptive was turned off or Visual stack missing.
+    if ! "$bin" adaptive get 2>/dev/null | grep -qx '1'; then
+      continue
+    fi
+    "$bin" tick >/dev/null 2>&1 || true
+  done
+}
+
+main "$@"

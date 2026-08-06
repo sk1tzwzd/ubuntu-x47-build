@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Nerovia Firefox widgets retired — intentionally inert.
+# Kept as a stub so old autostart / docs links do not spawn Firefox.
+set -euo pipefail
+echo "x47-nerovia-widgets: disabled (retired)" >&2
+exit 0

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=X47 Adaptive Display
+Comment=Time-of-day and ambient display comfort (Visual stack)
+Exec=x47-display-adaptive
+Icon=display-brightness-symbolic
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

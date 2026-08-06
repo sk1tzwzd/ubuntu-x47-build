@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Nerovia Positions
+Comment=Borderless Firefox open-positions widget (app.nerovia.ai)
+Exec=env X47_NEROVIA_FORCE=1 sh -c 'x47-nerovia-widgets install >/dev/null; firefox -P nerovia --new-window "https://app.nerovia.ai/?x47=positions"'
+Icon=utilities-system-monitor
+Categories=Network;Finance;
+Terminal=false
+StartupNotify=true

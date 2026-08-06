@@ -1,0 +1,5 @@
+{
+  "_comment": "Optional overrides. In the Nerovia Firefox profile console: localStorage.setItem('x47NeroviaSelectors', JSON.stringify({chart:'...', positions:'...'}))",
+  "chart": "",
+  "positions": ""
+}

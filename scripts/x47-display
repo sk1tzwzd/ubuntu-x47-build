@@ -1,0 +1,518 @@
+#!/usr/bin/env bash
+# X47 display comfort: brightness, blue-light (Night Light), glare reduction.
+# Adaptive (time-of-day / ambient) is Visual-stack only (not Performance-only).
+# Used by the top-bar x47-display@x47 panel and as a CLI.
+set -euo pipefail
+
+CONF="${X47_DISPLAY_CONF:-$HOME/.config/x47/display.conf}"
+SETTINGS="${X47_SETTINGS_CONF:-$HOME/.config/x47/settings.conf}"
+BUS_DEST=org.gnome.Mutter.DisplayConfig
+BUS_PATH=/org/gnome/Mutter/DisplayConfig
+BUS_IFACE=org.gnome.Mutter.DisplayConfig
+
+_usage() {
+  cat <<'EOF'
+usage: x47-display <command>
+
+  status                         Show current values
+  brightness [0-100]             Get or set backlight %
+  blue-light on|off|toggle|get   Night Light (blue-light filter)
+  warmth [0-100]                 Get or set warmth (0=cool, 100=warm)
+  glare [0-100]                  Get or set glare reduction
+  adaptive on|off|toggle|get     Time/ambient adaptive (Visual stack only)
+  tick                           One adaptive sample (daemon / timer)
+  apply                          Re-apply saved settings
+  comfort                        Bright screen + mild blue-light + light glare
+
+EOF
+}
+
+_have() { command -v "$1" >/dev/null 2>&1; }
+
+_conf_get() {
+  local key="$1" def="${2:-}"
+  [[ -f "$CONF" ]] || { printf '%s' "$def"; return 0; }
+  local line
+  line="$(grep -E "^${key}=" "$CONF" 2>/dev/null | tail -n1 || true)"
+  if [[ -n "$line" ]]; then
+    printf '%s' "${line#*=}"
+  else
+    printf '%s' "$def"
+  fi
+}
+
+_conf_set() {
+  local key="$1" val="$2"
+  mkdir -p "$(dirname "$CONF")"
+  touch "$CONF"
+  if grep -qE "^${key}=" "$CONF" 2>/dev/null; then
+    sed -i "s|^${key}=.*|${key}=${val}|" "$CONF"
+  else
+    printf '%s=%s\n' "$key" "$val" >>"$CONF"
+  fi
+}
+
+_settings_get() {
+  local key="$1" def="${2:-}"
+  [[ -f "$SETTINGS" ]] || { printf '%s' "$def"; return 0; }
+  local line
+  line="$(grep -E "^${key}=" "$SETTINGS" 2>/dev/null | tail -n1 || true)"
+  if [[ -n "$line" ]]; then
+    printf '%s' "${line#*=}"
+  else
+    printf '%s' "$def"
+  fi
+}
+
+# Adaptive / Visual-stack features require desktop_modes_installed=visual|both.
+_visual_stack_available() {
+  local installed
+  installed="$(_settings_get desktop_modes_installed both)"
+  case "${installed,,}" in
+    visual|both|full|fx|all) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+_clamp() {
+  local n="$1" lo="${2:-0}" hi="${3:-100}"
+  [[ "$n" =~ ^-?[0-9]+$ ]] || n="$lo"
+  (( n < lo )) && n=$lo
+  (( n > hi )) && n=$hi
+  printf '%s' "$n"
+}
+
+_truthy() {
+  case "${1:-}" in
+    1|true|on|yes|YES|True|ON) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+_backlight_info() {
+  local raw
+  raw="$(gdbus call --session --dest "$BUS_DEST" --object-path "$BUS_PATH" \
+    --method org.freedesktop.DBus.Properties.Get \
+    "$BUS_IFACE" Backlight 2>/dev/null)" || return 1
+  python3 - "$raw" <<'PY'
+import re, sys
+raw = sys.argv[1]
+serial = re.search(r"uint32 (\d+)", raw)
+conn = re.search(r"'connector': <'([^']+)'>", raw)
+vals = {k: int(v) for k, v in re.findall(r"'(min|max|value)': <(\d+)>", raw)}
+if not serial or not conn or "max" not in vals:
+    sys.exit(1)
+print(serial.group(1), conn.group(1), vals.get("min", 0), vals["max"], vals.get("value", vals["max"]))
+PY
+}
+
+_set_backlight_raw() {
+  local serial="$1" connector="$2" value="$3"
+  gdbus call --session --dest "$BUS_DEST" --object-path "$BUS_PATH" \
+    --method "$BUS_IFACE.SetBacklight" \
+    "$serial" "$connector" "$value" >/dev/null
+}
+
+_warmth_to_kelvin() {
+  local w
+  w="$(_clamp "${1:-40}")"
+  python3 -c "print(int(round(6500 - (6500-1700)*($w/100.0))))"
+}
+
+_apply_effective_brightness() {
+  local bright glare info serial connector minv maxv _cur target pct
+  bright="$(_clamp "$(_conf_get brightness 100)")"
+  glare="$(_clamp "$(_conf_get glare 0)")"
+  pct="$(python3 -c "print(max(1, min(100, $bright * (1.0 - ($glare/100.0)*0.55))))")"
+  info="$(_backlight_info)" || return 1
+  read -r serial connector minv maxv _cur <<<"$info"
+  target="$(python3 -c "mn=$minv; mx=$maxv; p=$pct/100.0; print(int(round(mn + (mx-mn)*p)))")"
+  _set_backlight_raw "$serial" "$connector" "$target"
+  if _have gdbus; then
+    if (( glare >= 50 )); then
+      gdbus call --session --dest org.gnome.Shell.Brightness \
+        --object-path /org/gnome/Shell/Brightness \
+        --method org.gnome.Shell.Brightness.SetDimming true >/dev/null 2>&1 || true
+    else
+      gdbus call --session --dest org.gnome.Shell.Brightness \
+        --object-path /org/gnome/Shell/Brightness \
+        --method org.gnome.Shell.Brightness.SetDimming false >/dev/null 2>&1 || true
+    fi
+  fi
+}
+
+_apply_blue_light() {
+  local on warmth kelvin
+  on="$(_conf_get blue_light 0)"
+  warmth="$(_clamp "$(_conf_get warmth 40)")"
+  kelvin="$(_warmth_to_kelvin "$warmth")"
+  # Always drive Night Light from our conf (never GNOME's sunset schedule).
+  # Schedule-automatic fights manual off and re-enables at night.
+  gsettings set org.gnome.settings-daemon.plugins.color night-light-schedule-automatic false
+  if _truthy "$on"; then
+    gsettings set org.gnome.settings-daemon.plugins.color night-light-enabled true
+    gsettings set org.gnome.settings-daemon.plugins.color night-light-temperature "$kelvin"
+  else
+    gsettings set org.gnome.settings-daemon.plugins.color night-light-enabled false
+  fi
+}
+
+_gnome_night_light_on() {
+  case "$(gsettings get org.gnome.settings-daemon.plugins.color night-light-enabled 2>/dev/null || echo false)" in
+    true|True|'true') return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+_pause_adaptive_for_manual() {
+  # Manual slider/switch edits disable adaptive so it does not fight the user.
+  if _truthy "$(_conf_get adaptive 0)"; then
+    _conf_set adaptive 0
+    gsettings set org.gnome.settings-daemon.plugins.power ambient-enabled false 2>/dev/null || true
+  fi
+}
+
+# Optional ambient illuminance (lux) from iio sysfs; empty if unavailable.
+_read_ambient_lux() {
+  python3 - <<'PY'
+import glob, pathlib
+best = None
+for p in glob.glob("/sys/bus/iio/devices/*/in_illuminance_raw"):
+    try:
+        v = float(pathlib.Path(p).read_text().strip())
+    except Exception:
+        continue
+    scale = 1.0
+    sp = pathlib.Path(p.replace("_raw", "_scale"))
+    if sp.exists():
+        try:
+            scale = float(sp.read_text().strip())
+        except Exception:
+            pass
+    lux = v * scale
+    if best is None or lux > best:
+        best = lux
+for p in glob.glob("/sys/bus/iio/devices/*/in_intensity_both_raw"):
+    try:
+        v = float(pathlib.Path(p).read_text().strip())
+        if best is None:
+            best = v
+    except Exception:
+        pass
+if best is None:
+    raise SystemExit(0)
+print(f"{best:.2f}")
+PY
+}
+
+# Compute brightness/warmth/glare/blue_light from local time (+ ambient lux).
+# Prints: brightness warmth glare blue_light phase
+_compute_adaptive() {
+  local lux="${1:-}"
+  python3 - "$lux" <<'PY'
+import datetime, math, sys
+
+lux_s = sys.argv[1].strip()
+lux = float(lux_s) if lux_s else None
+
+now = datetime.datetime.now().astimezone()
+# Fractional hour local
+h = now.hour + now.minute / 60.0 + now.second / 3600.0
+
+# Smooth day curve without needing geoclue:
+# night 22–5, dawn 5–8, day 8–17, dusk 17–22
+def lerp(a, b, t):
+    t = max(0.0, min(1.0, t))
+    return a + (b - a) * t
+
+def smoothstep(edge0, edge1, x):
+    t = max(0.0, min(1.0, (x - edge0) / max(1e-6, edge1 - edge0)))
+    return t * t * (3 - 2 * t)
+
+if h < 5 or h >= 22:
+    phase = "night"
+    # 22→5 wrap
+    if h >= 22:
+        t = smoothstep(22, 24, h) * 0.5  # deepen into night
+        bright = lerp(55, 42, t)
+        warmth = lerp(70, 85, t)
+        glare = lerp(28, 40, t)
+    else:
+        t = smoothstep(0, 5, h)
+        bright = lerp(42, 50, t)
+        warmth = lerp(85, 75, t)
+        glare = lerp(40, 30, t)
+    blue = 1
+elif h < 8:
+    phase = "dawn"
+    t = smoothstep(5, 8, h)
+    bright = lerp(50, 90, t)
+    warmth = lerp(75, 35, t)
+    glare = lerp(30, 12, t)
+    blue = 1
+elif h < 17:
+    phase = "day"
+    # Peak around solar noon ~12.5
+    noon = 12.5
+    dist = abs(h - noon) / 4.5
+    peak = max(0.0, 1.0 - dist)
+    bright = lerp(88, 100, peak)
+    warmth = lerp(28, 12, peak)
+    glare = lerp(14, 6, peak)
+    blue = 0 if peak > 0.35 else 1
+elif h < 22:
+    phase = "dusk"
+    t = smoothstep(17, 22, h)
+    bright = lerp(92, 55, t)
+    warmth = lerp(30, 70, t)
+    glare = lerp(12, 28, t)
+    blue = 1
+else:
+    phase = "night"
+    bright, warmth, glare, blue = 45, 80, 35, 1
+
+# Ambient lux nudges the curve when a sensor exists.
+if lux is not None:
+    # Map log-ish lux: dark room ~1, office ~300, outdoors ~10000+
+    if lux < 1:
+        lux_n = 0.0
+    else:
+        lux_n = max(0.0, min(1.0, math.log10(lux + 1) / 4.0))  # 0..~1 at 10000 lux
+    bright = lerp(max(30, bright - 25), min(100, bright + 8), lux_n)
+    warmth = lerp(min(90, warmth + 15), max(8, warmth - 20), lux_n)
+    glare = lerp(min(50, glare + 12), max(4, glare - 10), lux_n)
+    if lux_n > 0.55:
+        blue = 0
+    elif lux_n < 0.25:
+        blue = 1
+
+print(
+    int(round(bright)),
+    int(round(warmth)),
+    int(round(glare)),
+    int(blue),
+    phase,
+)
+PY
+}
+
+_set_ambient_hw() {
+  local enable="$1" lux="${2:-}"
+  if [[ "$enable" == "1" ]]; then
+    gsettings set org.gnome.settings-daemon.plugins.power ambient-enabled true 2>/dev/null || true
+    if [[ -n "$lux" ]] && _have gdbus; then
+      # Normalize lux → 0..1 target hint for Shell auto-brightness (best-effort).
+      local target
+      target="$(python3 -c "import math; lux=float('$lux'); print(max(0.05,min(1.0, math.log10(lux+1)/4.0)))" 2>/dev/null || echo "")"
+      if [[ -n "$target" ]]; then
+        gdbus call --session --dest org.gnome.Shell.Brightness \
+          --object-path /org/gnome/Shell/Brightness \
+          --method org.gnome.Shell.Brightness.SetAutoBrightnessTarget \
+          "$target" >/dev/null 2>&1 || true
+      fi
+    fi
+  else
+    gsettings set org.gnome.settings-daemon.plugins.power ambient-enabled false 2>/dev/null || true
+  fi
+}
+
+cmd_tick() {
+  if ! _visual_stack_available; then
+    echo "adaptive unavailable (Performance-only install)" >&2
+    return 1
+  fi
+  if ! _truthy "$(_conf_get adaptive 0)"; then
+    echo "adaptive=0"
+    return 0
+  fi
+  local lux="" bright warmth glare blue phase
+  lux="$(_read_ambient_lux || true)"
+  read -r bright warmth glare blue phase <<<"$(_compute_adaptive "$lux")"
+
+  # Honor a sticky blue-light choice (panel / CLI / GNOME Quick Settings).
+  # Adaptive still moves brightness / warmth / glare.
+  if _truthy "$(_conf_get blue_light_override 0)"; then
+    blue="$(_conf_get blue_light 0)"
+  elif ! _gnome_night_light_on && [[ "$blue" == "1" ]]; then
+    # User turned Night Light off outside x47-display — do not turn it back on.
+    blue=0
+    _conf_set blue_light_override 1
+  fi
+
+  _conf_set brightness "$bright"
+  _conf_set warmth "$warmth"
+  _conf_set glare "$glare"
+  _conf_set blue_light "$blue"
+  _conf_set adaptive_phase "$phase"
+  _conf_set adaptive_lux "${lux:-none}"
+  _set_ambient_hw 1 "$lux"
+  cmd_apply
+  echo "adaptive_tick phase=${phase} brightness=${bright} warmth=${warmth} glare=${glare} blue_light=${blue} override=$(_conf_get blue_light_override 0) lux=${lux:-none}"
+}
+
+cmd_adaptive() {
+  local act="${1:-get}" cur
+  cur="$(_conf_get adaptive 0)"
+  case "$act" in
+    get|status) echo "$cur"; return 0 ;;
+  esac
+  if ! _visual_stack_available; then
+    echo "Adaptive needs Visual stack (install with --desktop-mode both|visual)." >&2
+    _conf_set adaptive 0
+    return 1
+  fi
+  case "$act" in
+    on|1|true)
+      _conf_set adaptive 1
+      # Re-enable adaptive ownership of the blue-light filter.
+      _conf_set blue_light_override 0
+      ;;
+    off|0|false)
+      _conf_set adaptive 0
+      _set_ambient_hw 0
+      ;;
+    toggle)
+      if _truthy "$cur"; then
+        _conf_set adaptive 0
+        _set_ambient_hw 0
+      else
+        _conf_set adaptive 1
+        _conf_set blue_light_override 0
+      fi
+      ;;
+    *) echo "adaptive needs on|off|toggle|get" >&2; return 2 ;;
+  esac
+  if _truthy "$(_conf_get adaptive 0)"; then
+    cmd_tick
+  else
+    echo "adaptive=0"
+  fi
+}
+
+cmd_apply() {
+  _apply_blue_light
+  _apply_effective_brightness || true
+}
+
+cmd_status() {
+  local bright glare warmth bl info pct adaptive
+  bright="$(_clamp "$(_conf_get brightness 100)")"
+  glare="$(_clamp "$(_conf_get glare 0)")"
+  warmth="$(_clamp "$(_conf_get warmth 40)")"
+  bl="$(_conf_get blue_light 0)"
+  adaptive="$(_conf_get adaptive 0)"
+  echo "brightness=${bright}"
+  echo "blue_light=${bl}"
+  echo "blue_light_override=$(_conf_get blue_light_override 0)"
+  echo "warmth=${warmth} (approx $(_warmth_to_kelvin "$warmth")K)"
+  echo "glare=${glare}"
+  echo "adaptive=${adaptive}"
+  echo "adaptive_available=$(_visual_stack_available && echo 1 || echo 0)"
+  echo "adaptive_phase=$(_conf_get adaptive_phase none)"
+  echo "adaptive_lux=$(_conf_get adaptive_lux none)"
+  if info="$(_backlight_info)"; then
+    read -r _s _c minv maxv cur <<<"$info"
+    pct="$(python3 -c "print(int(round(($cur-$minv)/max(1,$maxv-$minv)*100)))")"
+    echo "backlight_hw=${pct}% (${cur}/${maxv})"
+  fi
+  echo "night_light=$(gsettings get org.gnome.settings-daemon.plugins.color night-light-enabled 2>/dev/null || echo '?')"
+  echo "night_temp=$(gsettings get org.gnome.settings-daemon.plugins.color night-light-temperature 2>/dev/null || echo '?')"
+  echo "night_schedule_auto=$(gsettings get org.gnome.settings-daemon.plugins.color night-light-schedule-automatic 2>/dev/null || echo '?')"
+  echo "ambient_enabled=$(gsettings get org.gnome.settings-daemon.plugins.power ambient-enabled 2>/dev/null || echo '?')"
+}
+
+cmd_brightness() {
+  if [[ $# -lt 1 ]]; then
+    echo "$(_clamp "$(_conf_get brightness 100)")"
+    return 0
+  fi
+  local v
+  v="$(_clamp "$1")"
+  _pause_adaptive_for_manual
+  _conf_set brightness "$v"
+  _apply_effective_brightness
+  echo "brightness=${v}"
+}
+
+cmd_glare() {
+  if [[ $# -lt 1 ]]; then
+    echo "$(_clamp "$(_conf_get glare 0)")"
+    return 0
+  fi
+  local v
+  v="$(_clamp "$1")"
+  _pause_adaptive_for_manual
+  _conf_set glare "$v"
+  _apply_effective_brightness
+  echo "glare=${v}"
+}
+
+cmd_warmth() {
+  if [[ $# -lt 1 ]]; then
+    echo "$(_clamp "$(_conf_get warmth 40)")"
+    return 0
+  fi
+  local v
+  v="$(_clamp "$1")"
+  _pause_adaptive_for_manual
+  _conf_set warmth "$v"
+  if _truthy "$(_conf_get blue_light 0)"; then
+    _apply_blue_light
+  fi
+  echo "warmth=${v}"
+}
+
+cmd_blue_light() {
+  local cur act="${1:-get}"
+  cur="$(_conf_get blue_light 0)"
+  case "$act" in
+    get|status) echo "$cur"; return 0 ;;
+    on|1|true)
+      # Sticky override: adaptive may keep adjusting brightness, not this toggle.
+      _conf_set blue_light_override 1
+      _conf_set blue_light 1
+      ;;
+    off|0|false)
+      _conf_set blue_light_override 1
+      _conf_set blue_light 0
+      ;;
+    toggle)
+      _conf_set blue_light_override 1
+      if _truthy "$cur"; then _conf_set blue_light 0; else _conf_set blue_light 1; fi
+      ;;
+    *) echo "blue-light needs on|off|toggle|get" >&2; return 2 ;;
+  esac
+  _apply_blue_light
+  echo "blue_light=$(_conf_get blue_light)"
+}
+
+cmd_comfort() {
+  _conf_set adaptive 0
+  _set_ambient_hw 0
+  _conf_set brightness 100
+  _conf_set blue_light 1
+  _conf_set warmth 42
+  _conf_set glare 12
+  cmd_apply
+  cmd_status
+}
+
+main() {
+  local cmd="${1:-}"
+  shift || true
+  case "$cmd" in
+    status) cmd_status ;;
+    brightness) cmd_brightness "$@" ;;
+    blue-light|bluelight|night-light) cmd_blue_light "$@" ;;
+    warmth|temperature) cmd_warmth "$@" ;;
+    glare) cmd_glare "$@" ;;
+    adaptive) cmd_adaptive "$@" ;;
+    tick) cmd_tick ;;
+    apply) cmd_apply ;;
+    comfort) cmd_comfort ;;
+    -h|--help|help|"") _usage; [[ -n "$cmd" ]] || exit 2 ;;
+    *) echo "unknown command: $cmd" >&2; _usage; exit 2 ;;
+  esac
+}
+
+main "$@"

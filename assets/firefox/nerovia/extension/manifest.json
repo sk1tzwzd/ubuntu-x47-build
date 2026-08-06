@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "X47 Nerovia Crop",
+  "version": "1.0.0",
+  "description": "Crop app.nerovia.ai to chart or open-positions widget views.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "x47-nerovia-crop@x47",
+      "strict_min_version": "115.0"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://app.nerovia.ai/*", "https://*.nerovia.ai/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

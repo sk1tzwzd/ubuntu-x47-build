@@ -1,0 +1,22 @@
+html[data-x47-widget] {
+  background: #0a0a0a !important;
+}
+
+html[data-x47-widget] body {
+  background: #0a0a0a !important;
+  margin: 0 !important;
+  overflow: auto !important;
+}
+
+html[data-x47-widget] body > *:not([data-x47-keep]) {
+  /* Ancestors of keep-nodes still need to participate in layout. */
+}
+
+html[data-x47-widget] [data-x47-hide="1"] {
+  display: none !important;
+}
+
+html[data-x47-widget="chart"] [data-x47-keep],
+html[data-x47-widget="positions"] [data-x47-keep] {
+  box-sizing: border-box !important;
+}

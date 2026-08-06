@@ -1,0 +1,61 @@
+/* Nerovia widget crop — works even if the unsigned crop add-on cannot load. */
+@-moz-document domain("app.nerovia.ai") {
+  html {
+    background: #0a0a0a !important;
+  }
+
+  html[data-x47-widget] body {
+    background: #0a0a0a !important;
+    overflow: auto !important;
+  }
+
+  html[data-x47-widget] body * {
+    visibility: hidden !important;
+  }
+
+  html[data-x47-widget] [data-x47-keep],
+  html[data-x47-widget] [data-x47-keep] * {
+    visibility: visible !important;
+  }
+
+  html[data-x47-widget] [data-x47-keep] {
+    max-width: 100vw !important;
+  }
+
+  html[data-x47-widget] [data-x47-hide="1"] {
+    display: none !important;
+  }
+}
+
+/* Chart widget URL: keep TradingView / canvas clusters, hide obvious chrome. */
+@-moz-document url-prefix("https://app.nerovia.ai/?x47=chart"),
+               url-prefix("https://app.nerovia.ai/?x47=chart&") {
+  nav,
+  aside,
+  header:not(:has(canvas)):not(:has(iframe)),
+  [class*="sidebar" i],
+  [class*="SideNav" i],
+  [class*="sidenav" i] {
+    display: none !important;
+  }
+
+  body {
+    background: #0a0a0a !important;
+  }
+}
+
+/* Positions widget URL: focus the positions table region. */
+@-moz-document url-prefix("https://app.nerovia.ai/?x47=positions"),
+               url-prefix("https://app.nerovia.ai/?x47=positions&") {
+  nav,
+  aside,
+  [class*="sidebar" i],
+  [class*="SideNav" i],
+  [class*="sidenav" i] {
+    display: none !important;
+  }
+
+  body {
+    background: #0a0a0a !important;
+  }
+}

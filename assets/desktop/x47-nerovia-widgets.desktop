@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=X47 Nerovia Widgets (disabled)
+Comment=Retired — no longer starts Firefox widgets
+Exec=/bin/true
+Hidden=true
+X-GNOME-Autostart-enabled=false

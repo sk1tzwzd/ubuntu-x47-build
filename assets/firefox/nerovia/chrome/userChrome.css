@@ -1,0 +1,76 @@
+/* Borderless app chrome for Nerovia widget windows. */
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+
+:root {
+  --x47-chrome-bg: #0a0a0a;
+}
+
+#navigator-toolbox,
+#TabsToolbar,
+#nav-bar,
+#PersonalToolbar,
+#titlebar,
+#sidebar-box,
+#sidebar-header,
+#sidebar-splitter,
+#urlbar-container,
+#TabsToolbar-customization-target {
+  visibility: collapse !important;
+  height: 0 !important;
+  max-height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+#navigator-toolbox {
+  border: none !important;
+  box-shadow: none !important;
+  background: var(--x47-chrome-bg) !important;
+}
+
+/* Thin hover strip so Ctrl+L / profile access remains possible if needed. */
+#navigator-toolbox {
+  visibility: visible !important;
+  height: 3px !important;
+  max-height: 3px !important;
+  min-height: 3px !important;
+  opacity: 0.15 !important;
+  pointer-events: auto !important;
+  overflow: hidden !important;
+  transition: max-height 160ms ease, height 160ms ease, opacity 120ms ease !important;
+}
+
+#navigator-toolbox:hover,
+#navigator-toolbox:focus-within {
+  height: auto !important;
+  max-height: 280px !important;
+  min-height: 0 !important;
+  opacity: 1 !important;
+}
+
+#navigator-toolbox:hover #TabsToolbar,
+#navigator-toolbox:hover #nav-bar,
+#navigator-toolbox:focus-within #TabsToolbar,
+#navigator-toolbox:focus-within #nav-bar {
+  visibility: visible !important;
+  height: auto !important;
+  max-height: none !important;
+  min-height: unset !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+browser,
+#tabbrowser-tabpanels,
+.browserContainer,
+.browserStack {
+  background: var(--x47-chrome-bg) !important;
+}
+
+#browser {
+  margin: 0 !important;
+  padding: 0 !important;
+}

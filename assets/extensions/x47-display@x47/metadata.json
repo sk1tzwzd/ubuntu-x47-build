@@ -1,0 +1,7 @@
+{
+  "uuid": "x47-display@x47",
+  "name": "X47 Display Comfort",
+  "description": "Top-bar brightness, blue-light filter, and glare reduction with sliders.",
+  "shell-version": ["48", "49", "50"],
+  "url": "https://github.com/sk1tzwzd/ubuntu-x47-build"
+}

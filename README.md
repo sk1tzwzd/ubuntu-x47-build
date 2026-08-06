@@ -95,11 +95,12 @@ Two modes for the main user (opt out with `--skip-desktop-fx`). Installer defaul
 
 | Mode | What you get |
 |------|----------------|
-| **Performance** (default) | Lean GNOME: animations off, no cube/blur/wobbly/Coverflow/ws-walls, **no dock**, lime Show Apps in the top bar |
-| **Visual** | Desktop Cube, Coverflow Alt-Tab, Blur My Shell, Burn My Windows, wobbly windows, multi-colour `x47-ws-walls`, animations on, **bottom Ubuntu Dock** |
+| **Performance** (default) | Lean GNOME: animations off, no cube/blur/wobbly/Coverflow/ws-walls, **no dock** (both modes), lime Show Apps in the top bar |
+| **Visual** | Desktop Cube, Coverflow Alt-Tab, Blur My Shell, Burn My Windows, wobbly windows, multi-colour `x47-ws-walls`, animations on (**no dock**) |
 
-Shared in both modes: CTRL+drag tiling, notification click-to-focus, Show Apps, mode toggle chip.
+Shared in both modes: CTRL+drag tiling, notification click-to-focus, Show Apps, mode toggle chip, display comfort panel, **no bottom dock**.
 
+- **Display comfort** — top-bar brightness / blue-light / glare; Adaptive (Visual stack) follows time of day. Turning blue-light / Night Light off sticks until you turn Adaptive back on.
 - **X47 wallpapers** — ASCII knuckle-duster circuit colourways (regen with `scripts/make-wallpaper.py --all`). Visual switches them per workspace.
 - **Login screen** — GDM Ubuntu wordmark replaced with the teal ASCII duster (`scripts/make-login-logo.py` → `/usr/share/pixmaps/x47-login-duster.png`).
 - **Notifications** — click a top banner once to jump to the app.
@@ -107,10 +108,11 @@ Shared in both modes: CTRL+drag tiling, notification click-to-focus, Show Apps, 
 - **Window tiling** — Tiling Shell; hold Ctrl while dragging; toggle via `x47-settings set tiling off`.
 - **Screenshot** — `Super+Shift+S` or `Print` (optional via X47 Settings).
 - **WezTerm (PuTTY-style)** — select copy / right-click paste / `Ctrl+C`·`V` (optional via X47 Settings).
+- **Syncthing** — optional hardened LAN sync (`x47-syncthing`); default share `~/X47Share`.
 
-User-level only (no sudo). On Wayland, **log out and back in** once after install so extension changes load.
+User-level only (no sudo) for most desktop FX. On Wayland, **log out and back in** once after install so extension changes load.
 
-> **Removed:** the Linux CMD Helper / X47 Widgets desktop cards are retired. `modules/52-widgets.sh` only purges leftover UUIDs and never reinstalls them.
+> **Removed:** Linux CMD Helper / X47 Widgets desktop cards, and Nerovia Firefox widgets (stubs only). `modules/52-widgets.sh` purges leftover UUIDs and never reinstalls them.
 
 ## Install from ISO
 
@@ -136,6 +138,7 @@ To build it yourself: `sudo apt install xorriso`, then `./scripts/build-iso.sh` 
 ### Privacy
 - **Mullvad VPN** via official apt repo (`mullvad-vpn` in the apt manifest)
 - **Tor Browser** latest linux-x86_64 build → `~/tools/tor-browser`, registered with `--register-app`, CLI symlink `~/.local/bin/tor-browser`
+- **Syncthing (Android ↔ PC)** — official binary, LAN-first hardening (no cloud, no relays, no global discovery, GUI on `127.0.0.1` + password). Share folder `~/X47Share`. Helper: `x47-syncthing`. Skip with `--skip-syncthing`. Prefer F-Droid Syncthing on Android; approve devices manually.
 
 ### Tools (high level)
 - **apt**: nmap, metasploit-framework, wireshark, hashcat, hydra, sqlmap, docker-ce, golang-go, ruby-dev, mullvad-vpn, ufw, fail2ban, …

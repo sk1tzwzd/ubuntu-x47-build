@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.12.0 — 2026-08-07
+
+### Desktop modes
+- **Dock off in both modes** — Visual no longer re-shows the bottom dock; hide via `manualhide` (Ubuntu session owns `ubuntu-dock`).
+- **Nerovia Firefox widgets retired** — autostart/helper stubbed; no longer spawn on login or mode switch.
+
+### Display comfort
+- **Night Light / blue-light sticks when turned off** — Adaptive no longer force-reenables it every tick. Manual off (panel, CLI, or GNOME Quick Settings) sets a sticky override; turning Adaptive back on clears that lock. Dropped GNOME sunset schedule driving (source of truth is `display.conf`).
+
+### Chrome autohide
+- **Cursor titlebar soft-hide removed** — the peek/hover tab bar was unreliable outside Firefox. Autohide chrome stays **Firefox-only**. Run `sudo scripts/cursor-autohide-titlebar.sh remove` after Cursor updates if it reappears.
+
+### Secure Android ↔ PC sync
+- **Syncthing** — official release binary + `x47-syncthing` helper; LAN-first (relays/global discovery/NAT off), localhost GUI with password, default share `~/X47Share`. No KDE Connect.
+
 ## v1.11.0 — 2026-08-06
 
 ### Desktop modes
@@ -25,7 +40,7 @@
 ## v1.9.14 — 2026-08-06
 
 ### Cursor
-- **Autohide title bar** when unmaximized (12px peek, full bar on hover) — `assets/cursor/x47-autohide-titlebar.css` + `scripts/cursor-autohide-titlebar.sh` (re-run after Cursor updates).
+- **Autohide title bar** when unmaximized (Cursor) — later **removed**; soft-hide kept Firefox-only.
 
 ## v1.9.13 — 2026-08-06
 

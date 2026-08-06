@@ -1,0 +1,303 @@
+#!/usr/bin/env bash
+# X47 Syncthing helper — hardened LAN-first Android ↔ PC file sync.
+set -euo pipefail
+
+export PATH="${HOME}/.local/bin:${PATH}"
+
+ST_HOME="${STHOMEDIR:-$HOME/.config/syncthing}"
+ST_DATA="${STDATADIR:-$HOME/.local/state/syncthing}"
+SHARE_DIR="${X47_SYNCTHING_SHARE:-$HOME/X47Share}"
+CRED_FILE="${X47_SYNCTHING_CRED:-$HOME/.config/x47/syncthing-gui.cred}"
+UNIT_DIR="$HOME/.config/systemd/user"
+SERVICE=syncthing.service
+
+_usage() {
+  cat <<'EOF'
+usage: x47-syncthing <command>
+
+  install   Install/update official Syncthing binary + hardened config
+  start     Start user service
+  stop      Stop user service
+  status    Show device ID, GUI URL, share folder, hardening flags
+  id        Print this device ID (for Android pairing)
+  gui       Print GUI URL + credentials path
+  open      Open GUI in Firefox (localhost only)
+
+Security model: no cloud, GUI on 127.0.0.1 + password, global discovery OFF,
+relays OFF, NAT traversal OFF. Devices must be on the same LAN (or your own VPN)
+and you must approve each device + folder manually.
+EOF
+}
+
+_have() { command -v "$1" >/dev/null 2>&1; }
+
+_arch() {
+  case "$(uname -m)" in
+    x86_64|amd64) echo amd64 ;;
+    aarch64|arm64) echo arm64 ;;
+    *) uname -m ;;
+  esac
+}
+
+_ensure_dirs() {
+  mkdir -p "$ST_HOME" "$ST_DATA" "$SHARE_DIR" "$(dirname "$CRED_FILE")" "$UNIT_DIR"
+  chmod 700 "$ST_HOME" "$ST_DATA" "$(dirname "$CRED_FILE")" 2>/dev/null || true
+  chmod 755 "$SHARE_DIR" 2>/dev/null || true
+}
+
+_install_binary() {
+  local arch tag asset url cache dir sumfile sum
+  arch="$(_arch)"
+  cache="$HOME/.cache/x47"
+  mkdir -p "$cache" "$HOME/.local/bin"
+  tag="$(curl -fsSL https://api.github.com/repos/syncthing/syncthing/releases/latest \
+    | python3 -c 'import sys,json; print(json.load(sys.stdin)["tag_name"])')"
+  asset="syncthing-linux-${arch}-${tag}.tar.gz"
+  url="https://github.com/syncthing/syncthing/releases/download/${tag}/${asset}"
+  echo "Downloading ${asset}"
+  curl -fsSL -o "$cache/$asset" "$url"
+  sumfile="$cache/sha256sum-${tag}.txt.asc"
+  curl -fsSL -o "$sumfile" \
+    "https://github.com/syncthing/syncthing/releases/download/${tag}/sha256sum.txt.asc"
+  sum="$(grep -E "  ${asset}$" "$sumfile" | head -1 | awk '{print $1}')"
+  [[ -n "$sum" ]] || { echo "checksum missing for $asset" >&2; return 1; }
+  (cd "$cache" && echo "$sum  $asset" | sha256sum -c -)
+  dir="$cache/syncthing-linux-${arch}-${tag}"
+  rm -rf "$dir"
+  tar -xzf "$cache/$asset" -C "$cache"
+  install -m 0755 "$dir/syncthing" "$HOME/.local/bin/syncthing"
+  "$HOME/.local/bin/syncthing" --version | head -1
+}
+
+_harden_config() {
+  local cfg="$ST_HOME/config.xml"
+  [[ -f "$cfg" ]] || return 1
+  python3 - "$cfg" "$SHARE_DIR" <<'PY'
+import hashlib, os, sys, time, xml.etree.ElementTree as ET
+
+cfg, share = sys.argv[1], sys.argv[2]
+tree = ET.parse(cfg)
+root = tree.getroot()
+
+def text(el, tag, value):
+    n = el.find(tag)
+    if n is None:
+        n = ET.SubElement(el, tag)
+    n.text = value
+
+# GUI: localhost + TLS preferred
+gui = root.find("gui")
+if gui is None:
+    gui = ET.SubElement(root, "gui")
+gui.set("enabled", "true")
+gui.set("tls", "false")  # localhost only; avoid self-signed browser pain
+text(gui, "address", "127.0.0.1:8384")
+# Keep existing user/password from generate
+
+opts = root.find("options")
+if opts is None:
+    opts = ET.SubElement(root, "options")
+
+# LAN-first hardening
+for tag, val in {
+    "globalAnnounceEnabled": "false",
+    "localAnnounceEnabled": "true",
+    "relaysEnabled": "false",
+    "natEnabled": "false",
+    "crashReportingEnabled": "false",
+    "announceLANAddresses": "false",
+    "startBrowser": "false",
+    "urAccepted": "-1",
+    "urSeen": "3",
+}.items():
+    text(opts, tag, val)
+
+# Ensure default share folder exists in config (id=x47share)
+folders = list(root.findall("folder"))
+have = False
+for f in folders:
+    if f.get("id") == "x47share":
+        have = True
+        f.set("path", share)
+        f.set("type", "sendreceive")
+        f.set("rescanIntervalS", "3600")
+        f.set("fsWatcherEnabled", "true")
+        f.set("autoNormalize", "true")
+        break
+if not have:
+    f = ET.SubElement(root, "folder", {
+        "id": "x47share",
+        "label": "X47Share",
+        "path": share,
+        "type": "sendreceive",
+        "rescanIntervalS": "3600",
+        "fsWatcherEnabled": "true",
+        "autoNormalize": "true",
+    })
+    ET.SubElement(f, "filesystemType").text = "basic"
+    ET.SubElement(f, "minDiskFree", {"unit": "%"}).text = "1"
+    # No devices yet — user must share after pairing.
+
+tree.write(cfg, encoding="utf-8", xml_declaration=True)
+print(cfg)
+PY
+  chmod 600 "$cfg"
+}
+
+_write_unit() {
+  cat >"$UNIT_DIR/$SERVICE" <<EOF
+[Unit]
+Description=Syncthing (X47 hardened LAN sync)
+Documentation=man:syncthing(1)
+StartLimitIntervalSec=60
+StartLimitBurst=4
+
+[Service]
+ExecStart=%h/.local/bin/syncthing serve --no-browser --no-restart --home=%h/.config/syncthing
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=3 4
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=%h/.config/syncthing %h/X47Share
+SystemCallArchitectures=native
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=default.target
+EOF
+  # If share path customized, patch ReadWritePaths — keep simple default X47Share.
+  systemctl --user daemon-reload
+}
+
+_device_id() {
+  if [[ -f "$ST_HOME/config.xml" ]]; then
+    syncthing --home="$ST_HOME" --device-id 2>/dev/null \
+      || python3 - "$ST_HOME/config.xml" <<'PY'
+import sys, xml.etree.ElementTree as ET
+root=ET.parse(sys.argv[1]).getroot()
+d=root.find("device")
+print(d.get("id") if d is not None else "")
+PY
+  else
+    echo ""
+  fi
+}
+
+cmd_install() {
+  _ensure_dirs
+  _install_binary
+  local pass user
+  user="x47"
+  if [[ ! -f "$ST_HOME/config.xml" ]]; then
+    pass="$(openssl rand -base64 32 | tr -d '/+=' | head -c 24)"
+    syncthing generate --home="$ST_HOME" --gui-user="$user" --gui-password="$pass" >/dev/null
+    umask 077
+    printf 'user=%s\npassword=%s\nurl=http://127.0.0.1:8384\n' "$user" "$pass" >"$CRED_FILE"
+    chmod 600 "$CRED_FILE"
+  elif [[ ! -f "$CRED_FILE" ]]; then
+    printf 'user=%s\npassword=(already set in Syncthing — reset via GUI if forgotten)\nurl=http://127.0.0.1:8384\n' "$user" >"$CRED_FILE"
+    chmod 600 "$CRED_FILE"
+  fi
+  # Point data dir via config if needed — Syncthing 2 uses --home for both unless STDATADIR
+  _harden_config
+  _write_unit
+  systemctl --user enable "$SERVICE" >/dev/null
+  systemctl --user restart "$SERVICE"
+  sleep 1
+  echo "installed"
+  cmd_status
+  cat <<EOF
+
+Android setup (F-Droid Syncthing recommended):
+  1) Install Syncthing (or Syncthing-Fork) on the phone
+  2) Add this device ID on the phone (Actions → Add remote device):
+     $(_device_id)
+  3) On the PC GUI (x47-syncthing open), accept the phone
+  4) Share folder "X47Share" with the phone; accept on both sides
+  5) Keep both on the same Wi‑Fi (or your VPN). Relays/discovery are OFF on purpose.
+
+GUI credentials: $CRED_FILE
+EOF
+}
+
+cmd_start() {
+  systemctl --user start "$SERVICE"
+  echo "started"
+}
+
+cmd_stop() {
+  systemctl --user stop "$SERVICE" 2>/dev/null || true
+  echo "stopped"
+}
+
+cmd_status() {
+  local id running
+  id="$(_device_id)"
+  running=0
+  systemctl --user is-active --quiet "$SERVICE" 2>/dev/null && running=1
+  echo "running=${running}"
+  echo "device_id=${id}"
+  echo "share=${SHARE_DIR}"
+  echo "config=${ST_HOME}/config.xml"
+  echo "gui=http://127.0.0.1:8384"
+  echo "cred_file=${CRED_FILE}"
+  if [[ -f "$ST_HOME/config.xml" ]]; then
+    python3 - "$ST_HOME/config.xml" <<'PY'
+import sys, xml.etree.ElementTree as ET
+r=ET.parse(sys.argv[1]).getroot()
+o=r.find("options")
+g=r.find("gui")
+def get(el,tag,default="?"):
+    if el is None:
+        return default
+    n=el.find(tag)
+    return n.text if n is not None and n.text is not None else default
+print("gui_address="+get(g,"address"))
+print("global_announce="+get(o,"globalAnnounceEnabled"))
+print("local_announce="+get(o,"localAnnounceEnabled"))
+print("relays="+get(o,"relaysEnabled"))
+print("nat="+get(o,"natEnabled"))
+print("crash_reporting="+get(o,"crashReportingEnabled"))
+PY
+  fi
+}
+
+cmd_id() { _device_id; }
+
+cmd_gui() {
+  echo "url=http://127.0.0.1:8384"
+  [[ -f "$CRED_FILE" ]] && cat "$CRED_FILE"
+}
+
+cmd_open() {
+  if _have firefox; then
+    firefox "http://127.0.0.1:8384" >/tmp/x47-syncthing-gui.log 2>&1 &
+  elif _have xdg-open; then
+    xdg-open "http://127.0.0.1:8384" >/tmp/x47-syncthing-gui.log 2>&1 &
+  else
+    echo "Open http://127.0.0.1:8384 in a browser"
+  fi
+  cmd_gui
+}
+
+main() {
+  local cmd="${1:-}"
+  shift || true
+  case "$cmd" in
+    install) cmd_install "$@" ;;
+    start) cmd_start "$@" ;;
+    stop) cmd_stop "$@" ;;
+    status) cmd_status "$@" ;;
+    id|device-id) cmd_id "$@" ;;
+    gui|creds) cmd_gui "$@" ;;
+    open) cmd_open "$@" ;;
+    -h|--help|help|"") _usage; [[ -n "$cmd" ]] || exit 2 ;;
+    *) echo "unknown: $cmd" >&2; _usage; exit 2 ;;
+  esac
+}
+
+main "$@"

@@ -35,10 +35,20 @@ _notify() {
 }
 
 _ext_enable() {
-  local uuid="$1"
-  [[ -d "$HOME/.local/share/gnome-shell/extensions/$uuid" ]] || return 0
+  local uuid="$1" cur cleaned
+  # System docks live under /usr/share; user extensions under ~/.local.
+  if [[ ! -d "$HOME/.local/share/gnome-shell/extensions/$uuid" ]] \
+     && [[ ! -d "/usr/share/gnome-shell/extensions/$uuid" ]] \
+     && ! gnome-extensions info "$uuid" >/dev/null 2>&1; then
+    return 0
+  fi
+  # Clear disabled-extensions or Ubuntu Dock stays suppressed after Visual apply.
+  cur="$(gsettings get org.gnome.shell disabled-extensions 2>/dev/null || echo "@as []")"
+  if [[ "$cur" == *"'$uuid'"* ]]; then
+    cleaned="$(printf '%s' "$cur" | sed -E "s/'$uuid',? ?//g; s/, ]/]/g; s/\[,/[/g; s/\[ ,/[/g")"
+    gsettings set org.gnome.shell disabled-extensions "$cleaned" 2>/dev/null || true
+  fi
   gnome-extensions enable "$uuid" 2>/dev/null || true
-  local cur
   cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
   if [[ "$cur" != *"'$uuid'"* ]]; then
     if [[ "$cur" == "@as []" || "$cur" == "[]" ]]; then
@@ -56,17 +66,35 @@ _ext_disable() {
   cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
   cleaned="$(printf '%s' "$cur" | sed -E "s/'$uuid',? ?//g; s/, ]/]/g; s/\[,/[/g")"
   gsettings set org.gnome.shell enabled-extensions "$cleaned" 2>/dev/null || true
+  cur="$(gsettings get org.gnome.shell disabled-extensions 2>/dev/null || echo "@as []")"
+  if [[ "$cur" != *"'$uuid'"* ]]; then
+    if [[ "$cur" == "@as []" || "$cur" == "[]" ]]; then
+      gsettings set org.gnome.shell disabled-extensions "['$uuid']" 2>/dev/null || true
+    else
+      gsettings set org.gnome.shell disabled-extensions "${cur%]}, '$uuid']" 2>/dev/null || true
+    fi
+  fi
 }
 
 _hide_dock() {
-  local uuid
-  for uuid in "${X47_DOCK_UUIDS[@]}"; do
-    _ext_disable "$uuid"
-  done
+  # Ubuntu session mode lists ubuntu-dock in enabledExtensions — disabling it
+  # fights the session (ERROR state) and the dock often comes back. Hide via
+  # dash-to-dock settings instead; only disable optional user dash-to-dock.
+  gsettings set org.gnome.shell.extensions.dash-to-dock manualhide true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
+  # Keep system dock enabled (session-owned); strip any accidental disable flag.
+  if gnome-extensions info ubuntu-dock@ubuntu.com >/dev/null 2>&1 \
+     || [[ -d /usr/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com ]]; then
+    _ext_enable ubuntu-dock@ubuntu.com
+  fi
+  if [[ -d "$HOME/.local/share/gnome-shell/extensions/dash-to-dock@micxgx.gmail.com" ]]; then
+    _ext_disable dash-to-dock@micxgx.gmail.com
+  fi
 }
 
 _show_dock() {
-  local uuid sdir
   # Prefer Ubuntu's dock; fall back to dash-to-dock if present.
   if [[ -d "$HOME/.local/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com" ]] \
      || gnome-extensions info ubuntu-dock@ubuntu.com >/dev/null 2>&1 \
@@ -76,18 +104,14 @@ _show_dock() {
   if [[ -d "$HOME/.local/share/gnome-shell/extensions/dash-to-dock@micxgx.gmail.com" ]]; then
     _ext_enable dash-to-dock@micxgx.gmail.com
   fi
-  for sdir in \
-    /usr/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com/schemas \
-    "$HOME/.local/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com/schemas" \
-    "$HOME/.local/share/gnome-shell/extensions/dash-to-dock@micxgx.gmail.com/schemas"; do
-    [[ -d "$sdir" ]] || continue
-    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock dock-fixed true 2>/dev/null || true
-    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
-    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock autohide false 2>/dev/null || true
-    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock multi-monitor true 2>/dev/null || true
-    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || true
-    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
-  done
+  # Reveal dock for Visual (manualhide is how Performance keeps it gone).
+  gsettings set org.gnome.shell.extensions.dash-to-dock manualhide false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock autohide false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock multi-monitor true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
 }
 
 _apply_performance() {
@@ -119,7 +143,8 @@ _apply_visual() {
   for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
     _ext_enable "$uuid"
   done
-  _show_dock
+  # Dock stays off in both modes (Super / Show Apps for launching).
+  _hide_dock
   gsettings set org.gnome.desktop.interface enable-animations true 2>/dev/null || true
   gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
   gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true

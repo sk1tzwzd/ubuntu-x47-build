@@ -13,6 +13,7 @@
 #   ./install.sh --skip-debloat   # keep language packs + default desktop apps
 #   ./install.sh --skip-perf      # skip boot/service perf tweaks + Firefox deb swap
 #   ./install.sh --skip-desktop-fx # skip tiling / wallpapers / desktop FX
+#   ./install.sh --skip-syncthing  # skip hardened Android↔PC Syncthing share
 #   ./install.sh --desktop-mode both|visual|performance
 #       both (default/recommended): install Visual + Performance; start Performance;
 #       toggle anytime from the top-bar chip. visual / performance = that stack only.
@@ -35,6 +36,7 @@ X47_SKIP_HARDENING=0
 X47_SKIP_DEBLOAT=0
 X47_SKIP_PERF=0
 X47_SKIP_DESKTOP_FX=0
+X47_SKIP_SYNCTHING=0
 X47_USER_ONLY=0
 X47_WITH_AMNESIA=0
 X47_PUTTY_CLIPBOARD=1
@@ -44,7 +46,7 @@ X47_DESKTOP_MODE="${X47_DESKTOP_MODE:-}"
 X47_ONLY=""
 
 usage() {
-  sed -n '2,24p' "$0" | sed 's/^# \?//'
+  sed -n '2,25p' "$0" | sed 's/^# \?//'
   exit 0
 }
 
@@ -55,6 +57,7 @@ while [[ $# -gt 0 ]]; do
     --skip-debloat) X47_SKIP_DEBLOAT=1; shift ;;
     --skip-perf) X47_SKIP_PERF=1; shift ;;
     --skip-desktop-fx) X47_SKIP_DESKTOP_FX=1; shift ;;
+    --skip-syncthing) X47_SKIP_SYNCTHING=1; shift ;;
     --desktop-mode)
       X47_DESKTOP_MODE="${2:-}"
       [[ -n "$X47_DESKTOP_MODE" ]] || die "--desktop-mode needs both|visual|performance"
@@ -83,6 +86,7 @@ else
 fi
 
 export X47_SKIP_APT X47_SKIP_HARDENING X47_SKIP_DEBLOAT X47_SKIP_PERF X47_SKIP_DESKTOP_FX \
+  X47_SKIP_SYNCTHING \
   X47_USER_ONLY X47_WITH_AMNESIA X47_PUTTY_CLIPBOARD X47_WIN_SCREENSHOT X47_DESKTOP_MODE
 
 MODULES=(
@@ -97,6 +101,7 @@ MODULES=(
   21-tools-pipx.sh
   22-tools-cargo.sh
   23-tools-release.sh
+  24-syncthing.sh
   30-icons.sh
   31-launchers.sh
   40-hardening.sh

@@ -17,6 +17,7 @@ X47_LEAN_FX_UUIDS=(
   "x47-notif-activate@x47"
   "x47-show-apps@x47"
   "x47-desktop-mode@x47"
+  "x47-display@x47"
 )
 
 X47_DOCK_UUIDS=(
@@ -55,7 +56,7 @@ x47_choose_desktop_mode() {
       --hide-column=2 --print-column=2 \
       --width=620 --height=300 \
       TRUE both 'Both (recommended) — Visual + Performance; start lean; toggle in top bar' \
-      FALSE visual 'Visual only — cube, dock, animations, multi-colour desktops' \
+      FALSE visual 'Visual only — cube, animations, multi-colour desktops' \
       FALSE performance 'Performance only — lean desktop, no heavy FX' \
       2>/dev/null)" || pick=""
   elif [[ -t 0 ]] && have whiptail; then
@@ -68,7 +69,7 @@ x47_choose_desktop_mode() {
   elif [[ -t 0 ]]; then
     echo "X47 Desktop Mode:" >&2
     echo "  1) Both — Visual + Performance; start Performance; toggle in top bar (recommended)" >&2
-    echo "  2) Visual only — cube, dock, animations, multi-colour desktops" >&2
+    echo "  2) Visual only — cube, animations, multi-colour desktops" >&2
     echo "  3) Performance only — lean desktop" >&2
     local ans
     read -rp "Choice [1]: " ans || ans=1

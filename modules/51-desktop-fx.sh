@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Desktop looks: Performance (lean) and optional Visual (cube/dock/FX).
+# Desktop looks: Performance (lean) and optional Visual (cube/FX). Dock off in both.
 # CTRL-only tiling, X47 wallpapers, notification click-to-focus, Show Apps,
 # and a top-bar Visual↔Performance toggle. User-level only.
 set -euo pipefail
@@ -25,45 +25,35 @@ X47_FX_UUIDS=(
 )
 
 hide_dock() {
-  log "disabling Ubuntu Dock — use Super for Activities / app grid"
-  local uuid cur
-  for uuid in ubuntu-dock@ubuntu.com dash-to-dock@micxgx.gmail.com; do
-    gnome-extensions disable "$uuid" 2>/dev/null || true
-  done
-  cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
-  for uuid in ubuntu-dock@ubuntu.com dash-to-dock@micxgx.gmail.com; do
-    cur="$(printf '%s' "$cur" | sed -E "s/'$uuid',? ?//g; s/, ]/]/g; s/\[,/[/g")"
-  done
-  gsettings set org.gnome.shell enabled-extensions "$cur" 2>/dev/null || true
+  log "hiding Ubuntu Dock (Performance) — session keeps the extension; UI via manualhide"
+  # Do not gnome-extensions disable ubuntu-dock: Ubuntu session mode lists it in
+  # enabledExtensions and fighting that leaves ERROR + the dock often reappears.
+  enable_uuid ubuntu-dock@ubuntu.com
+  gsettings set org.gnome.shell.extensions.dash-to-dock manualhide true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock autohide true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
+  gnome-extensions disable dash-to-dock@micxgx.gmail.com 2>/dev/null || true
   gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
-  ok "dock off — Super opens Activities; Super+1…9 launches favorites"
+  ok "dock hidden — Super opens Activities; Super+1…9 launches favorites"
 }
 
 show_dock() {
-  log "enabling Ubuntu Dock (bottom, always visible)"
-  enable_uuid ubuntu-dock@ubuntu.com
-  local sdir
-  for sdir in \
-    /usr/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com/schemas \
-    "$HOME/.local/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com/schemas"; do
-    [[ -d "$sdir" ]] || continue
-    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock dock-fixed true 2>/dev/null || true
-    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
-    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock autohide false 2>/dev/null || true
-    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock multi-monitor true 2>/dev/null || true
-    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || true
-    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
-  done
-  gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
-  ok "dock on (Visual)"
+  # Dock is off in Visual too — keep helper name for call sites.
+  hide_dock
 }
 
 # Enable a uuid both via the CLI and by appending to the enabled-extensions
 # array (belt and suspenders; the array survives until the next login).
 enable_uuid() {
-  local uuid="$1"
+  local uuid="$1" cur cleaned
+  # Clear disabled-extensions or Ubuntu Dock stays suppressed after Visual apply.
+  cur="$(gsettings get org.gnome.shell disabled-extensions 2>/dev/null || echo "@as []")"
+  if [[ "$cur" == *"'$uuid'"* ]]; then
+    cleaned="$(printf '%s' "$cur" | sed -E "s/'$uuid',? ?//g; s/, ]/]/g; s/\[,/[/g; s/\[ ,/[/g")"
+    gsettings set org.gnome.shell disabled-extensions "$cleaned" 2>/dev/null || true
+  fi
   gnome-extensions enable "$uuid" 2>/dev/null || true
-  local cur
   cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
   if [[ "$cur" != *"'$uuid'"* ]]; then
     if [[ "$cur" == "@as []" || "$cur" == "[]" ]]; then
@@ -548,6 +538,71 @@ desktop_mode_panel() {
   install_local_extension "x47-desktop-mode@x47" "top-bar Visual ↔ Performance toggle"
 }
 
+install_display_adaptive_autostart() {
+  # Visual / both only — Performance-only stays manual comfort.
+  mkdir -p "$HOME/.config/autostart"
+  local src="$X47_ROOT/assets/desktop/x47-display-adaptive.desktop"
+  local dest="$HOME/.config/autostart/x47-display-adaptive.desktop"
+  if [[ ! -f "$src" ]]; then
+    warn "missing $src — adaptive autostart skipped"
+    return 0
+  fi
+  install -m 0644 "$src" "$dest"
+  sed -i "s|^Exec=.*|Exec=$HOME/.local/bin/x47-display-adaptive|" "$dest"
+  ok "Adaptive display autostart (Visual stack)"
+}
+
+remove_display_adaptive_autostart() {
+  rm -f "$HOME/.config/autostart/x47-display-adaptive.desktop"
+  if [[ -x "$HOME/.local/bin/x47-display" ]]; then
+    "$HOME/.local/bin/x47-display" adaptive off >/dev/null 2>&1 || true
+  fi
+}
+
+display_comfort_panel() {
+  # Brightness / blue-light / glare sliders (right status area).
+  # Adaptive (time/ambient) only when Visual stack is installed.
+  local installed="${1:-both}"
+  if [[ -x "$HOME/.local/bin/x47-display" ]]; then
+    "$HOME/.local/bin/x47-display" apply >/dev/null 2>&1 || true
+  elif [[ -x "$X47_ROOT/scripts/x47-display" ]]; then
+    "$X47_ROOT/scripts/x47-display" apply >/dev/null 2>&1 || true
+  fi
+  install_local_extension "x47-display@x47" "top-bar display comfort (brightness / blue-light / glare)"
+  if [[ "$installed" == "visual" || "$installed" == "both" ]]; then
+    install_display_adaptive_autostart
+  else
+    remove_display_adaptive_autostart
+    log "Adaptive display skipped (Performance-only install)"
+  fi
+}
+
+install_nerovia_widgets() {
+  # Retired — never seed profile/autostart; strip leftovers instead.
+  remove_nerovia_widgets
+  log "Nerovia Firefox widgets retired (not installed)"
+}
+
+remove_nerovia_widgets() {
+  rm -f "$HOME/.config/autostart/x47-nerovia-widgets.desktop"
+  rm -f "$HOME/.local/share/applications/x47-nerovia-chart.desktop"
+  rm -f "$HOME/.local/share/applications/x47-nerovia-positions.desktop"
+  # Leave a disabled stub so an old session generator can't revive the launcher.
+  mkdir -p "$HOME/.config/autostart"
+  cat >"$HOME/.config/autostart/x47-nerovia-widgets.desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=X47 Nerovia Widgets (disabled)
+Exec=/bin/true
+Hidden=true
+X-GNOME-Autostart-enabled=false
+EOF
+  pkill -f 'firefox.*-P nerovia' >/dev/null 2>&1 || true
+  if [[ -x "$HOME/.local/bin/x47-nerovia-widgets" ]]; then
+    "$HOME/.local/bin/x47-nerovia-widgets" stop >/dev/null 2>&1 || true
+  fi
+}
+
 disable_heavy_fx() {
   local uuid cur cleaned
   for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
@@ -626,11 +681,14 @@ module_desktop_fx() {
   else
     disable_heavy_fx
   fi
+  # Nerovia Firefox widgets retired — always strip autostart/app entries.
+  remove_nerovia_widgets
 
   tiling_shell_tune
   notification_click_activate
   show_apps_top_bar
   desktop_mode_panel
+  display_comfort_panel "$installed"
 
   apply_desktop_mode_helper "$active"
 
