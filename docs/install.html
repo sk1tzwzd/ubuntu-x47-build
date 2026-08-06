@@ -167,9 +167,10 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
         </p>
         <ul class="clean">
           <li><strong>Performance</strong> — no cube/blur/dock; animations off; lime Show Apps</li>
-          <li><strong>Visual</strong> — cube, Coverflow, blur, Burn My Windows, wobbly, multi-colour walls (no dock)</li>
-          <li><strong>Nerovia (Visual)</strong> — borderless Firefox chart + positions for <code>app.nerovia.ai</code> via <code>x47-nerovia-widgets</code></li>
+          <li><strong>Visual</strong> — cube, Coverflow, blur, Burn My Windows, wobbly, multi-colour walls (dock off in both modes)</li>
+          <li><strong>Display comfort</strong> — top-bar brightness / blue-light / glare; Adaptive (Visual stack) follows time of day; Night Light off sticks</li>
           <li><strong>CTRL-only tiling</strong> — Tiling Shell; plain drag stays free</li>
+          <li><strong>Syncthing</strong> — optional hardened LAN sync (<code>x47-syncthing</code>); default share <code>~/X47Share</code></li>
           <li><strong>Anon</strong> stays Performance-only</li>
         </ul>
       </section>
@@ -179,11 +180,11 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
         <p class="section-lead">
           A system-wide enterprise policy is installed to
           <code>/etc/firefox/policies/policies.json</code> (honored by the Firefox
-          snap and deb).
+          snap and deb). Chrome is stock — normal tabs and toolbar (no autohide).
         </p>
         <ul class="clean">
           <li><strong>Main browser</strong> — telemetry, studies, Pocket and sponsored content off; tracking protection with cryptomining + fingerprinting blocking; HTTPS-only; DNS-over-HTTPS; no prefetch. JavaScript stays on. Also forced as the <strong>default browser</strong> (replaces Chrome).</li>
-          <li><strong>Anon browser</strong> — stays Tor Browser "Safest": JavaScript off, no SOCKS proxy (transparent Tor), and DoH hard-off (<code>network.trr.mode=5</code>) so DNS cannot bypass Tor.</li>
+          <li><strong>Anon browser</strong> — stays Tor Browser "Safest": JavaScript off, no SOCKS proxy (transparent Tor), and DoH hard-off (<code>network.trr.mode=5</code>) so DNS cannot bypass Tor. Same stock chrome as main.</li>
         </ul>
       </section>
 

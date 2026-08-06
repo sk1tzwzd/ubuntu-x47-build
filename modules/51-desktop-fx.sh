@@ -226,61 +226,54 @@ replace_marked_block() {
   rm -f "$tmp"
 }
 
-# Firefox: enable userChrome + autohide top chrome when the window is not maximized.
-firefox_autohide_chrome() {
+# Firefox: strip X47 autohide/hover chrome — normal tabs/toolbar everywhere.
+firefox_restore_normal_chrome() {
   local begin_old="/* --- x47 hover window buttons (Firefox) --- */"
   local end_old="/* --- end x47 hover window buttons --- */"
   local begin="/* --- x47 autohide chrome (unmaximized) --- */"
   local end="/* --- end x47 autohide chrome --- */"
-  local src="$X47_ROOT/assets/firefox/autohide-chrome.css"
   local pref_begin="// --- x47 userChrome ---"
   local pref_end="// --- end x47 userChrome ---"
-  local prof found=0 css userjs
-
-  [[ -f "$src" ]] || { warn "missing $src"; return 0; }
+  local prof found=0 css userjs tmp
 
   for prof in "$HOME"/snap/firefox/common/.mozilla/firefox/*.default* \
-              "$HOME"/.mozilla/firefox/*.default* \
+              "$HOME"/snap/firefox/common/.mozilla/firefox/*.x47 \
               "$HOME"/snap/firefox/common/.mozilla/firefox/amnesia.default \
-              "$HOME"/.mozilla/firefox/amnesia.default; do
+              "$HOME"/snap/firefox/common/.mozilla/firefox/nerovia.x47 \
+              "$HOME"/.mozilla/firefox/*.default* \
+              "$HOME"/.mozilla/firefox/*.x47 \
+              "$HOME"/.mozilla/firefox/amnesia.default \
+              "$HOME"/.mozilla/firefox/nerovia.x47; do
     [[ -d "$prof" ]] || continue
     found=1
     css="$prof/chrome/userChrome.css"
-    strip_css_block "$css" "$begin_old" "$end_old"
-    replace_marked_block "$css" "$begin" "$end" "$src"
+    if [[ -f "$css" ]]; then
+      strip_css_block "$css" "$begin_old" "$end_old"
+      strip_css_block "$css" "$begin" "$end"
+      if [[ ! -s "$css" ]] || ! grep -qE '[^[:space:]]' "$css" 2>/dev/null; then
+        rm -f "$css"
+        rmdir "$prof/chrome" 2>/dev/null || true
+      fi
+    fi
 
     userjs="$prof/user.js"
-    mkdir -p "$(dirname "$userjs")"
-    local tmp
+    [[ -f "$userjs" ]] || continue
     tmp="$(mktemp)"
-    if [[ -f "$userjs" ]]; then
-      # Drop prior marked block and any bare stylesheets pref we manage.
-      awk -v b="$pref_begin" -v e="$pref_end" '
-        index($0, b) { skip = 1; next }
-        index($0, e) { skip = 0; next }
-        skip { next }
-        /toolkit\.legacyUserProfileCustomizations\.stylesheets/ { next }
-        { print }
-      ' "$userjs" > "$tmp"
-    else
-      : > "$tmp"
-    fi
-    {
-      cat "$tmp"
-      [[ -s "$tmp" ]] && [[ "$(tail -c1 "$tmp" | wc -l)" -eq 0 ]] && printf '\n'
-      cat <<EOF
-$pref_begin
-user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
-$pref_end
-EOF
-    } > "$userjs"
-    rm -f "$tmp"
+    awk -v b="$pref_begin" -v e="$pref_end" '
+      index($0, b) { skip = 1; next }
+      index($0, e) { skip = 0; next }
+      skip { next }
+      /toolkit\.legacyUserProfileCustomizations\.stylesheets/ { next }
+      /Allow chrome\/userChrome\.css/ { next }
+      { print }
+    ' "$userjs" > "$tmp"
+    mv "$tmp" "$userjs"
   done
 
   if [[ "$found" == "1" ]]; then
-    ok "Firefox: unmaximized top bar autohides until hover (restart Firefox)"
+    ok "Firefox: normal chrome restored (restart Firefox if it is open)"
   else
-    warn "no Firefox profile found yet — autohide chrome will apply after first launch + re-run"
+    log "no Firefox profile yet — stock chrome on first launch"
   fi
 }
 
@@ -651,7 +644,7 @@ module_desktop_fx() {
   show_apps_duster_icon
   screenshot_keybindings
   hover_window_controls
-  firefox_autohide_chrome
+  firefox_restore_normal_chrome
   gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
   gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
   gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true

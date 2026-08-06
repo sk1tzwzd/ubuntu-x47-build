@@ -24,7 +24,7 @@ Stock Ubuntu is fine until you pile on cube effects, blur, animated window death
 - GNOME animations off
 - Ubuntu Dock off — lime Ubuntu circle in the top bar opens the app grid; Super / Super+1…9 still work
 - CTRL+drag tiling only (plain drags stay free)
-- Firefox: when the window isn’t maximized, the **whole top bar autohides** until you hover it (or `Ctrl+L`) — more page, less chrome
+- Firefox: stock tabs and toolbar (no custom chrome hide)
 - Optional package cleanup, zram, and sane defaults aimed at a snappier session
 
 Main account stays a normal, fast Ubuntu you can actually work on. No “pretty but laggy” tax.
@@ -37,7 +37,7 @@ Opt-in with `--with-amnesia`. Creates a separate **`anon`** user inspired by Tai
 - **Forced Tor + kill-switch** (UID-scoped nftables; IPv6 dropped for anon)
 - **obfs4 bridges** in the Tor path
 - **NymVPN / mixnet** on the stack; status panel shows **LINK / NYM / TOR** only — **no Wi‑Fi SSID or network name** leaking from the UI
-- Firefox hardened toward Safer/Safest-style use (verify via check.torproject.org); same unmaximized top-bar autohide as the main session
+- Firefox hardened toward Safer/Safest-style use (verify via check.torproject.org); stock chrome like the main session
 - Random MAC on anon login
 - Optional LUKS **persistent vault** for wallets / GPG / KeePass when you need secrets to survive reboot
 - Dark identity + ASCII shrouded-figure wallpaper so the session *feels* separate from the daily driver
@@ -90,4 +90,4 @@ Feedback welcome — especially from people who live in Tor/Nym daily or who car
 
 ## Short comment / TL;DR (optional sticky reply)
 
-**TL;DR:** Ubuntu 26.04 custom build. Debloated GNOME (no cube/blur/dock tax) for speed. Firefox top bar autohides when unmaximized. Optional `anon` user: tmpfs home, Tor kill-switch, Nym status, no SSID in the panel, pentest-friendly tooling. https://github.com/sk1tzwzd/ubuntu-x47-build
+**TL;DR:** Ubuntu 26.04 custom build. Debloated GNOME (no cube/blur/dock tax) for speed. Stock Firefox chrome. Optional `anon` user: tmpfs home, Tor kill-switch, Nym status, no SSID in the panel, pentest-friendly tooling. https://github.com/sk1tzwzd/ubuntu-x47-build

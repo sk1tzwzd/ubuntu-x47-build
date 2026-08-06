@@ -58,4 +58,4 @@ if [[ -f "$WB_HTML.x47-bak" && -f "$WB_HTML" ]]; then
 fi
 
 echo "Cursor titlebar autohide removed — reload Cursor (Ctrl+Shift+P → Developer: Reload Window)"
-echo "Firefox unmaximized tab/chrome autohide is unchanged."
+echo "Firefox chrome autohide is also retired (stock UI)."

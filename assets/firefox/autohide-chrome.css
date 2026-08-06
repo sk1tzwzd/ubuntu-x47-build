@@ -1,22 +1,2 @@
-/* --- x47 autohide chrome (unmaximized) --- */
-/* Soft-collapse tabs/toolbar/titlebar when the window is not maximized.
-   Leaves a short peek strip so the cut isn't harsh; full chrome on hover
-   or focus (e.g. Ctrl+L). Maximized & fullscreen stay normal. */
-:root:not([sizemode="maximized"]):not([sizemode="fullscreen"]):not([customizing]) #navigator-toolbox {
-  position: relative;
-  z-index: 2147483647;
-  max-height: 12px !important;
-  min-height: 12px !important;
-  opacity: 0.45;
-  overflow: clip;
-  transition: max-height 200ms ease, min-height 200ms ease, opacity 160ms ease !important;
-}
-
-:root:not([sizemode="maximized"]):not([sizemode="fullscreen"]):not([customizing]) #navigator-toolbox:hover,
-:root:not([sizemode="maximized"]):not([sizemode="fullscreen"]):not([customizing]) #navigator-toolbox:focus-within {
-  max-height: 320px !important;
-  min-height: 0 !important;
-  opacity: 1;
-  overflow: visible;
-}
-/* --- end x47 autohide chrome --- */
+/* Retired: X47 Firefox autohide chrome removed — stock Firefox UI.
+   modules/51-desktop-fx.sh::firefox_restore_normal_chrome strips leftovers. */
