@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Apply X47 Visual or High Performance desktop mode.
+# Apply X47 Visual or Performance desktop mode.
 #
 # Usage:
 #   x47-desktop-mode                # show current
 #   x47-desktop-mode status
 #   x47-desktop-mode visual
 #   x47-desktop-mode performance
-#   x47-desktop-mode sync-power     # map powerprofilesctl → desktop mode (both only)
+#   x47-desktop-mode sync-power     # optional: map powerprofilesctl → mode (both only)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || realpath "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" && pwd)"
@@ -65,6 +65,31 @@ _hide_dock() {
   done
 }
 
+_show_dock() {
+  local uuid sdir
+  # Prefer Ubuntu's dock; fall back to dash-to-dock if present.
+  if [[ -d "$HOME/.local/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com" ]] \
+     || gnome-extensions info ubuntu-dock@ubuntu.com >/dev/null 2>&1 \
+     || [[ -d /usr/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com ]]; then
+    _ext_enable ubuntu-dock@ubuntu.com
+  fi
+  if [[ -d "$HOME/.local/share/gnome-shell/extensions/dash-to-dock@micxgx.gmail.com" ]]; then
+    _ext_enable dash-to-dock@micxgx.gmail.com
+  fi
+  for sdir in \
+    /usr/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com/schemas \
+    "$HOME/.local/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com/schemas" \
+    "$HOME/.local/share/gnome-shell/extensions/dash-to-dock@micxgx.gmail.com/schemas"; do
+    [[ -d "$sdir" ]] || continue
+    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock dock-fixed true 2>/dev/null || true
+    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
+    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock autohide false 2>/dev/null || true
+    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock multi-monitor true 2>/dev/null || true
+    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || true
+    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
+  done
+}
+
 _apply_performance() {
   local uuid
   for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
@@ -73,25 +98,38 @@ _apply_performance() {
   for uuid in "${X47_LEAN_FX_UUIDS[@]}"; do
     _ext_enable "$uuid"
   done
-  # Super / Activities replaces the dock.
   _hide_dock
   gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
-  # Keep a static workspace floor (cheap without the cube).
   gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
   gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
   x47_settings_set_str desktop_mode performance
 }
 
 _apply_visual() {
-  # Visual / heavy FX stack removed from the build — always lean.
-  warn "Visual desktop FX were removed from X47 — applying lean desktop"
-  _apply_performance
+  local uuid installed
+  installed="$(x47_settings_get_str desktop_modes_installed both)"
+  if [[ "$installed" == "performance" ]]; then
+    warn "Visual stack was not installed (desktop_modes_installed=performance) — staying lean"
+    _apply_performance
+    return 0
+  fi
+  for uuid in "${X47_LEAN_FX_UUIDS[@]}"; do
+    _ext_enable "$uuid"
+  done
+  for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
+    _ext_enable "$uuid"
+  done
+  _show_dock
+  gsettings set org.gnome.desktop.interface enable-animations true 2>/dev/null || true
+  gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
+  gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
+  x47_settings_set_str desktop_mode visual
 }
 
 cmd_status() {
   x47_settings_ensure
   local mode installed
-  mode="$(x47_settings_get_str desktop_mode visual)"
+  mode="$(x47_settings_get_str desktop_mode performance)"
   installed="$(x47_settings_get_str desktop_modes_installed both)"
   echo "desktop_mode=$mode"
   echo "desktop_modes_installed=$installed"
@@ -104,14 +142,13 @@ cmd_status() {
 cmd_sync_power() {
   local installed mode want profile
   installed="$(x47_settings_get_str desktop_modes_installed both)"
-  mode="$(x47_settings_get_str desktop_mode visual)"
+  mode="$(x47_settings_get_str desktop_mode performance)"
 
   if [[ "$installed" == "performance" ]]; then
     [[ "$mode" == "performance" ]] || _apply_performance
     return 0
   fi
   if [[ "$installed" != "both" ]]; then
-    # visual-only: nothing to sync from Power Mode
     return 0
   fi
 
@@ -129,8 +166,8 @@ cmd_sync_power() {
   fi
   if [[ "$want" == "performance" ]]; then
     _apply_performance
-    _notify 'High Performance desktop' \
-      'Cube and window FX off (dock kept). Log out/in if effects still linger (Wayland).'
+    _notify 'Performance desktop' \
+      'Cube and window FX off. Log out/in if effects still linger (Wayland).'
   else
     _apply_visual
     _notify 'Visual desktop' \
@@ -140,17 +177,15 @@ cmd_sync_power() {
 
 usage() {
   cat <<'EOF'
-X47 Desktop Mode — Visual vs High Performance
+X47 Desktop Mode — Visual vs Performance
 
   x47-desktop-mode                 Show status
   x47-desktop-mode status
-  x47-desktop-mode visual          Enable cube / animations / heavy FX
-  x47-desktop-mode performance     Lean desktop (no cube / heavy FX; dock kept)
-  x47-desktop-mode sync-power      Apply from GNOME Power Mode (both installs)
+  x47-desktop-mode visual          Cube, dock, animations, multi-colour walls
+  x47-desktop-mode performance     Lean desktop (no heavy FX; dock off)
+  x47-desktop-mode sync-power      Optional: apply from GNOME Power Mode (both)
 
-When both modes are installed:
-  Settings → Power → Performance  → High Performance desktop
-  Settings → Power → Balanced     → Visual desktop
+Toggle from the top-bar chip (right side) when both modes are installed.
 EOF
 }
 
@@ -160,12 +195,12 @@ main() {
     ""|status) cmd_status ;;
     visual|v|full)
       _apply_visual
-      _notify 'Visual desktop' 'Applied. Log out/in on Wayland if needed.'
+      _notify 'Visual desktop' 'Applied. Log out/in on Wayland if cube/blur did not load.'
       cmd_status
       ;;
     performance|perf|hp)
       _apply_performance
-      _notify 'High Performance desktop' 'Applied. Log out/in on Wayland if needed.'
+      _notify 'Performance desktop' 'Applied. Log out/in on Wayland if needed.'
       cmd_status
       ;;
     sync-power|sync) cmd_sync_power ;;

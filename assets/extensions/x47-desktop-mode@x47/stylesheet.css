@@ -1,0 +1,14 @@
+.x47-desktop-mode-label {
+  font-weight: 700;
+  font-size: 11px;
+  padding: 0 8px;
+  letter-spacing: 0.04em;
+}
+
+.x47-desktop-mode-perf .x47-desktop-mode-label {
+  color: #8ec99f;
+}
+
+.x47-desktop-mode-visual .x47-desktop-mode-label {
+  color: #7ec8e3;
+}

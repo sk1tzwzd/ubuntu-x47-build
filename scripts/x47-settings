@@ -51,7 +51,7 @@ Keys:
   putty_clipboard   PuTTY mouse/keyboard clipboard in WezTerm (restart terminal after change)
   win_screenshot    Super+Shift+S opens the GNOME screenshot UI
   tiling            CTRL+drag to tile (plain drag free; off = disabled; applies instantly)
-  desktop_mode      visual | performance (also: x47-desktop-mode / Power settings when both installed)
+  desktop_mode      visual | performance (also: x47-desktop-mode / top-bar chip when both installed)
 EOF
 }
 

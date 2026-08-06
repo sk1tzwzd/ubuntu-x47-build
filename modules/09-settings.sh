@@ -38,10 +38,17 @@ module_settings() {
   x47_settings_set putty_clipboard "${X47_PUTTY_CLIPBOARD:-1}"
   x47_settings_set win_screenshot "${X47_WIN_SCREENSHOT:-1}"
 
-  # Build is lean-only.
-  x47_seed_desktop_mode_settings performance performance
-  x47_settings_set_str desktop_mode performance
-  x47_settings_set_str desktop_modes_installed performance
+  local installed active
+  installed="$(x47_normalize_desktop_mode "${X47_DESKTOP_MODE:-both}" || echo both)"
+  case "$installed" in
+    both) active=performance ;;
+    visual) active=visual ;;
+    performance) active=performance ;;
+  esac
+  x47_seed_desktop_mode_settings "$installed" "$active"
+
+  # Do not autostart Power↔desktop sync (panel chip is the primary toggle).
+  rm -f "$HOME/.config/autostart/x47-power-desktop-sync.desktop"
 
   x47_settings_apply
 

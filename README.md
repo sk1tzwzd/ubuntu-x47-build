@@ -38,7 +38,8 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 | `--skip-hardening` | Skip UFW / fail2ban / sysctl / auditd restore |
 | `--skip-debloat` | Keep language packs and default desktop apps (no trimming) |
 | `--skip-perf` | Skip boot/service perf tweaks and the Firefox snap→deb swap |
-| `--skip-desktop-fx` | Skip tiling / wallpapers / lean desktop tweaks |
+| `--skip-desktop-fx` | Skip tiling / wallpapers / desktop FX |
+| `--desktop-mode both\|visual\|performance` | Install both stacks (default/recommended), Visual only, or Performance only |
 | `--skip-putty-clipboard` | Disable PuTTY-style WezTerm clipboard (select copy / right-click paste / Ctrl+C·V) |
 | `--skip-win-screenshot` | Do not bind Super+Shift+S (Print still works) |
 | `--with-amnesia` | Also create the amnesiac, Tor-forced `anon` user (opt-in) |
@@ -90,13 +91,19 @@ If the GUI says an update is available but apt says you already have the newest 
 
 ## Desktop looks
 
-Lean GNOME desktop for the main user and `anon` (opt out with `--skip-desktop-fx`):
+Two modes for the main user (opt out with `--skip-desktop-fx`). Installer default is **both** stacks, starting in **Performance**; switch anytime from the **PERF / VISUAL** chip on the right of the top bar (or `x47-desktop-mode`):
 
-- **No heavy FX** — Desktop Cube, Coverflow Alt-Tab, Burn My Windows, Blur My Shell, wobbly windows, and per-desktop wall switching are **not installed**. GNOME animations are off.
-- **No dock** — Ubuntu Dock disabled. A lime Ubuntu circle in the **top bar** opens the app grid (`x47-show-apps@x47`); **Super** still opens Activities; **Super+1…9** launches favorites.
-- **X47 wallpapers** — ASCII knuckle-duster circuit colourways (regen with `scripts/make-wallpaper.py --all`). Anon uses a carbon-fibre ASCII shrouded-figure wallpaper (`x47-anon.png`).
+| Mode | What you get |
+|------|----------------|
+| **Performance** (default) | Lean GNOME: animations off, no cube/blur/wobbly/Coverflow/ws-walls, **no dock**, lime Show Apps in the top bar |
+| **Visual** | Desktop Cube, Coverflow Alt-Tab, Blur My Shell, Burn My Windows, wobbly windows, multi-colour `x47-ws-walls`, animations on, **bottom Ubuntu Dock** |
+
+Shared in both modes: CTRL+drag tiling, notification click-to-focus, Show Apps, mode toggle chip.
+
+- **X47 wallpapers** — ASCII knuckle-duster circuit colourways (regen with `scripts/make-wallpaper.py --all`). Visual switches them per workspace.
 - **Login screen** — GDM Ubuntu wordmark replaced with the teal ASCII duster (`scripts/make-login-logo.py` → `/usr/share/pixmaps/x47-login-duster.png`).
 - **Notifications** — click a top banner once to jump to the app.
+- **Anon** stays Performance-only (no heavy FX in the amnesia session).
 - **Window tiling** — Tiling Shell; hold Ctrl while dragging; toggle via `x47-settings set tiling off`.
 - **Screenshot** — `Super+Shift+S` or `Print` (optional via X47 Settings).
 - **WezTerm (PuTTY-style)** — select copy / right-click paste / `Ctrl+C`·`V` (optional via X47 Settings).

@@ -14,13 +14,16 @@ mkdir -p "$HOME/.config"
 run_install='
 echo "==============================================";
 echo "  X47 Ubuntu build — first boot setup";
-echo "  This installs the terminal, tools, hardening,";
-echo "  debloat and lean desktop. Sudo required.";
+echo "  Terminal, tools, hardening, debloat, and";
+echo "  desktop (Performance and/or Visual).";
+echo "  You will be asked which desktop to install.";
+echo "  Sudo required.";
 echo "==============================================";
 cd /opt/ubuntu-x47-build || exit 1;
 if ./install.sh; then
   touch "$HOME/.config/x47-firstboot-done";
   echo; echo "Done. Log out and back in to load the desktop.";
+  echo "Toggle Visual ↔ Performance from the top-bar chip (right).";
 else
   echo; echo "Install failed — run /opt/ubuntu-x47-build/install.sh again manually.";
 fi;

@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.11.0 — 2026-08-06
+
+### Desktop modes
+- **Performance + Visual restored** — installer offers `--desktop-mode both|visual|performance` (chooser defaults to **both**, starts in Performance).
+- **Visual** brings back cube, Coverflow, blur, Burn My Windows, wobbly, multi-colour `x47-ws-walls`, animations, and the bottom dock.
+- **Top-bar toggle** — `x47-desktop-mode@x47` chip on the right (`PERF` / `VISUAL`); also `x47-desktop-mode visual|performance`.
+- **Anon** stays Performance-only. Power-profile autostart not re-enabled (panel is the switcher).
+
 ## v1.10.1 — 2026-08-06
 
 ### Docs

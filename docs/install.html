@@ -93,7 +93,8 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
             <tr><td><code>--skip-hardening</code></td><td>Skip UFW / fail2ban / sysctl / auditd restore</td></tr>
             <tr><td><code>--skip-debloat</code></td><td>Keep language packs and default desktop apps (no trimming)</td></tr>
             <tr><td><code>--skip-perf</code></td><td>Skip boot/service perf tweaks and the Firefox snap&rarr;deb swap</td></tr>
-            <tr><td><code>--skip-desktop-fx</code></td><td>Skip tiling / wallpapers / lean desktop tweaks</td></tr>
+            <tr><td><code>--skip-desktop-fx</code></td><td>Skip tiling / wallpapers / desktop FX</td></tr>
+            <tr><td><code>--desktop-mode both\|visual\|performance</code></td><td>Install both stacks (recommended), Visual only, or Performance only. Both starts lean; toggle from the top-bar chip</td></tr>
             <tr><td><code>--skip-putty-clipboard</code></td><td>Disable PuTTY-style WezTerm clipboard (select copy / right-click paste / Ctrl+C·V)</td></tr>
             <tr><td><code>--skip-win-screenshot</code></td><td>Do not bind Super+Shift+S (Print still works)</td></tr>
             <tr><td><code>--with-amnesia</code></td><td>Create the amnesiac Tor-forced <code>anon</code> user</td></tr>
@@ -159,15 +160,16 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
       <section>
         <h2>Desktop looks</h2>
         <p class="section-lead">
-          Lean desktop for the main user and <code>anon</code> (opt out with <code>--skip-desktop-fx</code>).
-          No cube / blur / wobbly / Coverflow / Burn My Windows; GNOME animations off.
-          User-level only; on Wayland, log out and back in once so extension changes load.
+          Main user gets <strong>Performance</strong> and/or <strong>Visual</strong>
+          (opt out with <code>--skip-desktop-fx</code>). Default install is both,
+          starting lean; switch with the <strong>PERF / VISUAL</strong> chip on the
+          right of the top bar. On Wayland, log out once after install so extensions load.
         </p>
         <ul class="clean">
-          <li><strong>No dock</strong> — lime Ubuntu circle in the top bar opens the app grid; Super / Super+1…9 still work</li>
-          <li><strong>CTRL-only tiling</strong> — Tiling Shell layouts; plain drag stays free</li>
-          <li><strong>X47 wallpapers</strong> — circuit ASCII colourways; anon uses <code>anon@x47</code></li>
-          <li><strong>Notifications</strong> — click a banner to jump to the app</li>
+          <li><strong>Performance</strong> — no cube/blur/dock; animations off; lime Show Apps</li>
+          <li><strong>Visual</strong> — cube, Coverflow, blur, Burn My Windows, wobbly, multi-colour walls, bottom dock</li>
+          <li><strong>CTRL-only tiling</strong> — Tiling Shell; plain drag stays free</li>
+          <li><strong>Anon</strong> stays Performance-only</li>
         </ul>
       </section>
 

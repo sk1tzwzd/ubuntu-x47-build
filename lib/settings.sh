@@ -10,7 +10,7 @@ X47_FEATURE_DEFAULTS=(
   "win_screenshot=1"
   "tiling=1"
   "desktop_mode=performance"
-  "desktop_modes_installed=performance"
+  "desktop_modes_installed=both"
 )
 
 x47_settings_ensure() {

@@ -1,30 +1,29 @@
 #!/usr/bin/env bash
-# Desktop looks (lean): Super/Activities launcher (no dock), CTRL-only tiling,
-# X47 wallpapers, notification click-to-focus. No cube / blur / wobbly /
-# Coverflow / Burn My Windows / per-desktop wall switcher. Animations off.
-# User-level only.
+# Desktop looks: Performance (lean) and optional Visual (cube/dock/FX).
+# CTRL-only tiling, X47 wallpapers, notification click-to-focus, Show Apps,
+# and a top-bar Visual↔Performance toggle. User-level only.
 set -euo pipefail
 # shellcheck disable=SC1091
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/common.sh"
+# shellcheck disable=SC1091
+. "$X47_ROOT/lib/desktop-mode.sh"
 
 AM_DESKTOP="$X47_ROOT/assets/desktop"
 
-# Heavy FX — never installed; disabled if leftovers remain from older builds.
-X47_HEAVY_FX_UUIDS=(
+# Ego-install list for Visual / both (heavy FX from extensions.gnome.org).
+X47_VISUAL_EGO_UUIDS=(
   "CoverflowAltTab@palatis.blogspot.com"
   "desktop-cube@schneegans.github.com"
   "burn-my-windows@schneegans.github.com"
   "blur-my-shell@aunetx"
   "compiz-windows-effect@hermes83.github.com"
-  "x47-ws-walls@x47"
 )
 
-# Lean extensions only (version-matched from extensions.gnome.org / bundled).
+# Always ego-install tiling.
 X47_FX_UUIDS=(
   "tilingshell@ferrarodomenico.com"
 )
 
-# Super / Activities replaces the dock (lightest launcher).
 hide_dock() {
   log "disabling Ubuntu Dock — use Super for Activities / app grid"
   local uuid cur
@@ -36,9 +35,27 @@ hide_dock() {
     cur="$(printf '%s' "$cur" | sed -E "s/'$uuid',? ?//g; s/, ]/]/g; s/\[,/[/g")"
   done
   gsettings set org.gnome.shell enabled-extensions "$cur" 2>/dev/null || true
-  # F11 toggles window fullscreen system-wide.
   gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
   ok "dock off — Super opens Activities; Super+1…9 launches favorites"
+}
+
+show_dock() {
+  log "enabling Ubuntu Dock (bottom, always visible)"
+  enable_uuid ubuntu-dock@ubuntu.com
+  local sdir
+  for sdir in \
+    /usr/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com/schemas \
+    "$HOME/.local/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com/schemas"; do
+    [[ -d "$sdir" ]] || continue
+    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock dock-fixed true 2>/dev/null || true
+    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
+    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock autohide false 2>/dev/null || true
+    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock multi-monitor true 2>/dev/null || true
+    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || true
+    gsettings --schemadir "$sdir" set org.gnome.shell.extensions.dash-to-dock click-action 'cycle-windows' 2>/dev/null || true
+  done
+  gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
+  ok "dock on (Visual)"
 }
 
 # Enable a uuid both via the CLI and by appending to the enabled-extensions
@@ -524,8 +541,11 @@ notification_click_activate() {
 }
 
 show_apps_top_bar() {
-  # Lime Ubuntu circle in the top bar → application grid (dock-free).
   install_local_extension "x47-show-apps@x47" "top-bar Show Apps (green Ubuntu circle)"
+}
+
+desktop_mode_panel() {
+  install_local_extension "x47-desktop-mode@x47" "top-bar Visual ↔ Performance toggle"
 }
 
 disable_heavy_fx() {
@@ -539,7 +559,6 @@ disable_heavy_fx() {
     cleaned="$(printf '%s' "$cleaned" | sed -E "s/'$uuid',? ?//g; s/, ]/]/g; s/\[,/[/g")"
   done
   gsettings set org.gnome.shell enabled-extensions "$cleaned" 2>/dev/null || true
-  # Drop Power↔desktop sync — Visual/HP dual mode is gone.
   rm -f "$HOME/.config/autostart/x47-power-desktop-sync.desktop"
   gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
 }
@@ -563,9 +582,15 @@ module_desktop_fx() {
     return 0
   fi
 
-  # Build is lean-only (no Visual / dual-mode stack).
-  x47_seed_desktop_mode_settings performance performance
-  log "desktop-fx: lean (no cube / blur / wobbly / Coverflow / Burn My Windows)"
+  local installed active
+  installed="$(x47_normalize_desktop_mode "${X47_DESKTOP_MODE:-both}" || echo both)"
+  case "$installed" in
+    both) active=performance ;;
+    visual) active=visual ;;
+    performance) active=performance ;;
+  esac
+  x47_seed_desktop_mode_settings "$installed" "$active"
+  log "desktop-fx: install=$installed active=$active"
 
   set_wallpaper
   show_apps_duster_icon
@@ -575,30 +600,43 @@ module_desktop_fx() {
   gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
   gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
   gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
+
+  # Never autostart Power sync — panel chip is the switcher.
+  rm -f "$HOME/.config/autostart/x47-power-desktop-sync.desktop"
 
   if ! have gnome-extensions; then
     warn "gnome-extensions CLI missing — wallpaper only"
     hide_dock
-    disable_heavy_fx
     return 0
   fi
-
-  hide_dock
-  disable_heavy_fx
 
   local uuid ok_any=0
   for uuid in "${X47_FX_UUIDS[@]}"; do
     ego_install "$uuid" && ok_any=1 || true
   done
+
+  if [[ "$installed" == "visual" || "$installed" == "both" ]]; then
+    for uuid in "${X47_VISUAL_EGO_UUIDS[@]}"; do
+      ego_install "$uuid" && ok_any=1 || true
+    done
+    install_ws_walls_extension
+    cube_workspaces
+    coverflow_tune
+    bmw_fx_profile
+  else
+    disable_heavy_fx
+  fi
+
   tiling_shell_tune
   notification_click_activate
   show_apps_top_bar
-  apply_desktop_mode_helper performance
+  desktop_mode_panel
 
-  ok "desktop-fx module done (lean)"
+  apply_desktop_mode_helper "$active"
+
+  ok "desktop-fx module done (install=$installed active=$active)"
   if [[ "$ok_any" == "1" ]]; then
-    log "Log out and back in so GNOME picks up tiling (Wayland)."
+    log "Log out and back in so GNOME picks up extensions (Wayland)."
   fi
 }
 
