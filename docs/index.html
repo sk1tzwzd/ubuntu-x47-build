@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ubuntu X47 Build</title>
-  <meta name="description" content="Free open-source Ubuntu desktop installer: WezTerm, pentest toolchain, hardening, and optional amnesia Tor session." />
+  <meta name="description" content="Free open-source Ubuntu desktop installer: lean GNOME, WezTerm, pentest toolchain, hardening, and optional amnesia Tor session." />
   <link rel="icon" href="images/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="images/favicon-32.png" sizes="32x32" />
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png" />
@@ -18,6 +18,7 @@
         <li><a href="index.html" aria-current="page">Overview</a></li>
         <li><a href="install.html">Install</a></li>
         <li><a href="amnesia.html">Amnesia</a></li>
+        <li><a href="releases.html">Releases</a></li>
         <li><a href="support.html">Support</a></li>
         <li><a href="https://github.com/sk1tzwzd/ubuntu-x47-build">GitHub</a></li>
       </ul>
@@ -27,18 +28,18 @@
       <p class="free-note">Free and open source — no paid tier, no license fee</p>
       <h1 class="hero-brand">Ubuntu <em>X47</em> Build</h1>
       <p class="hero-lead">
-        An idempotent installer that reproduces a hardened Ubuntu desktop:
-        WezTerm, Mullvad and Tor Browser, a full pentest toolchain, and an
-        optional amnesiac <code>anon</code> session with forced Tor.
+        A lean, reproducible Ubuntu desktop: WezTerm, Mullvad and Tor Browser,
+        a full pentest toolchain, and an optional amnesiac <code>anon</code>
+        session with forced Tor — without cube/blur/dock tax.
       </p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="https://github.com/sk1tzwzd/ubuntu-x47-build">Download on GitHub</a>
+        <a class="btn btn-primary" href="https://github.com/sk1tzwzd/ubuntu-x47-build/releases/latest">Latest release</a>
         <a class="btn btn-ghost" href="install.html">Install guide</a>
         <a class="btn btn-ghost" href="https://buymeacoffee.com/sk1tzwzd">Buy me a coffee</a>
       </div>
       <figure class="shot">
-        <img src="images/x47-desktop.png" alt="Ubuntu X47 desktop with ASCII duster wallpaper, bottom dock, and Linux CMD Helper widget" width="1600" height="1000" />
-        <figcaption>X47 desktop — ASCII duster wallpaper, bottom dock, and the Linux CMD Helper widget.</figcaption>
+        <img src="images/x47-desktop.png" alt="Ubuntu X47 desktop with ASCII duster wallpaper" width="1600" height="1000" />
+        <figcaption>X47 desktop — ASCII knuckle-duster wallpaper, lean GNOME, top-bar Show Apps.</figcaption>
       </figure>
     </header>
 
@@ -46,21 +47,19 @@
       <section>
         <h2>What this is</h2>
         <p class="section-lead">
-          A reproducible build for Ubuntu 24.04 / 26 desktops. Clone the repo,
+          A reproducible build for Ubuntu 26.04 desktops. Clone the repo,
           run <code>install.sh</code>, and get the same toolchain and hardening
           used on the reference machine. Part of
           <a href="https://vulnscape.net">VulnScape</a>.
         </p>
         <ul class="clean">
-          <li><strong>WezTerm</strong> as default terminal (wide window + X47 watermark); GNOME Terminal removed</li>
-          <li><strong>Privacy apps</strong> — Mullvad VPN (apt) and Tor Browser</li>
+          <li><strong>WezTerm</strong> as default terminal (wide window + X47 watermark)</li>
+          <li><strong>Privacy apps</strong> — Mullvad VPN and Tor Browser</li>
           <li><strong>Pentest + dev tools</strong> via apt, Go, pipx, cargo, and release binaries</li>
-          <li><strong>Lean by default</strong> — language packs, Help, App Centre, Security Centre, and default desktop bloat removed; zram + trim; file indexer off (reversible)</li>
-          <li><strong>Polished desktop</strong> — bottom dock always visible (hides in F11 fullscreen), 3D effects (Coverflow Alt-Tab, Desktop Cube, TV Glitch, Blur My Shell, wobbly windows), hover-only window controls and an ASCII-art X47 duster wallpaper</li>
-          <li><strong>Linux CMD Helper</strong> — a desktop card that turns plain-English questions into the exact Ubuntu terminal command (Claude Haiku); above desktop icons, under windows, click to copy</li>
-          <li><strong>Hardened Firefox</strong> — set as the default browser; telemetry/Pocket/sponsored off, tracking protection, HTTPS-only and DoH via system policy</li>
-          <li><strong>Hardening</strong> restored from a snapshot (UFW, fail2ban, AppArmor, auditd, sysctl)</li>
-          <li><strong>Amnesia mode</strong> (opt-in) — RAM-only <code>anon</code> home, Tor kill-switch, random MAC, NymVPN; same desktop looks as main (no widgets); WezTerm default</li>
+          <li><strong>Lean desktop</strong> — no cube, blur, wobbly, Coverflow, or Ubuntu Dock; animations off; CTRL+drag tiling; lime Show Apps in the top bar</li>
+          <li><strong>Hardened Firefox</strong> — default browser; unmaximized top chrome autohides until hover</li>
+          <li><strong>Hardening</strong> from snapshot (UFW, fail2ban, AppArmor, auditd, sysctl)</li>
+          <li><strong>Amnesia mode</strong> (opt-in) — RAM-only <code>anon</code> home, Tor kill-switch, Nym status, random MAC</li>
         </ul>
       </section>
 
@@ -72,41 +71,38 @@ cd ubuntu-x47-build
 chmod +x install.sh snapshot.sh modules/*.sh
 ./install.sh</code></pre>
         <p class="section-lead" style="margin-top:1rem">
-          Releases: <a href="https://github.com/sk1tzwzd/ubuntu-x47-build/releases">github.com/sk1tzwzd/ubuntu-x47-build/releases</a>
+          See <a href="releases.html">Releases</a> for Latest vs ISO archives, or browse
+          <a href="https://github.com/sk1tzwzd/ubuntu-x47-build/releases">GitHub releases</a>.
         </p>
       </section>
 
       <section>
         <h2>Install from ISO</h2>
         <p class="section-lead">
-          Download the bootable installer from the latest
-          <a href="https://github.com/sk1tzwzd/ubuntu-x47-build/releases/latest">GitHub release</a>.
-          It is a fresh Ubuntu 26.04 install — you choose language, disk,
-          username, and password. No personal files from the reference machine
-          are included; only the X47 installer scripts ride along. Pick
-          <em>Install X47 Ubuntu 26.04</em> at boot; first login runs the setup
-          terminal. GitHub caps release files at 2&nbsp;GB, so the ISO is split:
+          Bootable images are published on ISO-tagged releases (not every
+          source bump). Grab the parts from a release titled
+          <em>Installer ISO</em>, or start from
+          <a href="https://github.com/sk1tzwzd/ubuntu-x47-build/releases">the releases list</a>.
+          Fresh Ubuntu 26.04 install — you choose language, disk, and user.
+          Pick <em>Install X47 Ubuntu 26.04</em> at boot; first login runs setup.
+          GitHub caps assets at 2&nbsp;GB, so the ISO is split:
         </p>
         <pre><code># download SHA256SUMS + every x47-ubuntu-26.04-desktop-amd64.iso.*.part, then:
 cat x47-ubuntu-26.04-desktop-amd64.iso.*.part &gt; x47-ubuntu-26.04-desktop-amd64.iso
 sha256sum -c SHA256SUMS --ignore-missing</code></pre>
-        <p class="section-lead" style="margin-top:1rem">
-          Write it to a USB stick with your usual tool (GNOME Disks,
-          balenaEtcher, or <code>dd</code>) and boot from it.
-        </p>
       </section>
 
       <section>
         <h2>More screenshots</h2>
-        <p class="section-lead">WezTerm, the command helper, and the optional amnesia session.</p>
+        <p class="section-lead">WezTerm and the optional amnesia session.</p>
         <div class="gallery two">
           <figure class="shot">
             <img src="images/wezterm-watermark.png" alt="WezTerm with X47 watermark and integrated tab-bar controls" width="1600" height="1000" />
-            <figcaption>WezTerm — X47 watermark on the right; title bar removed, window controls on the tab bar.</figcaption>
+            <figcaption>WezTerm — X47 watermark; integrated tab-bar window controls.</figcaption>
           </figure>
           <figure class="shot">
             <img src="images/anon-desktop.png" alt="Amnesia anon session with Tor check and persistent storage" width="1600" height="1000" />
-            <figcaption>Amnesia <code>anon</code> session — Tor verified, Create Persistent Storage.</figcaption>
+            <figcaption>Amnesia <code>anon</code> session — Tor verified, optional persistent storage.</figcaption>
           </figure>
         </div>
       </section>

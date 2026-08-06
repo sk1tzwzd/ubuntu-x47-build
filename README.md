@@ -10,7 +10,8 @@ Idempotent installer that reproduces a custom Ubuntu 24.04 / 26 desktop:
 
 Part of the [VulnScape](https://vulnscape.net) cybersecurity suite.
 
-**Docs site (free):** [sk1tzwzd.github.io/ubuntu-x47-build](https://sk1tzwzd.github.io/ubuntu-x47-build/)  
+**Docs site (free):** [sk1tzwzd.github.io/ubuntu-x47-build](https://sk1tzwzd.github.io/ubuntu-x47-build/) · [Releases](https://sk1tzwzd.github.io/ubuntu-x47-build/releases.html)  
+
 **Support (optional):** [buymeacoffee.com/sk1tzwzd](https://buymeacoffee.com/sk1tzwzd)
 
 ## Quick start (fresh machine)
@@ -90,6 +91,7 @@ Lean GNOME desktop for the main user and `anon` (opt out with `--skip-desktop-fx
 - **No heavy FX** — Desktop Cube, Coverflow Alt-Tab, Burn My Windows, Blur My Shell, wobbly windows, and per-desktop wall switching are **not installed**. GNOME animations are off.
 - **No dock** — Ubuntu Dock disabled. A lime Ubuntu circle in the **top bar** opens the app grid (`x47-show-apps@x47`); **Super** still opens Activities; **Super+1…9** launches favorites.
 - **X47 wallpapers** — ASCII knuckle-duster circuit colourways (regen with `scripts/make-wallpaper.py --all`). Anon uses a carbon-fibre ASCII shrouded-figure wallpaper (`x47-anon.png`).
+- **Login screen** — GDM Ubuntu wordmark replaced with the teal ASCII duster (`scripts/make-login-logo.py` → `/usr/share/pixmaps/x47-login-duster.png`).
 - **Notifications** — click a top banner once to jump to the app.
 - **Window tiling** — Tiling Shell; hold Ctrl while dragging; toggle via `x47-settings set tiling off`.
 - **Screenshot** — `Super+Shift+S` or `Print` (optional via X47 Settings).
@@ -145,7 +147,8 @@ Files under `config/` are copied back to `/etc` (UFW rules, fail2ban jails, sysc
 
 - **RAM-only home** — `/home/anon` is a `tmpfs` mount. Wiped every reboot; skeleton re-copied from `/var/lib/anon-skel`.
 - **Forced Tor + kill-switch** — UID-scoped nftables; IPv6 dropped for `anon`. Tor config is inlined in `/etc/tor/torrc` (AppArmor blocks `torrc.d`).
-- **Desktop** — same lean looks as the main user (CTRL tiling, top-bar Show Apps, no dock / cube / blur / heavy FX) with its own identity: **ASCII shrouded-figure wallpaper**, an **Anon Status** panel that shows only **LINK / NYM / TOR** (no Wi‑Fi SSID or network name) plus a security verdict, **NymVPN opening on login**, and **Tor forced through obfs4 bridges**; dark `Yaru-prussiangreen-dark`, green accent, location off; first-run wizard skipped.
+- **Desktop** — same lean looks as the main user (CTRL tiling, top-bar Show Apps with lime **X47** icon, no dock / cube / blur / heavy FX): teal circuit wallpaper (matches main; shroud kept as fallback), **Anon Status** panel (**LINK / NYM / TOR** only — no Wi‑Fi SSID), **NymVPN on login**, dark `Yaru-prussiangreen-dark`, green accent, location off.
+- **Tor** — UID kill-switch + SOCKS/`TransPort`; **direct Tor by default** (hardcoded public obfs4 bridges are often unreachable behind VPNs). Optional bridges via `torrc-anon.conf` / bridges.torproject.org.
 - **Terminal** — WezTerm (`/usr/local/bin/wezterm`) as default; GNOME Terminal removed.
 - **Apps** — Firefox (Safest / JS off), Electrum (BTC), Feather (XMR), Kleopatra (PGP), KeePassXC, VulnScape, **NymVPN** (daemon + GUI; connect after login).
 - **Random MAC** — Tails-style spoof on anon login, restored on logout (`anon-mac-spoof`).

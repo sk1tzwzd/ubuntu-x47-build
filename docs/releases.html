@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Releases — Ubuntu X47 Build</title>
+  <meta name="description" content="Ubuntu X47 Build releases: latest source installer and bootable ISO archives." />
+  <link rel="icon" href="images/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="images/favicon-32.png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="images/apple-touch-icon.png" />
+  <link rel="stylesheet" href="css/site.css" />
+</head>
+<body>
+  <div class="wrap">
+    <nav class="site-nav" aria-label="Primary">
+      <a class="brand" href="index.html"><img src="images/x47duster.png" alt="" width="102" height="102" />Ubuntu <span>X47</span> Build</a>
+      <ul class="nav-links">
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="install.html">Install</a></li>
+        <li><a href="amnesia.html">Amnesia</a></li>
+        <li><a href="releases.html" aria-current="page">Releases</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="https://github.com/sk1tzwzd/ubuntu-x47-build">GitHub</a></li>
+      </ul>
+    </nav>
+
+    <main>
+      <h1 class="page-title">Releases</h1>
+      <p class="section-lead">
+        GitHub releases are kept slim on purpose: one <strong>Latest</strong>
+        for the current installer scripts, and a small set of
+        <strong>ISO</strong> archives when a bootable image was baked.
+      </p>
+
+      <section>
+        <h2>What to download</h2>
+        <ul class="clean">
+          <li>
+            <strong>Latest (source)</strong> —
+            <a href="https://github.com/sk1tzwzd/ubuntu-x47-build/releases/latest">releases/latest</a>
+            — current <code>install.sh</code> tree. Prefer this for updates on an
+            existing Ubuntu machine (<code>git pull</code> or the release zip).
+          </li>
+          <li>
+            <strong>Installer ISO</strong> —
+            look for a release titled <em>Installer ISO</em> (assets end in
+            <code>.iso.*.part</code>). Rejoin parts before flashing — see
+            <a href="install.html">Install</a>.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Version history</h2>
+        <p class="section-lead">
+          Full notes live in
+          <a href="https://github.com/sk1tzwzd/ubuntu-x47-build/blob/main/CHANGELOG.md">CHANGELOG.md</a>.
+          Older one-line releases (empty “ui changes” / “debloat” tags) were
+          folded into that log and removed from the Releases page so the list
+          stays readable.
+        </p>
+        <pre><code># clone / update
+git clone https://github.com/sk1tzwzd/ubuntu-x47-build.git
+cd ubuntu-x47-build && git pull
+
+# or grab Latest from GitHub, then:
+chmod +x install.sh modules/*.sh
+./install.sh                  # lean desktop + tooling
+./install.sh --with-amnesia   # also provision anon</code></pre>
+      </section>
+
+      <section>
+        <h2>All releases on GitHub</h2>
+        <p class="section-lead">
+          <a class="btn btn-primary" href="https://github.com/sk1tzwzd/ubuntu-x47-build/releases">Open releases</a>
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="foot-row">
+        <p>Ubuntu X47 Build — free software. Donations optional.</p>
+        <div class="foot-links">
+          <a href="https://github.com/sk1tzwzd/ubuntu-x47-build">GitHub</a>
+          <a href="https://buymeacoffee.com/sk1tzwzd">Buy me a coffee</a>
+          <a href="https://vulnscape.net">VulnScape</a>
+          <a href="support.html">Support</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

@@ -58,8 +58,80 @@ module_gnome() {
   fi
 
   mullvad_tray_start
+  install_gdm_login_logo
 
   ok "GNOME module done"
+}
+
+# Replace the Ubuntu wordmark on the GDM login screen with the ASCII duster.
+install_gdm_login_logo() {
+  if [[ "${X47_USER_ONLY:-0}" == "1" ]]; then
+    return 0
+  fi
+  if ! need_sudo; then
+    warn "no sudo — skipping GDM login logo"
+    return 0
+  fi
+
+  local src="$X47_ROOT/assets/desktop/x47-login-duster.png"
+  local dest=/usr/share/pixmaps/x47-login-duster.png
+  local greeter=/etc/gdm3/greeter.dconf-defaults
+  local override=/usr/share/glib-2.0/schemas/20_x47-login.gschema.override
+
+  if [[ ! -f "$src" ]]; then
+    if have python3 && [[ -f "$X47_ROOT/scripts/make-login-logo.py" ]]; then
+      log "rendering ASCII duster login logo"
+      python3 "$X47_ROOT/scripts/make-login-logo.py" || warn "login logo render failed"
+    fi
+  fi
+  [[ -f "$src" ]] || { warn "missing $src — GDM logo skipped"; return 0; }
+
+  log "installing GDM login logo (ASCII duster)"
+  run_sudo install -D -m 0644 "$src" "$dest"
+
+  run_sudo tee "$override" >/dev/null <<EOF
+[org.gnome.login-screen]
+logo='$dest'
+EOF
+  run_sudo glib-compile-schemas /usr/share/glib-2.0/schemas >/dev/null 2>&1 || true
+
+  if [[ -f "$greeter" ]]; then
+    run_sudo python3 - "$greeter" "$dest" <<'PY'
+from pathlib import Path
+import sys
+path, dest = Path(sys.argv[1]), sys.argv[2]
+lines = path.read_text().splitlines(keepends=True)
+out, in_login, inserted = [], False, False
+for line in lines:
+    s = line.strip()
+    if s.startswith("[") and s.endswith("]"):
+        in_login = s == "[org/gnome/login-screen]"
+        out.append(line)
+        if in_login and not inserted:
+            out.append(f"logo='{dest}'\n")
+            inserted = True
+        continue
+    if in_login and (s.startswith("logo=") or s.startswith("#logo=")):
+        if s.startswith("#logo="):
+            out.append(line)
+        continue
+    out.append(line)
+if not inserted:
+    out.append("\n[org/gnome/login-screen]\n")
+    out.append(f"logo='{dest}'\n")
+path.write_text("".join(out))
+PY
+  fi
+
+  if [[ -x /usr/share/gdm/generate-config ]]; then
+    run_sudo /usr/share/gdm/generate-config >/dev/null 2>&1 \
+      || run_sudo dconf compile /var/lib/gdm3/greeter-dconf-defaults /usr/share/gdm/dconf >/dev/null 2>&1 \
+      || warn "could not recompile GDM greeter dconf"
+  else
+    run_sudo dconf compile /var/lib/gdm3/greeter-dconf-defaults /usr/share/gdm/dconf >/dev/null 2>&1 || true
+  fi
+
+  ok "GDM login logo -> $dest (log out to the greeter to see it)"
 }
 
 # Mullvad autostarts + autoconnects; make the GUI open minimized in the tray

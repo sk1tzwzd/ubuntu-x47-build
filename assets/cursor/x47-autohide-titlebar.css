@@ -1,0 +1,23 @@
+/* X47: soft-hide Cursor title bar when windowed; reveal on hover (matches Firefox peek). */
+.monaco-workbench:not(.maximized):not(.fullscreen) .part.titlebar {
+  max-height: 12px !important;
+  min-height: 12px !important;
+  height: 12px !important;
+  opacity: 0.45 !important;
+  overflow: clip !important;
+  transition: max-height 200ms ease, min-height 200ms ease, height 200ms ease, opacity 160ms ease !important;
+}
+
+.monaco-workbench:not(.maximized):not(.fullscreen) .part.titlebar:hover,
+.monaco-workbench:not(.maximized):not(.fullscreen) .part.titlebar:focus-within {
+  max-height: 40px !important;
+  min-height: 35px !important;
+  height: 35px !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+}
+
+/* Keep window controls clickable when the bar peeks. */
+.monaco-workbench:not(.maximized):not(.fullscreen) .part.titlebar .window-controls-container {
+  opacity: 1 !important;
+}

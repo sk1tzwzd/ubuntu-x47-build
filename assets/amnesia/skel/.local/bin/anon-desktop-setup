@@ -6,7 +6,12 @@ set -euo pipefail
 
 gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
 gsettings set org.gnome.desktop.interface gtk-theme 'Yaru-prussiangreen-dark' 2>/dev/null || true
-gsettings set org.gnome.desktop.interface icon-theme 'Yaru-prussiangreen-dark' 2>/dev/null || true
+# X47 icon theme (lime Show Apps circle); fall back to Yaru if missing.
+if [[ -d "$HOME/.local/share/icons/X47" ]]; then
+  gsettings set org.gnome.desktop.interface icon-theme 'X47' 2>/dev/null || true
+else
+  gsettings set org.gnome.desktop.interface icon-theme 'Yaru-prussiangreen-dark' 2>/dev/null || true
+fi
 gsettings set org.gnome.desktop.interface accent-color 'green' 2>/dev/null || true
 gsettings set org.gnome.desktop.interface cursor-theme 'Yaru' 2>/dev/null || true
 gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
@@ -45,9 +50,17 @@ gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
 gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
 gsettings set org.gnome.mutter edge-tiling false 2>/dev/null || true
 
-# Wallpaper: one look on every desktop — black circuit + "anon@x47".
-wp="$HOME/.local/share/backgrounds/x47-anon.png"
-if [[ -f "$wp" ]]; then
+# Wallpaper: same teal circuit as the main account (fallback: anon shroud).
+wp=""
+for candidate in \
+  "$HOME/.local/share/backgrounds/x47-circuit.png" \
+  "$HOME/.local/share/backgrounds/x47-anon.png"; do
+  if [[ -f "$candidate" ]]; then
+    wp="$candidate"
+    break
+  fi
+done
+if [[ -n "$wp" ]]; then
   gsettings set org.gnome.desktop.background picture-uri "file://$wp" 2>/dev/null || true
   gsettings set org.gnome.desktop.background picture-uri-dark "file://$wp" 2>/dev/null || true
   gsettings set org.gnome.desktop.background picture-options 'zoom' 2>/dev/null || true

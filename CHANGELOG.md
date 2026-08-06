@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.10.0 — 2026-08-06
+
+### Release hygiene
+- **Docs / site** — lean-desktop copy, new Releases page, clearer Latest vs Installer ISO.
+- **GitHub releases** — folded noisy empty tags into this changelog; Latest is source; ISO kept on dedicated Installer ISO releases.
+
+### Desktop & apps (since v1.9.2)
+- Lean GNOME (no cube/blur/dock); top-bar Show Apps; Firefox/Cursor soft-hide chrome; GDM ASCII duster logo; anon Tor/Nym/status + wallpaper/icon parity.
+
+## v1.9.14 — 2026-08-06
+
+### Cursor
+- **Autohide title bar** when unmaximized (12px peek, full bar on hover) — `assets/cursor/x47-autohide-titlebar.css` + `scripts/cursor-autohide-titlebar.sh` (re-run after Cursor updates).
+
+## v1.9.13 — 2026-08-06
+
+### Login screen
+- **GDM logo** — Ubuntu wordmark replaced with the teal ASCII knuckle-duster (`x47-login-duster.png`).
+
+
+## v1.9.12 — 2026-08-05
+
+### Amnesia (`anon`)
+- **Icon + wallpaper** — lime X47 Show Apps theme and teal `x47-circuit.png` (same as main) staged into skel/live.
+- **Tor** — stop forcing dead/blocked public obfs4 bridges (stuck SOCKS behind Mullvad/VPN). Direct Tor + kill-switch by default; bridges optional.
+
 ## v1.9.11 — 2026-08-05
 
 ### Firefox

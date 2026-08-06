@@ -183,11 +183,40 @@ stage_anon_desktop_fx_into_skel() {
   local desk="$X47_ROOT/assets/desktop"
   run_sudo mkdir -p "$skel/.local/share/backgrounds"
   local wf
-  # Anon gets ONE wallpaper: black circuit + "anon@x47" (no per-workspace colours).
-  for wf in x47-anon.png; do
+  # Same teal circuit as main; keep shroud as optional fallback.
+  for wf in x47-circuit.png x47-anon.png; do
     [[ -f "$desk/wallpapers/$wf" ]] || continue
     run_sudo install -m 0644 "$desk/wallpapers/$wf" "$skel/.local/share/backgrounds/$wf"
   done
+  # Lime Show Apps icon theme (matches main account).
+  local icon_src="$X47_ROOT/assets/icons/show-apps-duster"
+  local icon_dst="$skel/.local/share/icons/X47"
+  if [[ -d "$icon_src" ]]; then
+    run_sudo rm -rf "$icon_dst"
+    if [[ -d "$HOME/.local/share/icons/X47" ]]; then
+      run_sudo mkdir -p "$skel/.local/share/icons"
+      run_sudo cp -a "$HOME/.local/share/icons/X47" "$icon_dst"
+    else
+      # Minimal theme from assets (PNGs may be generated on main by 51-desktop-fx).
+      run_sudo mkdir -p "$icon_dst/scalable/actions"
+      run_sudo tee "$icon_dst/index.theme" >/dev/null <<'EOF'
+[Icon Theme]
+Name=X47
+Comment=Yaru-blue-dark with X47 Show Apps duster
+Inherits=Yaru-blue-dark,Yaru,hicolor
+Directories=scalable/actions
+[scalable/actions]
+Context=Actions
+Size=16
+MinSize=8
+MaxSize=512
+Type=Scalable
+EOF
+      for f in view-app-grid-ubuntu-symbolic.svg view-app-grid-symbolic.svg view-app-grid-ubiquity-symbolic.svg; do
+        [[ -f "$icon_src/$f" ]] && run_sudo install -m 0644 "$icon_src/$f" "$icon_dst/scalable/actions/$f"
+      done
+    fi
+  fi
   # Bundled X47 extensions (also copied from main user if present).
   local bund
   for bund in x47-anon-status@x47 x47-notif-activate@x47 x47-show-apps@x47; do

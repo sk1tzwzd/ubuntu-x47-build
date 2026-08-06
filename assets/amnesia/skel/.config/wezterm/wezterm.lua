@@ -76,7 +76,7 @@ config.font_size = 11.0
 config.color_scheme = 'Tokyo Night'
 config.window_background_opacity = 1.0
 config.enable_scroll_bar = false
-config.window_padding = { left = 8, right = 8, top = 6, bottom = 6 }
+config.window_padding = { left = 8, right = 8, top = 14, bottom = 6 }
 
 -- Default spawn cells (used when gui-startup is skipped).
 config.initial_cols = 120
