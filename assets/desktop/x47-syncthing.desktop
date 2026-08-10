@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=X47 Sync
+GenericName=Secure file sync
+Comment=Hardened Syncthing — Android ↔ PC on your LAN (no cloud relays)
+Exec=x47-syncthing open
+Icon=x47-syncthing
+Terminal=false
+Categories=Network;FileTransfer;
+Keywords=syncthing;sync;android;x47;share;
+StartupNotify=true

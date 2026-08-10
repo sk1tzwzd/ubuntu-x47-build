@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Remove broken / leftover app-launcher entries and empty foreign folders.
+set -euo pipefail
+
+APPDIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+ICON_SVG="$HOME/.local/share/icons/hicolor/scalable/apps/x47-syncthing.svg"
+
+removed=0
+
+_rm_desktop() {
+  local f="$1" reason="$2"
+  [[ -f "$APPDIR/$f" ]] || return 0
+  rm -f "$APPDIR/$f"
+  echo "removed $f ($reason)"
+  removed=$((removed + 1))
+}
+
+# Empty / foreign distro folders that show as dead tiles in the app grid.
+python3 - <<'PY'
+import subprocess
+raw = subprocess.check_output(
+    ["gsettings", "get", "org.gnome.desktop.app-folders", "folder-children"],
+    text=True,
+).strip()
+# Keep useful folders; drop YaST/Pardus leftovers from other distros.
+keep = []
+for name in ("System", "Utilities", "DevTools", "PentestTools"):
+    if f"'{name}'" in raw or name in raw:
+        keep.append(name)
+# Also keep any other custom folders except YaST/Pardus
+import ast
+arr = ast.literal_eval(raw.replace("@as ", ""))
+for x in arr:
+    if x in ("YaST", "Pardus"):
+        continue
+    if x not in keep:
+        keep.append(x)
+val = "@as []" if not keep else "['" + "', '".join(keep) + "']"
+subprocess.check_call(["gsettings", "set", "org.gnome.desktop.app-folders", "folder-children", val])
+print("app-folders:", keep)
+# Reset empty foreign folder keys if present
+for dead in ("YaST", "Pardus"):
+    subprocess.run(
+        ["dconf", "reset", "-f", f"/org/gnome/desktop/app-folders/folders/{dead}/"],
+        check=False,
+    )
+PY
+
+# Handler with no icon — keep but ensure NoDisplay (scheme handler only).
+if [[ -f "$APPDIR/nym-vpn-app-handler.desktop" ]]; then
+  if ! grep -q '^NoDisplay=true' "$APPDIR/nym-vpn-app-handler.desktop"; then
+    echo 'NoDisplay=true' >>"$APPDIR/nym-vpn-app-handler.desktop"
+  fi
+  if ! grep -q '^Icon=' "$APPDIR/nym-vpn-app-handler.desktop"; then
+    sed -i '/^Name=/a Icon=network-vpn' "$APPDIR/nym-vpn-app-handler.desktop" || true
+  fi
+fi
+
+# Ensure X47 Sync icon is visible to the icon theme.
+if [[ -f "$ICON_SVG" ]]; then
+  gtk-update-icon-cache -f "$HOME/.local/share/icons/hicolor" >/dev/null 2>&1 || true
+fi
+
+# Hide duplicate stock Terminal overrides (WezTerm is the real terminal).
+for f in gnome-terminal.desktop org.gnome.Terminal.desktop org.gnome.Yelp.desktop; do
+  if [[ -f "$APPDIR/$f" ]] && ! grep -q '^NoDisplay=true' "$APPDIR/$f"; then
+    echo 'NoDisplay=true' >>"$APPDIR/$f"
+    echo "hid $f"
+  fi
+done
+
+# Override broken system Cursor icon name if user copy lacks absolute icon.
+if [[ -f "$APPDIR/cursor.desktop" ]]; then
+  if [[ -f /usr/share/pixmaps/co.anysphere.cursor.png ]]; then
+    sed -i 's|^Icon=.*|Icon=/usr/share/pixmaps/co.anysphere.cursor.png|' "$APPDIR/cursor.desktop"
+  fi
+fi
+
+if command -v update-desktop-database >/dev/null; then
+  update-desktop-database "$APPDIR" >/dev/null 2>&1 || true
+fi
+
+echo "launcher cleanup done (removed=${removed})"

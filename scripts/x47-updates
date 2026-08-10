@@ -1,0 +1,467 @@
+#!/usr/bin/env bash
+# X47 Updates — check and apply apt / snap / Cursor updates in one place.
+#
+# Usage:
+#   x47-updates              # GUI (Zenity) if available, else check + prompt
+#   x47-updates gui
+#   x47-updates check        # refresh indexes + print report
+#   x47-updates apply        # apply all updates (password prompt)
+#   x47-updates status       # last check summary
+#   x47-updates repair-sources  # restore Mullvad (and similar) apt lists
+set -euo pipefail
+
+export PATH="${HOME}/.local/bin:${PATH}"
+
+STATUS_FILE="${X47_UPDATES_STATUS:-$HOME/.config/x47/updates-status.conf}"
+REPORT_FILE="${X47_UPDATES_REPORT:-$HOME/.cache/x47/updates-report.txt}"
+
+_usage() {
+  cat <<'EOF'
+X47 Updates — check and install system updates
+
+  x47-updates                 Open GUI (or text flow)
+  x47-updates gui             Force Zenity UI
+  x47-updates check           Refresh indexes and list pending updates
+  x47-updates apply           Apply apt + snap + Cursor updates
+  x47-updates status          Show last check summary
+  x47-updates repair-sources  Restore missing third-party apt sources (Mullvad)
+
+Covers: apt packages, snap refreshes, Cursor (apt), Mullvad repo repair.
+EOF
+}
+
+_have() { command -v "$1" >/dev/null 2>&1; }
+
+_ensure_dirs() {
+  mkdir -p "$(dirname "$STATUS_FILE")" "$(dirname "$REPORT_FILE")"
+}
+
+_status_set() {
+  local key="$1" val="$2"
+  _ensure_dirs
+  touch "$STATUS_FILE"
+  if grep -qE "^${key}=" "$STATUS_FILE" 2>/dev/null; then
+    sed -i "s|^${key}=.*|${key}=${val}|" "$STATUS_FILE"
+  else
+    printf '%s=%s\n' "$key" "$val" >>"$STATUS_FILE"
+  fi
+}
+
+_status_get() {
+  local key="$1" def="${2:-}"
+  [[ -f "$STATUS_FILE" ]] || { printf '%s' "$def"; return 0; }
+  local line
+  line="$(grep -E "^${key}=" "$STATUS_FILE" 2>/dev/null | tail -n1 || true)"
+  if [[ -n "$line" ]]; then
+    printf '%s' "${line#*=}"
+  else
+    printf '%s' "$def"
+  fi
+}
+
+# Run a privileged command: prefer pkexec for GUI, else sudo.
+_priv() {
+  if [[ "$(id -u)" -eq 0 ]]; then
+    env "$@"
+    return
+  fi
+  if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && _have pkexec; then
+    pkexec env "$@"
+    return
+  fi
+  if _have sudo; then
+    sudo env "$@"
+    return
+  fi
+  echo "sudo or pkexec required" >&2
+  return 1
+}
+
+_mullvad_source_missing() {
+  dpkg -s mullvad-vpn >/dev/null 2>&1 || return 1
+  [[ ! -f /etc/apt/sources.list.d/mullvad.list ]] && return 0
+  # Treat unknown suite (e.g. resolute before Mullvad publishes it) as needing repair.
+  local suite
+  suite="$(awk '/^deb / {
+    for (i=1;i<=NF;i++) if ($i ~ /^https?:/) { print $(i+1); exit }
+  }' /etc/apt/sources.list.d/mullvad.list 2>/dev/null || true)"
+  [[ -z "$suite" ]] && return 0
+  ! curl -fsSIL "https://repository.mullvad.net/deb/stable/dists/${suite}/Release" >/dev/null 2>&1
+}
+
+_mullvad_suite() {
+  local host="${1:-}"
+  [[ -n "$host" ]] || host="$(. /etc/os-release; echo "${VERSION_CODENAME:-noble}")"
+  if curl -fsSIL "https://repository.mullvad.net/deb/stable/dists/${host}/Release" >/dev/null 2>&1; then
+    printf '%s' "$host"
+  else
+    printf 'noble'
+  fi
+}
+
+_repair_mullvad_source() {
+  local host_codename codename arch_name key_tmp list_tmp
+  host_codename="$(. /etc/os-release; echo "${VERSION_CODENAME:-noble}")"
+  codename="$(_mullvad_suite "$host_codename")"
+  arch_name="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
+  key_tmp="$(mktemp)"
+  list_tmp="$(mktemp)"
+  echo "Restoring Mullvad apt repository…"
+  if [[ "$codename" != "$host_codename" ]]; then
+    echo "note: Mullvad has no ${host_codename} suite yet — using ${codename}"
+  fi
+  curl -fsSL https://repository.mullvad.net/deb/mullvad-keyring.asc -o "$key_tmp"
+  printf 'deb [signed-by=/usr/share/keyrings/mullvad-keyring.asc arch=%s] https://repository.mullvad.net/deb/stable %s main\n' \
+    "$arch_name" "$codename" >"$list_tmp"
+  # Install via privileged helper so pkexec/sudo only copy local files.
+  _priv bash -c "
+    set -euo pipefail
+    install -m 0755 -d /usr/share/keyrings /etc/apt/sources.list.d
+    install -m 0644 '$key_tmp' /usr/share/keyrings/mullvad-keyring.asc
+    install -m 0644 '$list_tmp' /etc/apt/sources.list.d/mullvad.list
+    apt-get update -qq
+  "
+  local rc=$?
+  rm -f "$key_tmp" "$list_tmp"
+  return "$rc"
+}
+
+cmd_repair_sources() {
+  if ! dpkg -s mullvad-vpn >/dev/null 2>&1; then
+    echo "mullvad_source=not_installed"
+    echo "No missing third-party sources to repair."
+    return 0
+  fi
+  if ! _mullvad_source_missing; then
+    echo "mullvad_source=ok"
+    echo "No missing third-party sources to repair."
+    return 0
+  fi
+  if _repair_mullvad_source; then
+    echo "mullvad_source=restored"
+  else
+    echo "mullvad_source=repair_failed" >&2
+    return 1
+  fi
+}
+
+_cursor_bin() {
+  if [[ -x "$HOME/.local/bin/update-cursor" ]]; then
+    printf '%s' "$HOME/.local/bin/update-cursor"
+  elif _have update-cursor; then
+    command -v update-cursor
+  else
+    return 1
+  fi
+}
+
+_apt_upgradable_list() {
+  # apt list needs indexes; do not fail hard if apt is locked briefly.
+  apt list --upgradable 2>/dev/null | awk -F/ 'NR>1 {print $1}' | sed '/^$/d' || true
+}
+
+_snap_refresh_list() {
+  if ! _have snap; then
+    return 0
+  fi
+  # "All snaps up to date." or lines of snaps
+  snap refresh --list 2>/dev/null | awk 'NR>1 && $1!="" {print $1}' || true
+}
+
+_write_report() {
+  local apt_n="$1" snap_n="$2" cursor_note="$3" mullvad_note="$4" reboot_note="$5"
+  local apt_list="$6" snap_list="$7"
+  _ensure_dirs
+  {
+    echo "X47 Updates report — $(date -Is)"
+    echo
+    echo "=== apt ($apt_n) ==="
+    if [[ "$apt_n" -eq 0 ]]; then
+      echo "(none)"
+    else
+      printf '%s\n' "$apt_list"
+    fi
+    echo
+    echo "=== snap ($snap_n) ==="
+    if [[ "$snap_n" -eq 0 ]]; then
+      echo "(none)"
+    else
+      printf '%s\n' "$snap_list"
+    fi
+    echo
+    echo "=== Cursor ==="
+    echo "$cursor_note"
+    echo
+    echo "=== Mullvad apt source ==="
+    echo "$mullvad_note"
+    echo
+    echo "=== Reboot ==="
+    echo "$reboot_note"
+  } >"$REPORT_FILE"
+}
+
+cmd_check() {
+  local apt_list snap_list apt_n snap_n cursor_note mullvad_note reboot_note
+  echo "Checking for updates…"
+
+  if _mullvad_source_missing; then
+    echo "Mullvad apt source missing — restoring so updates can be found…"
+    _repair_mullvad_source || echo "warn: could not restore Mullvad source" >&2
+  fi
+
+  echo "Refreshing apt indexes…"
+  if ! _priv apt-get update -qq; then
+    echo "warn: apt update failed (password cancelled or network?)" >&2
+  fi
+
+  apt_list="$(_apt_upgradable_list)"
+  if [[ -z "${apt_list// }" ]]; then
+    apt_n=0
+    apt_list=""
+  else
+    apt_n="$(printf '%s\n' "$apt_list" | grep -c . || true)"
+  fi
+
+  snap_list="$(_snap_refresh_list)"
+  if [[ -z "${snap_list// }" ]]; then
+    snap_n=0
+    snap_list=""
+  else
+    snap_n="$(printf '%s\n' "$snap_list" | grep -c . || true)"
+  fi
+
+  if dpkg -s cursor >/dev/null 2>&1; then
+    cursor_note="installed $(dpkg-query -W -f='${Version}' cursor 2>/dev/null || echo '?') — will only-upgrade on Apply"
+  else
+    cursor_note="not installed"
+  fi
+
+  if dpkg -s mullvad-vpn >/dev/null 2>&1; then
+    if [[ -f /etc/apt/sources.list.d/mullvad.list ]]; then
+      mullvad_note="ok ($(dpkg-query -W -f='${Version}' mullvad-vpn 2>/dev/null))"
+    else
+      mullvad_note="MISSING source list (run: x47-updates repair-sources)"
+    fi
+  else
+    mullvad_note="not installed"
+  fi
+
+  if [[ -f /var/run/reboot-required ]]; then
+    reboot_note="YES — reboot recommended after updates"
+  else
+    reboot_note="no"
+  fi
+
+  _write_report "$apt_n" "$snap_n" "$cursor_note" "$mullvad_note" "$reboot_note" "$apt_list" "$snap_list"
+  _status_set last_check "$(date -Is)"
+  _status_set apt_count "$apt_n"
+  _status_set snap_count "$snap_n"
+  _status_set reboot_required "$([[ -f /var/run/reboot-required ]] && echo 1 || echo 0)"
+
+  cat "$REPORT_FILE"
+  echo
+  echo "report=$REPORT_FILE"
+  local total=$((apt_n + snap_n))
+  echo "pending_total=${total}"
+}
+
+cmd_status() {
+  if [[ ! -f "$STATUS_FILE" ]]; then
+    echo "No check yet. Run: x47-updates check"
+    return 0
+  fi
+  echo "last_check=$(_status_get last_check never)"
+  echo "apt_count=$(_status_get apt_count 0)"
+  echo "snap_count=$(_status_get snap_count 0)"
+  echo "reboot_required=$(_status_get reboot_required 0)"
+  if [[ -f "$REPORT_FILE" ]]; then
+    echo "report=$REPORT_FILE"
+  fi
+}
+
+_apply_in_foreground() {
+  set -euo pipefail
+  export DEBIAN_FRONTEND=noninteractive
+  echo "=== X47 Updates: applying ==="
+  if [[ ! -f /etc/apt/sources.list.d/mullvad.list ]] && dpkg -s mullvad-vpn >/dev/null 2>&1; then
+    echo "Restoring Mullvad apt source…"
+    install -m 0755 -d /usr/share/keyrings
+    curl -fsSL https://repository.mullvad.net/deb/mullvad-keyring.asc \
+      -o /usr/share/keyrings/mullvad-keyring.asc || true
+    codename="$(. /etc/os-release; echo "${VERSION_CODENAME:-noble}")"
+    arch_name="$(dpkg --print-architecture)"
+    echo "deb [signed-by=/usr/share/keyrings/mullvad-keyring.asc arch=${arch_name}] https://repository.mullvad.net/deb/stable ${codename} main" \
+      > /etc/apt/sources.list.d/mullvad.list || true
+  fi
+  echo "--- apt update ---"
+  apt-get update
+  echo "--- apt upgrade ---"
+  apt-get upgrade -y
+  if dpkg -s cursor >/dev/null 2>&1; then
+    echo "--- Cursor only-upgrade ---"
+    apt-get install --only-upgrade -y cursor || true
+  fi
+  if command -v snap >/dev/null 2>&1; then
+    echo "--- snap refresh ---"
+    snap refresh || true
+  fi
+  echo
+  if [[ -f /var/run/reboot-required ]]; then
+    echo "DONE — reboot recommended."
+    [[ -f /var/run/reboot-required.pkgs ]] && echo "Packages: $(tr '\n' ' ' </var/run/reboot-required.pkgs)"
+  else
+    echo "DONE — no reboot flag set."
+  fi
+}
+
+cmd_apply() {
+  echo "Applying updates (password may be required)…"
+  # Privileged apply as a single script for clear terminal output.
+  local tmp
+  tmp="$(mktemp /tmp/x47-updates-apply.XXXXXX.sh)"
+  cat >"$tmp" <<'EOS'
+#!/usr/bin/env bash
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+echo "=== X47 Updates: applying ==="
+if [[ ! -f /etc/apt/sources.list.d/mullvad.list ]] && dpkg -s mullvad-vpn >/dev/null 2>&1; then
+  echo "Restoring Mullvad apt source…"
+  install -m 0755 -d /usr/share/keyrings
+  curl -fsSL https://repository.mullvad.net/deb/mullvad-keyring.asc \
+    -o /usr/share/keyrings/mullvad-keyring.asc || true
+  host="$(. /etc/os-release; echo "${VERSION_CODENAME:-noble}")"
+  codename="$host"
+  if ! curl -fsSIL "https://repository.mullvad.net/deb/stable/dists/${codename}/Release" >/dev/null 2>&1; then
+    codename=noble
+    echo "note: Mullvad has no ${host} suite — using ${codename}"
+  fi
+  arch_name="$(dpkg --print-architecture)"
+  echo "deb [signed-by=/usr/share/keyrings/mullvad-keyring.asc arch=${arch_name}] https://repository.mullvad.net/deb/stable ${codename} main" \
+    > /etc/apt/sources.list.d/mullvad.list || true
+fi
+echo "--- apt update ---"
+apt-get update
+echo "--- apt upgrade ---"
+apt-get upgrade -y
+if dpkg -s cursor >/dev/null 2>&1; then
+  echo "--- Cursor only-upgrade ---"
+  apt-get install --only-upgrade -y cursor || true
+fi
+if command -v snap >/dev/null 2>&1; then
+  echo "--- snap refresh ---"
+  snap refresh || true
+fi
+echo
+if [[ -f /var/run/reboot-required ]]; then
+  echo "DONE — reboot recommended."
+  [[ -f /var/run/reboot-required.pkgs ]] && echo "Packages: $(tr '\n' ' ' </var/run/reboot-required.pkgs)"
+else
+  echo "DONE — no reboot flag set."
+fi
+EOS
+  chmod 0755 "$tmp"
+  local rc=0
+  if [[ "$(id -u)" -eq 0 ]]; then
+    bash "$tmp" || rc=$?
+  elif [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && _have pkexec; then
+    pkexec bash "$tmp" || rc=$?
+  elif _have sudo; then
+    sudo bash "$tmp" || rc=$?
+  else
+    echo "sudo or pkexec required" >&2
+    rm -f "$tmp"
+    return 1
+  fi
+  rm -f "$tmp"
+  _status_set last_apply "$(date -Is)"
+  _status_set reboot_required "$([[ -f /var/run/reboot-required ]] && echo 1 || echo 0)"
+  return "$rc"
+}
+
+_run_apply_in_terminal() {
+  local self
+  self="$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")"
+  local cmd
+  cmd=$(printf '%q ' "$self" apply)
+  if [[ -x "$HOME/.local/bin/wezterm" ]] || _have wezterm; then
+    local wt
+    wt="$(command -v wezterm 2>/dev/null || echo "$HOME/.local/bin/wezterm")"
+    "$wt" start --always-new-process --class x47-updates -- \
+      bash -lc "$cmd; echo; read -r -p 'Press Enter to close…' _" &
+    return 0
+  fi
+  if _have gnome-terminal; then
+    gnome-terminal --title='X47 Updates' -- bash -lc "$cmd; echo; read -r -p 'Press Enter to close…' _" &
+    return 0
+  fi
+  # Fallback: run in current context
+  cmd_apply
+}
+
+cmd_gui() {
+  if ! _have zenity; then
+    echo "zenity not found — falling back to text UI" >&2
+    cmd_check
+    echo
+    read -r -p "Apply all updates now? [y/N] " ans || ans=n
+    case "${ans,,}" in
+      y|yes) cmd_apply ;;
+      *) echo "Cancelled." ;;
+    esac
+    return 0
+  fi
+
+  zenity --info --title='X47 Updates' --width=420 \
+    --text='Click OK to check for apt, snap, and Cursor updates.\nYou may be asked for your password to refresh package lists.' \
+    2>/dev/null || true
+
+  local check_out
+  if ! check_out="$(cmd_check 2>&1)"; then
+    zenity --error --title='X47 Updates' --width=480 \
+      --text="Check failed:\n\n$(printf '%s' "$check_out" | tail -c 1200)" 2>/dev/null || true
+    return 1
+  fi
+
+  local apt_n snap_n total body
+  apt_n="$(_status_get apt_count 0)"
+  snap_n="$(_status_get snap_count 0)"
+  total=$((apt_n + snap_n))
+  body="$(cat "$REPORT_FILE" 2>/dev/null || printf '%s' "$check_out")"
+
+  if [[ "$total" -eq 0 ]]; then
+    local extra=""
+    [[ -f /var/run/reboot-required ]] && extra="\n\nA reboot is still recommended from earlier updates."
+    zenity --info --title='X47 Updates' --width=520 --height=400 \
+      --text="<b>Everything looks up to date.</b>${extra}\n\n<pre>$(printf '%s' "$body" | sed 's/&/\&amp;/g; s/</\&lt;/g' | head -c 3500)</pre>" \
+      2>/dev/null || zenity --info --title='X47 Updates' --text='Everything looks up to date.' 2>/dev/null || true
+    return 0
+  fi
+
+  if zenity --question --title='X47 Updates' --width=560 --height=480 \
+    --ok-label='Update all' --cancel-label='Cancel' \
+    --text="<b>${total} update(s) available</b> (apt: ${apt_n}, snap: ${snap_n}).\n\nApply all updates now? A terminal will show progress.\n\n<pre>$(printf '%s' "$body" | sed 's/&/\&amp;/g; s/</\&lt;/g' | head -c 3000)</pre>" \
+    2>/dev/null; then
+    _run_apply_in_terminal
+    zenity --info --title='X47 Updates' --width=420 \
+      --text='Update started in a terminal window.\nWhen it finishes, reboot if the terminal says so.' \
+      2>/dev/null || true
+  else
+    zenity --info --title='X47 Updates' --text='Cancelled — no changes applied.' 2>/dev/null || true
+  fi
+}
+
+main() {
+  local cmd="${1:-}"
+  shift || true
+  case "$cmd" in
+    ""|gui) cmd_gui "$@" ;;
+    check) cmd_check "$@" ;;
+    apply) cmd_apply "$@" ;;
+    status) cmd_status "$@" ;;
+    repair-sources|repair) cmd_repair_sources "$@" ;;
+    -h|--help|help) _usage ;;
+    *) echo "unknown command: $cmd" >&2; _usage; exit 2 ;;
+  esac
+}
+
+main "$@"

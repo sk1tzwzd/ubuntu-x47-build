@@ -18,6 +18,7 @@ X47_LEAN_FX_UUIDS=(
   "x47-show-apps@x47"
   "x47-desktop-mode@x47"
   "x47-display@x47"
+  "x47-syncthing@x47"
 )
 
 X47_DOCK_UUIDS=(

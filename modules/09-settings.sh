@@ -24,6 +24,10 @@ module_settings() {
   install -m 0755 "$X47_ROOT/scripts/x47-display-adaptive" "$share/bin/x47-display-adaptive"
   install -m 0755 "$X47_ROOT/scripts/x47-nerovia-widgets" "$share/bin/x47-nerovia-widgets"
   install -m 0755 "$X47_ROOT/scripts/x47-power-desktop-sync" "$share/bin/x47-power-desktop-sync"
+  if [[ -f "$X47_ROOT/scripts/x47-clean-launchers" ]]; then
+    install -m 0755 "$X47_ROOT/scripts/x47-clean-launchers" "$share/bin/x47-clean-launchers"
+    ln -sfn "$share/bin/x47-clean-launchers" "$HOME/.local/bin/x47-clean-launchers"
+  fi
   ln -sfn "$share/bin/x47-settings" "$HOME/.local/bin/x47-settings"
   ln -sfn "$share/bin/x47-desktop-mode" "$HOME/.local/bin/x47-desktop-mode"
   ln -sfn "$share/bin/x47-display" "$HOME/.local/bin/x47-display"

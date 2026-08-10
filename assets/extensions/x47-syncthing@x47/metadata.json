@@ -1,0 +1,7 @@
+{
+  "uuid": "x47-syncthing@x47",
+  "name": "X47 Sync",
+  "description": "Top-bar shortcut for hardened Syncthing (Android ↔ PC LAN sync).",
+  "shell-version": ["48", "49", "50"],
+  "url": "https://github.com/sk1tzwzd/ubuntu-x47-build"
+}

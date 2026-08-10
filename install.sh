@@ -102,6 +102,7 @@ MODULES=(
   22-tools-cargo.sh
   23-tools-release.sh
   24-syncthing.sh
+  25-updates.sh
   30-icons.sh
   31-launchers.sh
   40-hardening.sh

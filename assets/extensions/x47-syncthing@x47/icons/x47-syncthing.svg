@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="X47 Sync">
+  <defs>
+    <linearGradient id="bg" x1="18" y1="8" x2="110" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0f766e"/>
+      <stop offset="0.55" stop-color="#115e59"/>
+      <stop offset="1" stop-color="#0b3d3a"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="40" y1="24" x2="96" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5eead4" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#2dd4bf" stop-opacity="0.85"/>
+    </linearGradient>
+  </defs>
+  <!-- App tile -->
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#bg)"/>
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="none" stroke="#99f6e4" stroke-opacity="0.18" stroke-width="2"/>
+
+  <!-- Phone (left) -->
+  <rect x="28" y="38" width="28" height="52" rx="6" fill="none" stroke="url(#glow)" stroke-width="5"/>
+  <circle cx="42" cy="80" r="2.4" fill="#ccfbf1"/>
+
+  <!-- Desktop (right) -->
+  <rect x="72" y="42" width="30" height="22" rx="4" fill="none" stroke="url(#glow)" stroke-width="5"/>
+  <path d="M78 72h18M80 78h14" stroke="#99f6e4" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Sync arcs between devices -->
+  <path d="M54 48c8-10 20-10 28 0" fill="none" stroke="#f0fdfa" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M80 50l4-8 7 5" fill="none" stroke="#f0fdfa" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M82 80c-8 10-20 10-28 0" fill="none" stroke="#5eead4" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M56 78l-4 8-7-5" fill="none" stroke="#5eead4" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

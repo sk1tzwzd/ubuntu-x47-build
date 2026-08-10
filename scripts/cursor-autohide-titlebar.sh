@@ -57,5 +57,35 @@ if [[ -f "$WB_HTML.x47-bak" && -f "$WB_HTML" ]]; then
   fi
 fi
 
+# Also strip Custom UI Style settings that try to write locks under /usr/share/cursor.
+SETTINGS="${XDG_CONFIG_HOME:-$HOME/.config}/Cursor/User/settings.json"
+if [[ -f "$SETTINGS" ]]; then
+  python3 - "$SETTINGS" <<'PY' || true
+import json, sys
+from pathlib import Path
+p = Path(sys.argv[1])
+try:
+    data = json.loads(p.read_text())
+except Exception:
+    raise SystemExit(0)
+changed = False
+for k in list(data):
+    if str(k).startswith("custom-ui-style"):
+        del data[k]
+        changed = True
+if changed:
+    p.write_text(json.dumps(data, indent=4) + "\n")
+    print(f"removed custom-ui-style keys from {p}")
+PY
+fi
+rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/Cursor/User/x47-autohide-titlebar.css"
+# Disable the extension if still installed (avoids EACCES on system out/ dir).
+shopt -s nullglob
+for d in "$HOME"/.cursor/extensions/subframe7536.custom-ui-style-*; do
+  [[ -d "$d" && "$d" != *.disabled-x47 ]] || continue
+  mv "$d" "${d}.disabled-x47"
+  echo "disabled $(basename "$d")"
+done
+
 echo "Cursor titlebar autohide removed — reload Cursor (Ctrl+Shift+P → Developer: Reload Window)"
 echo "Firefox chrome autohide is also retired (stock UI)."

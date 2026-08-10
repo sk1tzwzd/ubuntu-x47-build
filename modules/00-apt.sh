@@ -70,9 +70,15 @@ module_apt() {
   # --- Mullvad VPN (optional; ignore failures) ---
   if [[ ! -f /etc/apt/sources.list.d/mullvad.list ]]; then
     log "adding Mullvad apt repo (optional)"
+    local mullvad_suite="$codename"
+    # New Ubuntu series often land before Mullvad publishes a matching suite.
+    if ! curl -fsSIL "https://repository.mullvad.net/deb/stable/dists/${mullvad_suite}/Release" >/dev/null 2>&1; then
+      mullvad_suite="noble"
+      warn "Mullvad has no ${codename} suite — using ${mullvad_suite}"
+    fi
     if curl -fsSL https://repository.mullvad.net/deb/mullvad-keyring.asc \
       | run_sudo tee /usr/share/keyrings/mullvad-keyring.asc >/dev/null 2>&1; then
-      echo "deb [signed-by=/usr/share/keyrings/mullvad-keyring.asc arch=${arch_name}] https://repository.mullvad.net/deb/stable ${codename} main" \
+      echo "deb [signed-by=/usr/share/keyrings/mullvad-keyring.asc arch=${arch_name}] https://repository.mullvad.net/deb/stable ${mullvad_suite} main" \
         | run_sudo tee /etc/apt/sources.list.d/mullvad.list >/dev/null || true
     else
       warn "Mullvad key download failed — skipping repo"

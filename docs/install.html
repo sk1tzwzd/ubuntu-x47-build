@@ -171,6 +171,7 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
           <li><strong>Display comfort</strong> — top-bar brightness / blue-light / glare; Adaptive (Visual stack) follows time of day; Night Light off sticks</li>
           <li><strong>CTRL-only tiling</strong> — Tiling Shell; plain drag stays free</li>
           <li><strong>Syncthing</strong> — optional hardened LAN sync (<code>x47-syncthing</code>); default share <code>~/X47Share</code></li>
+          <li><strong>X47 Updates</strong> — app menu / <code>x47-updates</code> for apt + snap + Cursor (security unattended-upgrades stay on)</li>
           <li><strong>Anon</strong> stays Performance-only</li>
         </ul>
       </section>
@@ -189,9 +190,10 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
       </section>
 
       <section>
-        <h2>Updating Cursor</h2>
+        <h2>X47 Updates &amp; Cursor</h2>
         <p class="section-lead">
-          Cursor is installed from the official apt repo. Prefer:
+          Prefer the <strong>X47 Updates</strong> app (or <code>x47-updates check</code> /
+          <code>apply</code>) for apt, snap, and Cursor together. Cursor-only:
         </p>
         <pre><code>update-cursor
 # or: sudo apt update &amp;&amp; sudo apt install --only-upgrade cursor</code></pre>
@@ -200,6 +202,11 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
           have the newest version, that is a known Cursor lag (in-app feed vs
           apt repo) — not caused by this build. Silence the nag with
           <code>update-cursor --quiet-gui</code>.
+        </p>
+        <p class="section-lead" style="margin-top:1rem">
+          Mullvad on Wayland+AMD uses <code>ELECTRON_OZONE_PLATFORM_HINT=x11</code> for the
+          tray GUI; the daemon keeps the VPN up if the GUI exits. Backup:
+          <code>mullvad status</code> / <code>mullvad connect</code>.
         </p>
       </section>
 

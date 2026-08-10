@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.13.0 — 2026-08-11
+
+### Updates
+- **X47 Updates** — `x47-updates` CLI + Zenity GUI + desktop entry (`modules/25-updates.sh`): check/apply apt, snap, and Cursor in one place; progress in a terminal; reboot hint when `/var/run/reboot-required` is set. Unattended security upgrades unchanged.
+- **`repair-sources`** — restores a missing or broken Mullvad apt list before upgrades.
+
+### Mullvad
+- **Apt suite fallback** — when Mullvad has no Release for the host Ubuntu codename (e.g. `resolute`), pin the repo to `noble`.
+- **GUI stability** — user desktop/autostart override sets `ELECTRON_OZONE_PLATFORM_HINT=x11` (Wayland+AMD Electron GPU crash). Daemon stays up if the tray GUI exits; CLI backup: `mullvad status` / `mullvad connect`.
+
+### Sync & launchers
+- **X47 Sync polish** — app icon, desktop entry, and top-bar **SYNC** chip (`x47-syncthing@x47`); `open` no longer prints the GUI password to stdout.
+- **`x47-clean-launchers`** — drops empty YaST/Pardus folders, refreshes Sync icon cache, hides duplicate Terminal/Yelp stubs.
+
+### Fixes
+- **Display panel** — `SliderRow` registered with `GObject.registerClass` (GNOME Shell 50 “no GType”).
+- **Cursor titlebar helper** — clearer remove path after Cursor updates reintroduce soft-hide CSS.
+
 ## v1.12.0 — 2026-08-07
 
 ### Desktop modes
@@ -8,13 +26,14 @@
 
 ### Display comfort
 - **Night Light / blue-light sticks when turned off** — Adaptive no longer force-reenables it every tick. Manual off (panel, CLI, or GNOME Quick Settings) sets a sticky override; turning Adaptive back on clears that lock. Dropped GNOME sunset schedule driving (source of truth is `display.conf`).
+- **x47-display crash fix** — register `SliderRow` with `GObject.registerClass` (GNOME Shell 50 “no GType” on enable).
 
 ### Chrome / Firefox UI
 - **Firefox stock chrome** — removed unmaximized tab/toolbar autohide for main + anon (all desktop modes). Restart Firefox after install/upgrade.
 - **Cursor titlebar soft-hide removed** — run `sudo scripts/cursor-autohide-titlebar.sh remove` after Cursor updates if it reappears.
 
 ### Secure Android ↔ PC sync
-- **Syncthing** — official release binary + `x47-syncthing` helper; LAN-first (relays/global discovery/NAT off), localhost GUI with password, default share `~/X47Share`. No KDE Connect.
+- **Syncthing** — official release binary + `x47-syncthing` helper; LAN-first (relays/global discovery/NAT off), localhost GUI with password, default share `~/X47Share`. No KDE Connect. (App icon / top-bar chip landed in v1.13.0.)
 
 ## v1.11.0 — 2026-08-06
 

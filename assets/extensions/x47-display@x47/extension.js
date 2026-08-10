@@ -1,6 +1,7 @@
 // Top-bar display comfort: brightness, blue-light, glare, adaptive (Visual).
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 
@@ -65,9 +66,11 @@ function _visualStackAvailable() {
         installed === 'full' || installed === 'fx' || installed === 'all';
 }
 
+// Must registerClass — plain ES6 extends breaks on GNOME Shell 45+ ("no GType").
+const SliderRow = GObject.registerClass(
 class SliderRow extends PopupMenu.PopupBaseMenuItem {
-    constructor(labelText, iconName, initial01) {
-        super({activate: false, can_focus: false});
+    _init(labelText, iconName, initial01) {
+        super._init({activate: false, can_focus: false});
 
         this._box = new St.BoxLayout({
             style_class: 'x47-display-row',
@@ -113,7 +116,7 @@ class SliderRow extends PopupMenu.PopupBaseMenuItem {
         this.slider.value = clamped;
         this._value.set_text(`${Math.round(clamped * 100)}%`);
     }
-}
+});
 
 export default class X47DisplayExtension extends Extension {
     enable() {

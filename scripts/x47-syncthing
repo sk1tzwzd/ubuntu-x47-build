@@ -274,14 +274,16 @@ cmd_gui() {
 }
 
 cmd_open() {
+  # Do not print credentials here — desktop launches log stdout to the journal.
   if _have firefox; then
     firefox "http://127.0.0.1:8384" >/tmp/x47-syncthing-gui.log 2>&1 &
   elif _have xdg-open; then
     xdg-open "http://127.0.0.1:8384" >/tmp/x47-syncthing-gui.log 2>&1 &
   else
     echo "Open http://127.0.0.1:8384 in a browser"
+    return 0
   fi
-  cmd_gui
+  echo "opened http://127.0.0.1:8384 (creds: $CRED_FILE)"
 }
 
 main() {

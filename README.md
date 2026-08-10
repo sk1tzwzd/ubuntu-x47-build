@@ -78,16 +78,27 @@ Firefox is left as the hardened snap (the earlier snap→deb swap was removed). 
 - **Main browser** — a system-wide enterprise policy at `/etc/firefox/policies/policies.json` (honored by the Firefox snap and deb): telemetry/studies/Pocket/sponsored content off, tracking protection with cryptomining + fingerprinting blocking, HTTPS-only, DNS-over-HTTPS, no prefetch/speculative connections. JavaScript stays on for normal browsing. The installer also sets **hardened Firefox as the default browser** (over Chrome).
 - **Anon browser** — Tor Browser "Safest" defaults (JS off, DoH hard-off). Firefox uses local Tor SOCKS (`127.0.0.1:9050`); other apps stay transparently torified by the UID kill-switch.
 
-## Updating Cursor
+## X47 Updates
 
-Cursor is installed from the official apt repo. Use:
+Use the **X47 Updates** app (app menu) or CLI to check and apply full apt/snap/Cursor updates in one place (Ubuntu Software Updater remains available; unattended security upgrades stay on):
+
+```bash
+x47-updates              # Zenity: Check → list → Update all
+x47-updates check        # report only
+x47-updates apply        # password prompt; progress in a terminal
+x47-updates repair-sources   # restore Mullvad apt list if missing
+```
+
+Cursor-only shortcut (same apt repo):
 
 ```bash
 update-cursor
 # or: sudo apt update && sudo apt install --only-upgrade cursor
 ```
 
-If the GUI says an update is available but apt says you already have the newest version, that is a **known Cursor lag** (in-app feed vs apt repo). It is not caused by X47 debloat. Wait and re-run later, or silence the nag with `update-cursor --quiet-gui`.
+If the Cursor GUI says an update is available but apt says you already have the newest version, that is a **known Cursor lag** (in-app feed vs apt repo). It is not caused by X47 debloat. Wait and re-run later, or silence the nag with `update-cursor --quiet-gui`.
+
+**Mullvad:** the VPN daemon keeps running if the tray GUI crashes. On Wayland+AMD the GUI is launched with `ELECTRON_OZONE_PLATFORM_HINT=x11`. Backup: `mullvad status` / `mullvad connect`.
 
 ## Desktop looks
 
@@ -108,7 +119,8 @@ Shared in both modes: CTRL+drag tiling, notification click-to-focus, Show Apps, 
 - **Window tiling** — Tiling Shell; hold Ctrl while dragging; toggle via `x47-settings set tiling off`.
 - **Screenshot** — `Super+Shift+S` or `Print` (optional via X47 Settings).
 - **WezTerm (PuTTY-style)** — select copy / right-click paste / `Ctrl+C`·`V` (optional via X47 Settings).
-- **Syncthing** — optional hardened LAN sync (`x47-syncthing`); default share `~/X47Share`.
+- **Syncthing (X47 Sync)** — optional hardened LAN sync (`x47-syncthing`); default share `~/X47Share`. Top-bar **SYNC** chip (right) + app icon opens the localhost GUI.
+- **X47 Updates** — check/apply apt + snap + Cursor; restores Mullvad apt source when needed.
 
 User-level only (no sudo) for most desktop FX. On Wayland, **log out and back in** once after install so extension changes load.
 
@@ -136,9 +148,10 @@ To build it yourself: `sudo apt install xorriso`, then `./scripts/build-iso.sh` 
 - Default terminal via `xdg-terminals.list` + GNOME gsettings; GNOME Terminal purged / hidden
 
 ### Privacy
-- **Mullvad VPN** via official apt repo (`mullvad-vpn` in the apt manifest)
+- **Mullvad VPN** via official apt repo (`mullvad-vpn` in the apt manifest); GUI launcher uses `ELECTRON_OZONE_PLATFORM_HINT=x11` on Wayland
 - **Tor Browser** latest linux-x86_64 build → `~/tools/tor-browser`, registered with `--register-app`, CLI symlink `~/.local/bin/tor-browser`
 - **Syncthing (Android ↔ PC)** — official binary, LAN-first hardening (no cloud, no relays, no global discovery, GUI on `127.0.0.1` + password). Share folder `~/X47Share`. Helper: `x47-syncthing`. Skip with `--skip-syncthing`. Prefer F-Droid Syncthing on Android; approve devices manually.
+- **X47 Updates** — `x47-updates` (+ desktop entry) for full apt/snap/Cursor upgrades; restores Mullvad apt source if dropped
 
 ### Tools (high level)
 - **apt**: nmap, metasploit-framework, wireshark, hashcat, hydra, sqlmap, docker-ce, golang-go, ruby-dev, mullvad-vpn, ufw, fail2ban, …
