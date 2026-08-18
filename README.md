@@ -143,7 +143,7 @@ Shared in both modes: CTRL+drag tiling, notification click-to-focus, Show Apps, 
 - **X47 Updates** — check/apply apt + snap + Cursor; restores Mullvad apt source when needed.
 - **Claude Code** — official Anthropic CLI + Dev Tools launcher (Claude starburst icon).
 - **X47 PDF** — one app to edit / arrange / annotate PDFs (ONLYOFFICE + PDF Arranger + Xournal++) with an offline guide.
-- **X47-Win** (separate repo) — Windows 11 privacy kit. Import a BitLocker USB key here with `x47-windows-import-key`.
+- **X47-Win** (separate repo) — Windows 11 privacy kit. Encryption is optional. If you used BitLocker, import the USB key here with `x47-windows-import-key`.
 - **X47 Ark** — copy Windows user files to an external USB, verify, then delete Windows and give the disk to Ubuntu (`x47-ark`). Typical dual-boot (Windows first) finishes from a live USB.
 
 User-level only (no sudo) for most desktop FX. On Wayland, **log out and back in** once after install so extension changes load.
@@ -176,7 +176,7 @@ To build it yourself: `sudo apt install xorriso`, then `./scripts/build-iso.sh` 
 - **Tor Browser** latest linux-x86_64 build → `~/tools/tor-browser`, registered with `--register-app`, CLI symlink `~/.local/bin/tor-browser`
 - **Syncthing (Android ↔ PC)** — official binary, LAN-first hardening (no cloud, no relays, no global discovery, GUI on `127.0.0.1` + password). Share folder `~/X47Share`. Helper: `x47-syncthing`. Skip with `--skip-syncthing`. Prefer F-Droid Syncthing on Android; approve devices manually.
 - **X47 Updates** — `x47-updates` (+ desktop entry) for full apt/snap/Cursor upgrades; restores Mullvad apt source if dropped
-- **X47-Win** — separate Windows 11 kit: [sk1tzwzd.github.io/X47-Win](https://sk1tzwzd.github.io/X47-Win/). After BitLocker, import the USB key on Ubuntu with `x47-windows-import-key`.
+- **X47-Win** — separate Windows 11 kit: [sk1tzwzd.github.io/X47-Win](https://sk1tzwzd.github.io/X47-Win/). Encryption is optional (BitLocker or VeraCrypt). If BitLocker is on, import the USB key on Ubuntu with `x47-windows-import-key`.
 
 ### Tools (high level)
 - **apt**: nmap, metasploit-framework, wireshark, hashcat, hydra, sqlmap, docker-ce, golang-go, ruby-dev, mullvad-vpn, ufw, fail2ban, …
