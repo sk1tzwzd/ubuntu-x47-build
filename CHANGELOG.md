@@ -6,7 +6,7 @@
 - **X47 Windows kit** — `windows/` PowerShell pack (wallpaper, debloat, privacy, ID rotation, BitLocker TPM+PIN). Stage onto the Windows volume and run `Install-X47Windows.bat` as Administrator. Import the USB recovery key on Ubuntu with `x47-windows-import-key`.
 - **Windows looks** — `Apply-X47Theme.bat`: XP, remastered XP, Vista, Windows 10, Windows 11 stock, or X47 circuit. Uses Open-Shell + ExplorerPatcher and original wallpapers (no Microsoft theme files).
 - **Windows max-offline** — deeper debloat (OneDrive uninstall), `07-security.ps1` (inbound firewall, RDP/SMBv1 off, Defender on), `08-anonymity.ps1` (MSA lock, telemetry hosts, Wi-Fi MAC random). Standalone: `Apply-X47Anonymity.bat`.
-- **Windows docs site** — `docs/windows.html` (security & privacy) and `docs/windows-install.html`; theme screenshot placeholders until captures exist.
+- **X47-Win split** — Windows kit and site moved to the separate [X47-Win](https://github.com/sk1tzwzd/X47-Win) repo (`https://sk1tzwzd.github.io/X47-Win/`). Ubuntu docs stay Linux-only; `x47-windows-import-key` remains here.
 
 ### Ark
 - **X47 Ark** — `x47-ark` copies Windows user folders (Documents, Desktop, Downloads, Pictures, Videos, Music) to an external USB, verifies the copy, then reclaims the dual-boot disk for Ubuntu. Typical “Windows first” layouts write a live-USB finisher instead of moving a mounted root. Skip with `--skip-ark`.
