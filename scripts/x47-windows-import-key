@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# Import a BitLocker recovery key written by the X47 Windows kit.
+# Stores ~/.config/x47/bitlocker-recovery.txt (0600) and checks dual-boot EFI.
+#
+# Usage:
+#   x47-windows-import-key /path/to/X47-BitLocker-Recovery-*.txt
+#   x47-windows-import-key --status
+set -euo pipefail
+
+export PATH="${HOME}/.local/bin:/usr/bin:/bin:${PATH}"
+
+DEST_DIR="${X47_BITLOCKER_DIR:-$HOME/.config/x47}"
+DEST="$DEST_DIR/bitlocker-recovery.txt"
+
+_have() { command -v "$1" >/dev/null 2>&1; }
+
+_usage() {
+  cat <<'EOF'
+X47 Windows — import BitLocker recovery key
+
+  x47-windows-import-key FILE   Extract the 48-digit key and store it
+  x47-windows-import-key --status
+  x47-windows-import-key --check
+
+Stores ~/.config/x47/bitlocker-recovery.txt (mode 0600) for x47-ark / dislocker.
+EOF
+}
+
+_extract_digits() {
+  local raw digits
+  raw="$(tr -d '[:space:]-' <"$1")"
+  digits="$(printf '%s' "$raw" | tr -cd '0-9')"
+  if [[ ${#digits} -ne 48 ]]; then
+    echo "expected 48 digits, found ${#digits} in $1" >&2
+    return 1
+  fi
+  printf '%s' "$digits"
+}
+
+_format_key() {
+  local d="$1"
+  printf '%s-%s-%s-%s-%s-%s-%s-%s\n' \
+    "${d:0:6}" "${d:6:6}" "${d:12:6}" "${d:18:6}" \
+    "${d:24:6}" "${d:30:6}" "${d:36:6}" "${d:42:6}"
+}
+
+cmd_import() {
+  local src="$1"
+  [[ -f "$src" ]] || { echo "not a file: $src" >&2; exit 1; }
+  local digits
+  digits="$(_extract_digits "$src")"
+  mkdir -p "$DEST_DIR"
+  chmod 700 "$DEST_DIR"
+  {
+    echo "# X47 BitLocker recovery — imported $(date -Iseconds)"
+    echo "# source: $src"
+    _format_key "$digits"
+  } >"$DEST"
+  chmod 0600 "$DEST"
+  echo "stored $DEST (0600)"
+  cmd_check
+}
+
+cmd_status() {
+  if [[ -f "$DEST" ]]; then
+    local n
+    n="$(tr -cd '0-9' <"$DEST" | wc -c | tr -d ' ')"
+    echo "key_file=$DEST"
+    echo "digits=$n"
+    [[ "$n" -eq 48 ]] && echo "key=ok" || echo "key=invalid"
+  else
+    echo "key_file=missing"
+    echo "key=absent"
+  fi
+  cmd_check
+}
+
+cmd_check() {
+  echo "--- dual-boot ---"
+  if _have efibootmgr; then
+    local order current
+    order="$(efibootmgr 2>/dev/null | awk -F: '/BootOrder/ {print $2}' | tr -d ' ')"
+    current="$(efibootmgr 2>/dev/null | awk -F: '/BootCurrent/ {print $2}' | tr -d ' ')"
+    echo "BootCurrent=$current"
+    echo "BootOrder=$order"
+    if efibootmgr -v 2>/dev/null | grep -qi ubuntu; then
+      echo "ubuntu_efi=present"
+    else
+      echo "ubuntu_efi=MISSING"
+    fi
+    if efibootmgr -v 2>/dev/null | grep -qi microsoft; then
+      echo "windows_efi=present"
+    fi
+  else
+    echo "efibootmgr=unavailable"
+  fi
+
+  echo "--- windows volume ---"
+  local part fstype
+  part="$(lsblk -pnlo NAME,PARTTYPENAME,FSTYPE 2>/dev/null | awk '/Microsoft basic data|MS basic data/ {print $1; exit}')"
+  if [[ -z "$part" ]]; then
+    part="/dev/nvme0n1p3"
+  fi
+  fstype="$(lsblk -no FSTYPE "$part" 2>/dev/null || true)"
+  echo "part=$part"
+  echo "fstype=${fstype:-unknown}"
+  case "$fstype" in
+    ntfs|ntfs3)
+      echo "bitlocker=off_or_unlocked"
+      echo "note: volume still looks like plain NTFS (encrypt from Windows, then re-check)"
+      ;;
+    BitLocker*|crypto_LUKS|"")
+      echo "bitlocker=likely"
+      if [[ -f "$DEST" ]] && _have dislocker; then
+        echo "dislocker=installed (x47-ark unlock --key-file $DEST)"
+      elif [[ -f "$DEST" ]]; then
+        echo "dislocker=missing — sudo apt install dislocker   or re-run modules/28-ark.sh"
+      fi
+      ;;
+    *)
+      echo "fstype_note=$fstype"
+      ;;
+  esac
+}
+
+main() {
+  case "${1:-}" in
+    ""|-h|--help|help) _usage ;;
+    --status) cmd_status ;;
+    --check) cmd_check ;;
+    *) cmd_import "$1" ;;
+  esac
+}
+
+main "$@"

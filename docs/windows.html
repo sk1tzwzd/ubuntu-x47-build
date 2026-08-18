@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Windows — Ubuntu X47 Build</title>
+  <meta name="description" content="X47 Windows 11 kit: dual-boot privacy twin with BitLocker PIN, debloat, and max-offline anonymity. Same site as Ubuntu X47." />
+  <link rel="icon" href="images/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="images/favicon-32.png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="images/apple-touch-icon.png" />
+  <link rel="stylesheet" href="css/site.css" />
+</head>
+<body>
+  <div class="wrap">
+    <nav class="site-nav" aria-label="Primary">
+      <a class="brand" href="index.html"><img src="images/x47duster.png" alt="" width="102" height="102" />Ubuntu <span>X47</span> Build</a>
+      <ul class="nav-links">
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="install.html">Install</a></li>
+        <li><a href="windows.html" aria-current="page">Windows</a></li>
+        <li><a href="amnesia.html">Amnesia</a></li>
+        <li><a href="releases.html">Releases</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="https://github.com/sk1tzwzd/ubuntu-x47-build">GitHub</a></li>
+      </ul>
+    </nav>
+
+    <header class="hero">
+      <p class="free-note">Same project — Windows 11 Pro dual-boot kit, free</p>
+      <h1 class="hero-brand">X47 on <em>Windows</em></h1>
+      <p class="hero-lead">
+        A privacy twin for the Ubuntu X47 machine: less junk, less telemetry,
+        BitLocker with a pre-boot PIN that does not break GRUB, and an optional
+        max-offline pass that blocks Microsoft account cloud.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="windows-install.html">Install on Windows</a>
+        <a class="btn btn-ghost" href="https://github.com/sk1tzwzd/ubuntu-x47-build/tree/main/windows">Kit on GitHub</a>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <h2>What this is</h2>
+        <p class="section-lead">
+          PowerShell scripts in <code>windows/</code> that you run
+          <strong>once, as Administrator, from Windows 11 Pro</strong>.
+          Linux only copies the folder to <code>C:\X47</code>. It cannot
+          enable BitLocker or change Windows from Ubuntu.
+        </p>
+        <ul class="clean">
+          <li><strong>Same wallpaper option</strong> as Ubuntu X47 (circuit art)</li>
+          <li><strong>Debloat</strong> — Xbox, Widgets, Copilot, OneDrive, consumer junk</li>
+          <li><strong>Privacy</strong> — telemetry cut to Required, ads and location off</li>
+          <li><strong>Security</strong> — inbound firewall, RDP off, Defender stays on</li>
+          <li><strong>Anonymity</strong> — block Microsoft accounts and telemetry hosts</li>
+          <li><strong>BitLocker + PIN</strong> — Windows unlocks itself; Ubuntu still uses LUKS</li>
+          <li><strong>Looks</strong> — XP, remastered XP, Vista, Windows 10, or stock 11</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Security — what we lock down</h2>
+        <p class="section-lead">
+          This is hardening, not “turn Defender off.” The goal is a smaller
+          attack surface that still gets patches.
+        </p>
+        <ul class="clean">
+          <li><strong>BitLocker (XTS-AES 256, full volume)</strong> with a TPM+PIN.
+            Windows asks for your PIN after you pick it in GRUB. Ubuntu’s LUKS
+            password is separate. TPM-only is avoided so an Ubuntu bootloader
+            update is less likely to brick silent unlock.</li>
+          <li><strong>Recovery key</strong> saved to USB (and imported on Ubuntu
+            with <code>x47-windows-import-key</code>) so X47 Ark / dislocker can
+            still read files from Linux.</li>
+          <li><strong>Fast Startup off</strong> — required for clean dual-boot and
+            so Linux can mount NTFS without a dirty hibernation lock.</li>
+          <li><strong>Inbound firewall</strong> blocked on Private/Public. Outbound
+            stays allow so Windows Update still works.</li>
+          <li><strong>RDP, Remote Assistance, WinRM, Remote Registry</strong> disabled.</li>
+          <li><strong>SMBv1, LLMNR, NetBIOS-over-TCP, WPAD, Teredo/6to4</strong> off
+            (less LAN discovery and fewer tunnel tricks).</li>
+          <li><strong>AutoPlay / AutoRun</strong> off. <strong>UAC</strong> at the
+            highest prompt. <strong>WDigest</strong> off; LSA protected process
+            where the build allows.</li>
+          <li><strong>Recall</strong> disabled. <strong>Defender and SmartScreen
+            stay on</strong> — turning them off would be the opposite of security.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Privacy and anonymity — what we cut</h2>
+        <p class="section-lead">
+          Windows 11 Pro cannot go fully silent (Enterprise-only “Security”
+          telemetry). This kit goes as far as Pro allows, then blocks extra
+          cloud endpoints. That is the max-offline choice.
+        </p>
+        <ul class="clean">
+          <li><strong>Telemetry = Required</strong> (lowest Pro allows). Feedback,
+            tailored experiences, and CEIP tasks off. DiagTrack / dmwappush
+            disabled.</li>
+          <li><strong>Advertising ID</strong> off and rotated. SQM machine ID
+            rotated. Device-metadata phone-home off.</li>
+          <li><strong>Location, Find My Device, activity history, Timeline,
+            cloud clipboard, Start web search, Cortana</strong> off.</li>
+          <li><strong>Microsoft accounts blocked</strong> (local sign-in only).
+            If the user is already an MSA, switch to a local account in Settings,
+            then re-run the anonymity script.</li>
+          <li><strong>Hosts + firewall</strong> block telemetry, Store, OneDrive,
+            Xbox Live, and <code>login.live.com</code>. Windows Update and
+            Defender definition hosts are <em>not</em> on that list.</li>
+          <li><strong>OneDrive uninstalled</strong> (already-synced files stay on disk).</li>
+          <li><strong>Wi-Fi MAC randomization</strong> on. NTP moved off
+            <code>time.windows.com</code> to <code>pool.ntp.org</code>.</li>
+        </ul>
+        <div class="aside">
+          <strong>This is not a Tor amnesia session.</strong>
+          The board UUID, TPM, and Windows <code>MachineGuid</code> stay —
+          wiping them breaks activation and BitLocker. Your ISP still sees
+          the PC’s IP unless Mullvad (or similar) is running <em>on Windows</em>.
+          Store, OneDrive, Xbox Live, and “Sign in with Microsoft” will break.
+          Revert hosts with <code>Apply-X47Anonymity.ps1 -Revert</code>.
+        </div>
+      </section>
+
+      <section>
+        <h2>Looks</h2>
+        <p class="section-lead">
+          Switch anytime with <code>C:\X47\Apply-X47Theme.bat</code>.
+          Screenshots will land here once they are taken. These placeholders
+          mark the six looks.
+        </p>
+        <div class="gallery three">
+          <figure class="shot-placeholder">
+            <div class="ph-body">Screenshot coming — X47 circuit</div>
+            <figcaption>X47 — circuit wallpaper, stock Windows 11 chrome.</figcaption>
+          </figure>
+          <figure class="shot-placeholder">
+            <div class="ph-body">Screenshot coming — Windows XP</div>
+            <figcaption>XP — Luna Start, rectangular taskbar, original hills.</figcaption>
+          </figure>
+          <figure class="shot-placeholder">
+            <div class="ph-body">Screenshot coming — remastered XP</div>
+            <figcaption>Remastered XP — search, large icons, 4K dusk hills.</figcaption>
+          </figure>
+          <figure class="shot-placeholder">
+            <div class="ph-body">Screenshot coming — Windows Vista</div>
+            <figcaption>Vista — Aero Start, transparency, aurora wallpaper.</figcaption>
+          </figure>
+          <figure class="shot-placeholder">
+            <div class="ph-body">Screenshot coming — Windows 10</div>
+            <figcaption>Windows 10 — ExplorerPatcher taskbar.</figcaption>
+          </figure>
+          <figure class="shot-placeholder">
+            <div class="ph-body">Screenshot coming — Windows 11</div>
+            <figcaption>Windows 11 stock — centered Start and taskbar.</figcaption>
+          </figure>
+        </div>
+        <p class="section-lead" style="margin-top:1rem">
+          Looks change Start, taskbar, wallpaper, and accent. They do not patch
+          <code>uxtheme</code> or ship Microsoft Luna/Aero files.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="foot-row">
+        <p>Ubuntu X47 Build — free software. Donations optional.</p>
+        <div class="foot-links">
+          <a href="windows-install.html">Windows install</a>
+          <a href="https://github.com/sk1tzwzd/ubuntu-x47-build">GitHub</a>
+          <a href="https://buymeacoffee.com/sk1tzwzd">Buy me a coffee</a>
+          <a href="support.html">Support</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

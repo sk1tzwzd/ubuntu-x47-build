@@ -10,7 +10,7 @@ Idempotent installer that reproduces a custom Ubuntu 24.04 / 26 desktop:
 
 Part of the [VulnScape](https://vulnscape.net) cybersecurity suite.
 
-**Docs site (free):** [sk1tzwzd.github.io/ubuntu-x47-build](https://sk1tzwzd.github.io/ubuntu-x47-build/) · [Releases](https://sk1tzwzd.github.io/ubuntu-x47-build/releases.html)  
+**Docs site (free):** [sk1tzwzd.github.io/ubuntu-x47-build](https://sk1tzwzd.github.io/ubuntu-x47-build/) · [Windows kit](https://sk1tzwzd.github.io/ubuntu-x47-build/windows.html) · [Releases](https://sk1tzwzd.github.io/ubuntu-x47-build/releases.html)  
 
 **Support (optional):** [buymeacoffee.com/sk1tzwzd](https://buymeacoffee.com/sk1tzwzd)
 
@@ -43,6 +43,10 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 | `--skip-putty-clipboard` | Disable PuTTY-style WezTerm clipboard (select copy / right-click paste / Ctrl+C·V) |
 | `--skip-win-screenshot` | Do not bind Super+Shift+S (Print still works) |
 | `--with-amnesia` | Also create the amnesiac, Tor-forced `anon` user (opt-in) |
+| `--skip-syncthing` | Skip hardened Android↔PC Syncthing share |
+| `--skip-claude` | Skip official Claude Code CLI + Dev Tools launcher |
+| `--skip-pdf` | Skip X47 PDF (ONLYOFFICE, PDF Arranger, Xournal++, guide) |
+| `--skip-ark` | Skip X47 Ark (Windows file backup + Ubuntu disk reclaim) |
 | `--only 10-terminal,30-icons` | Run a subset of modules |
 
 Optional features default **on**. Change them anytime with **X47 Settings** (`x47-settings` in the app menu, or `x47-settings list` / `set KEY on|off`).
@@ -100,6 +104,20 @@ If the Cursor GUI says an update is available but apt says you already have the 
 
 **Mullvad:** the VPN daemon keeps running if the tray GUI crashes. On Wayland+AMD the GUI is launched with `ELECTRON_OZONE_PLATFORM_HINT=x11`. Backup: `mullvad status` / `mullvad connect`.
 
+## X47 Ark
+
+**X47 Ark** copies Windows user files to an external USB, verifies the copy, then can delete Windows so Ubuntu owns the disk. The backup cannot live on the dual-boot drive. If BitLocker is on, unlock it in the app with your recovery key (no Windows boot). Fast Startup should be off if the volume is hibernated.
+
+```bash
+x47-ark              # GTK assistant (Zenity fallback)
+x47-ark detect       # layout only
+x47-ark backup /media/you/USB
+x47-ark verify
+x47-ark reclaim      # after verify; type DELETE WINDOWS
+```
+
+Typical dual-boot (Windows first) cannot move a mounted Ubuntu root. Ark writes `X47-Ark/finish-ark.sh` on the stick — boot any Ubuntu live USB and run it. Offline guide: `x47-ark guide`.
+
 ## Desktop looks
 
 Two modes for the main user (opt out with `--skip-desktop-fx`). Installer default is **both** stacks, starting in **Performance**; switch anytime from the **PERF / VISUAL** chip on the right of the top bar (or `x47-desktop-mode`):
@@ -121,6 +139,10 @@ Shared in both modes: CTRL+drag tiling, notification click-to-focus, Show Apps, 
 - **WezTerm (PuTTY-style)** — select copy / right-click paste / `Ctrl+C`·`V` (optional via X47 Settings).
 - **Syncthing (X47 Sync)** — optional hardened LAN sync (`x47-syncthing`); default share `~/X47Share`. Top-bar **SYNC** chip (right) + app icon opens the localhost GUI.
 - **X47 Updates** — check/apply apt + snap + Cursor; restores Mullvad apt source when needed.
+- **Claude Code** — official Anthropic CLI + Dev Tools launcher (Claude starburst icon).
+- **X47 PDF** — one app to edit / arrange / annotate PDFs (ONLYOFFICE + PDF Arranger + Xournal++) with an offline guide.
+- **X47 Windows kit** — dual-boot privacy twin (`windows/`): same wallpaper, debloat, telemetry cut, BitLocker + PIN. Run from Windows as Admin; import the USB key with `x47-windows-import-key`.
+- **X47 Ark** — copy Windows user files to an external USB, verify, then delete Windows and give the disk to Ubuntu (`x47-ark`). Typical dual-boot (Windows first) finishes from a live USB.
 
 User-level only (no sudo) for most desktop FX. On Wayland, **log out and back in** once after install so extension changes load.
 
@@ -152,6 +174,7 @@ To build it yourself: `sudo apt install xorriso`, then `./scripts/build-iso.sh` 
 - **Tor Browser** latest linux-x86_64 build → `~/tools/tor-browser`, registered with `--register-app`, CLI symlink `~/.local/bin/tor-browser`
 - **Syncthing (Android ↔ PC)** — official binary, LAN-first hardening (no cloud, no relays, no global discovery, GUI on `127.0.0.1` + password). Share folder `~/X47Share`. Helper: `x47-syncthing`. Skip with `--skip-syncthing`. Prefer F-Droid Syncthing on Android; approve devices manually.
 - **X47 Updates** — `x47-updates` (+ desktop entry) for full apt/snap/Cursor upgrades; restores Mullvad apt source if dropped
+- **X47 Windows kit** — dual-boot privacy twin (`windows/`): same circuit wallpaper, debloat, telemetry cut, BitLocker + pre-boot PIN. Run `C:\X47\Install-X47Windows.bat` as Admin; then `x47-windows-import-key` on Ubuntu.
 
 ### Tools (high level)
 - **apt**: nmap, metasploit-framework, wireshark, hashcat, hydra, sqlmap, docker-ce, golang-go, ruby-dev, mullvad-vpn, ufw, fail2ban, …
@@ -159,6 +182,9 @@ To build it yourself: `sudo apt install xorriso`, then `./scripts/build-iso.sh` 
 - **pipx**: netexec, impacket, bloodhound-python, smbmap, enum4linux-ng, arjun, wafw00f, …
 - **cargo**: bat, feroxbuster
 - **release bins**: rustscan, gitleaks, trufflehog, eza, fd, zoxide, delta
+- **Claude Code**: official Anthropic CLI (`~/.local/bin/claude`) + Dev Tools launcher. Skip with `--skip-claude`.
+- **X47 PDF**: `x47-pdf` chooser + ONLYOFFICE + PDF Arranger + Xournal++ + offline guide. Skip with `--skip-pdf`.
+- **X47 Ark**: GTK assistant (`x47-ark` / `x47-ark-gui`) backs up Windows user folders to USB, verifies, then reclaims the dual-boot disk. Skip with `--skip-ark`.
 - **gems**: evil-winrm, wpscan
 - **git clones**: WhatWeb, Responder → `~/tools/`
 

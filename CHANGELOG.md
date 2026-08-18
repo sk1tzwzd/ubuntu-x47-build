@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### Windows
+- **X47 Windows kit** — `windows/` PowerShell pack (wallpaper, debloat, privacy, ID rotation, BitLocker TPM+PIN). Stage onto the Windows volume and run `Install-X47Windows.bat` as Administrator. Import the USB recovery key on Ubuntu with `x47-windows-import-key`.
+- **Windows looks** — `Apply-X47Theme.bat`: XP, remastered XP, Vista, Windows 10, Windows 11 stock, or X47 circuit. Uses Open-Shell + ExplorerPatcher and original wallpapers (no Microsoft theme files).
+- **Windows max-offline** — deeper debloat (OneDrive uninstall), `07-security.ps1` (inbound firewall, RDP/SMBv1 off, Defender on), `08-anonymity.ps1` (MSA lock, telemetry hosts, Wi-Fi MAC random). Standalone: `Apply-X47Anonymity.bat`.
+- **Windows docs site** — `docs/windows.html` (security & privacy) and `docs/windows-install.html`; theme screenshot placeholders until captures exist.
+
+### Ark
+- **X47 Ark** — `x47-ark` copies Windows user folders (Documents, Desktop, Downloads, Pictures, Videos, Music) to an external USB, verifies the copy, then reclaims the dual-boot disk for Ubuntu. Typical “Windows first” layouts write a live-USB finisher instead of moving a mounted root. Skip with `--skip-ark`.
+- **X47 Ark GUI** — GTK4 / libadwaita assistant (`x47-ark-gui`) walks Scan → USB → Copy → Reclaim in one window. `x47-ark` / the desktop entry open it; Zenity remains the fallback.
+- **BitLocker unlock** — paste the 48-digit recovery key (or password) in the Scan step; `dislocker` unlocks the volume so files can be copied without booting Windows. Does not crack BitLocker or permanently decrypt the partition.
+- **Ark verify** — after unlock, read-test user folders + sample files; after backup, compare sample SHA-256s back to the Windows source. Reclaim requires both OK.
+- **Process terminal** — GTK assistant embeds a small live VTE pane; scan / unlock / rsync / verify / reclaim stream there.
+
+### PDF
+- **X47 PDF** — one chooser (`x47-pdf`) for free PDF work: ONLYOFFICE (edit text/images), PDF Arranger (pages), Xournal++ (annotate/sign), plus an offline guide. Skip with `--skip-pdf`.
+
+### Dev Tools
+- **Claude Code** — official Anthropic CLI (`modules/26-claude-code.sh`) plus a WezTerm launcher and the Claude starburst icon. Skip with `--skip-claude`.
+
 ## v1.13.0 — 2026-08-11
 
 ### Updates

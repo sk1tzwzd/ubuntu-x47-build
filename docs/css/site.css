@@ -357,6 +357,9 @@ table.flags code {
   .gallery.two {
     grid-template-columns: 1fr 1fr;
   }
+  .gallery.three {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
 }
 
 .site-footer {

@@ -1,0 +1,53 @@
+X47 Windows 11 — start here
+===========================
+
+You are on the Windows partition. Do this in Windows, not Ubuntu.
+
+1. Stay on AC power. Plug in a USB stick (for the BitLocker recovery key).
+2. Right-click Install-X47Windows.bat → Run as administrator
+   or in an Administrator PowerShell:
+
+     Set-ExecutionPolicy Bypass -Scope Process
+     C:\X47\Install-X47Windows.ps1
+
+3. Type YES when asked.
+4. When BitLocker asks, choose a 6+ digit PIN. That PIN unlocks Windows only.
+   Ubuntu still uses your LUKS password.
+5. Copy / photograph the 48-digit recovery key. It is also written to:
+     C:\X47\BitLocker-Recovery.txt
+     <USB>\X47-BitLocker-Recovery-*.txt
+   After encryption finishes, Linux cannot read C:\X47 without that key.
+   The USB copy is the one that matters.
+6. Wait until this reports 100% and Protection On:
+
+     manage-bde -status C:
+
+7. Shut down Windows fully (Start → Power → Shut down). Do not hibernate.
+8. Boot Ubuntu from GRUB. Then run:
+
+     x47-windows-import-key /media/$USER/<USB-name>/X47-BitLocker-Recovery-*.txt
+
+Skip BitLocker only (privacy + wallpaper + debloat):
+
+     C:\X47\Install-X47Windows.ps1 -SkipBitLocker
+
+Security + max-offline anonymity (without re-doing BitLocker):
+
+     C:\X47\Apply-X47Anonymity.bat
+
+  Blocks Microsoft accounts, Store, OneDrive, Xbox, telemetry hosts.
+  Defender and Windows Update stay on. Revert: Apply-X47Anonymity.ps1 -Revert
+  If sk1tz is a Microsoft account: switch to a local account in Settings first.
+  Your IP is still visible unless Mullvad is running on Windows.
+
+Looks (do this in Windows, switch anytime):
+
+     C:\X47\Apply-X47Theme.bat
+
+  1 X47 circuit    2 Windows XP    3 Remastered XP
+  4 Windows Vista  5 Windows 10    6 Windows 11 stock
+
+Remastered XP = Luna Start + search + large icons + 4K dusk hills.
+This is Start / taskbar / wallpaper / accent — not a full Microsoft theme patch.
+
+Full walkthrough: C:\X47\docs\x47-windows-guide.html
