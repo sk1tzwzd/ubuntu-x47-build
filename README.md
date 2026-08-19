@@ -130,7 +130,7 @@ Two modes for the main user (opt out with `--skip-desktop-fx`). Installer defaul
 | Mode | What you get |
 |------|----------------|
 | **Performance** (default) | Lean GNOME: animations off, no cube/blur/wobbly/Coverflow/ws-walls, **no dock** (both modes), lime Show Apps in the top bar |
-| **Visual** | Desktop Cube, Coverflow Alt-Tab, Blur My Shell, Burn My Windows, wobbly windows, multi-colour `x47-ws-walls`, animations on (**no dock**) |
+| **Visual** | Desktop Cube, Coverflow Alt-Tab, Blur My Shell, multi-colour `x47-ws-walls`, animations on (**no dock**). No wobbly windows, no window open/close FX |
 
 Shared in both modes: CTRL+drag tiling, notification click-to-focus, Show Apps, mode toggle chip, display comfort panel, **no bottom dock**.
 

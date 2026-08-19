@@ -14,9 +14,7 @@ AM_DESKTOP="$X47_ROOT/assets/desktop"
 X47_VISUAL_EGO_UUIDS=(
   "CoverflowAltTab@palatis.blogspot.com"
   "desktop-cube@schneegans.github.com"
-  "burn-my-windows@schneegans.github.com"
   "blur-my-shell@aunetx"
-  "compiz-windows-effect@hermes83.github.com"
 )
 
 # Always ego-install tiling.
@@ -598,12 +596,12 @@ EOF
 
 disable_heavy_fx() {
   local uuid cur cleaned
-  for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
+  for uuid in "${X47_HEAVY_FX_UUIDS[@]}" "${X47_WINDOW_FX_UUIDS[@]}"; do
     gnome-extensions disable "$uuid" 2>/dev/null || true
   done
   cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
   cleaned="$cur"
-  for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
+  for uuid in "${X47_HEAVY_FX_UUIDS[@]}" "${X47_WINDOW_FX_UUIDS[@]}"; do
     cleaned="$(printf '%s' "$cleaned" | sed -E "s/'$uuid',? ?//g; s/, ]/]/g; s/\[,/[/g")"
   done
   gsettings set org.gnome.shell enabled-extensions "$cleaned" 2>/dev/null || true
@@ -670,7 +668,7 @@ module_desktop_fx() {
     install_ws_walls_extension
     cube_workspaces
     coverflow_tune
-    bmw_fx_profile
+    # Burn My Windows + wobbly windows are no longer part of Visual.
   else
     disable_heavy_fx
   fi

@@ -1,14 +1,18 @@
 # X47 desktop mode helpers (visual / performance / both).
 # shellcheck shell=bash
 
-# Heavy FX disabled in Performance mode.
+# Heavy FX enabled in Visual, disabled in Performance.
 X47_HEAVY_FX_UUIDS=(
   "CoverflowAltTab@palatis.blogspot.com"
   "desktop-cube@schneegans.github.com"
-  "burn-my-windows@schneegans.github.com"
   "blur-my-shell@aunetx"
-  "compiz-windows-effect@hermes83.github.com"
   "x47-ws-walls@x47"
+)
+
+# Never enabled — no wobbly windows, no open/close window FX.
+X47_WINDOW_FX_UUIDS=(
+  "burn-my-windows@schneegans.github.com"
+  "compiz-windows-effect@hermes83.github.com"
 )
 
 # Always kept enabled in both modes (includes the top-bar mode toggle).

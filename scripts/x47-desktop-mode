@@ -119,6 +119,9 @@ _apply_performance() {
   for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
     _ext_disable "$uuid"
   done
+  for uuid in "${X47_WINDOW_FX_UUIDS[@]}"; do
+    _ext_disable "$uuid"
+  done
   for uuid in "${X47_LEAN_FX_UUIDS[@]}"; do
     _ext_enable "$uuid"
   done
@@ -142,6 +145,10 @@ _apply_visual() {
   done
   for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
     _ext_enable "$uuid"
+  done
+  # No wobble, no Burn My Windows open/close — even in Visual.
+  for uuid in "${X47_WINDOW_FX_UUIDS[@]}"; do
+    _ext_disable "$uuid"
   done
   # Dock stays off in both modes (Super / Show Apps for launching).
   _hide_dock
@@ -206,7 +213,7 @@ X47 Desktop Mode — Visual vs Performance
 
   x47-desktop-mode                 Show status
   x47-desktop-mode status
-  x47-desktop-mode visual          Cube, dock, animations, multi-colour walls
+  x47-desktop-mode visual          Cube, Coverflow, blur, multi-colour walls (no wobble / window open-close)
   x47-desktop-mode performance     Lean desktop (no heavy FX; dock off)
   x47-desktop-mode sync-power      Optional: apply from GNOME Power Mode (both)
 

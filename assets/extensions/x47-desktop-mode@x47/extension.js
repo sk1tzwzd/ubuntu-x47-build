@@ -52,7 +52,7 @@ export default class X47DesktopModeExtension extends Extension {
         this._indicator.add_child(this._label);
 
         this._itemPerf = new PopupMenu.PopupMenuItem('Performance — lean (no cube)');
-        this._itemVisual = new PopupMenu.PopupMenuItem('Visual — cube, animations');
+        this._itemVisual = new PopupMenu.PopupMenuItem('Visual — cube, Coverflow, blur');
         this._itemPerf.connect('activate', () => this._apply('performance'));
         this._itemVisual.connect('activate', () => this._apply('visual'));
         this._indicator.menu.addMenuItem(this._itemPerf);
