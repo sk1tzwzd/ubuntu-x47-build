@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Windows URL redirects** — `windows.html` and `windows-install.html` send people to [X47-Win](https://sk1tzwzd.github.io/X47-Win/) instead of 404.
+
+
+
 ### Windows
 - **X47 Windows kit** — `windows/` PowerShell pack (wallpaper, debloat, privacy, ID rotation, BitLocker TPM+PIN). Stage onto the Windows volume and run `Install-X47Windows.bat` as Administrator. Import the USB recovery key on Ubuntu with `x47-windows-import-key`.
 - **Windows looks** — `Apply-X47Theme.bat`: XP, remastered XP, Vista, Windows 10, Windows 11 stock, or X47 circuit. Uses Open-Shell + ExplorerPatcher and original wallpapers (no Microsoft theme files).
