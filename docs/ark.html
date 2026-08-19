@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>X47 Ark — Ubuntu X47 Build</title>
+  <meta name="description" content="X47 Ark: backup Windows user files to USB, verify the copy, then reclaim the dual-boot disk for Ubuntu." />
+  <link rel="icon" href="images/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="images/favicon-32.png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="images/apple-touch-icon.png" />
+  <link rel="stylesheet" href="css/site.css" />
+</head>
+<body>
+  <div class="wrap">
+    <nav class="site-nav" aria-label="Primary">
+      <a class="brand" href="index.html"><img src="images/x47duster.png" alt="" width="102" height="102" />Ubuntu <span>X47</span> Build</a>
+      <ul class="nav-links">
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="install.html">Install</a></li>
+        <li><a href="ark.html" aria-current="page">Ark</a></li>
+        <li><a href="https://sk1tzwzd.github.io/X47-Win/">X47-Win</a></li>
+        <li><a href="amnesia.html">Amnesia</a></li>
+        <li><a href="releases.html">Releases</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="https://github.com/sk1tzwzd/ubuntu-x47-build">GitHub</a></li>
+      </ul>
+    </nav>
+
+    <main>
+      <h1 class="page-title">X47 Ark</h1>
+      <p class="section-lead">
+        Backup Windows user files to a USB stick, verify the copy, then give
+        the disk to Ubuntu. Installed with the Ubuntu X47 build. Search
+        <strong>Ark</strong> or open Show Apps → Utilities.
+      </p>
+
+      <section>
+        <h2>What it does</h2>
+        <ul class="clean">
+          <li><strong>Scan</strong> — finds the Windows partition on a dual-boot disk</li>
+          <li><strong>BitLocker unlock</strong> — paste the 48-digit recovery key; uses <code>dislocker</code>. Does not crack BitLocker</li>
+          <li><strong>Copy</strong> — Documents, Desktop, Downloads, Pictures, Videos, Music to an <em>external</em> USB (not the dual-boot drive)</li>
+          <li><strong>Verify</strong> — read-tests folders and compares sample SHA-256s</li>
+          <li><strong>Reclaim</strong> — after verify, delete Windows and grow Ubuntu. Typical “Windows first” layouts write a live-USB finisher instead of moving a mounted root</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>How to run it</h2>
+        <pre><code>x47-ark              # GTK assistant (Zenity fallback)
+x47-ark detect       # layout only
+x47-ark backup /media/$USER/USB
+x47-ark verify
+x47-ark reclaim      # type DELETE WINDOWS after verify
+x47-ark guide        # offline walkthrough</code></pre>
+        <p class="section-lead" style="margin-top:1rem">
+          Skip at install time with <code>./install.sh --skip-ark</code>.
+        </p>
+      </section>
+
+      <section>
+        <h2>Limits</h2>
+        <div class="aside">
+          The backup cannot live on the same disk you are about to wipe.
+          Fast Startup / hibernate on Windows can lock NTFS — shut Windows
+          down fully first. Reclaim is destructive; verify must pass.
+          X47-Win (the Windows privacy kit) does <em>not</em> delete the
+          Windows partition — that is Ark on Ubuntu.
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="foot-row">
+        <p>Ubuntu X47 Build — free software. Donations optional.</p>
+        <div class="foot-links">
+          <a href="https://github.com/sk1tzwzd/ubuntu-x47-build">GitHub</a>
+          <a href="https://sk1tzwzd.github.io/X47-Win/">X47-Win</a>
+          <a href="install.html">Install</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

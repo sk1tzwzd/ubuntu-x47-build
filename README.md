@@ -13,7 +13,7 @@ Idempotent installer that reproduces a custom Ubuntu 24.04 / 26 desktop:
 
 Part of the [VulnScape](https://vulnscape.net) cybersecurity suite.
 
-**Docs site (free):** [sk1tzwzd.github.io/ubuntu-x47-build](https://sk1tzwzd.github.io/ubuntu-x47-build/) · [Releases](https://sk1tzwzd.github.io/ubuntu-x47-build/releases.html)
+**Docs site (free):** [sk1tzwzd.github.io/ubuntu-x47-build](https://sk1tzwzd.github.io/ubuntu-x47-build/) · [Ark](https://sk1tzwzd.github.io/ubuntu-x47-build/ark.html) · [Releases](https://sk1tzwzd.github.io/ubuntu-x47-build/releases.html)
 
 Windows 11 kit is a **separate project:** [X47-Win](https://sk1tzwzd.github.io/X47-Win/)  
 

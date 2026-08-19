@@ -99,6 +99,18 @@ PY
   ok "X47 Ark added to Utilities"
 }
 
+_pin_ark_desktop() {
+  local desk="${XDG_DESKTOP_DIR:-$HOME/Desktop}"
+  mkdir -p "$desk"
+  local dest="$desk/X47 Ark.desktop"
+  [[ -f "$HOME/.local/share/applications/x47-ark.desktop" ]] || return 0
+  install -m 0755 "$HOME/.local/share/applications/x47-ark.desktop" "$dest"
+  if have gio; then
+    gio set "$dest" metadata::trusted true 2>/dev/null || true
+  fi
+  ok "desktop shortcut → $dest"
+}
+
 _install_ark_packages() {
   if [[ "${X47_SKIP_APT:-0}" == "1" ]] || [[ "${X47_USER_ONLY:-0}" == "1" ]]; then
     warn "skipping Ark package install (no apt)"
@@ -128,6 +140,7 @@ module_ark() {
   _install_ark_icon
   _install_ark_desktop
   _add_ark_to_utilities
+  _pin_ark_desktop
 }
 
 module_ark
