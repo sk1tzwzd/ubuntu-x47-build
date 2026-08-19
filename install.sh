@@ -14,6 +14,9 @@
 #   ./install.sh --skip-perf      # skip boot/service perf tweaks + Firefox deb swap
 #   ./install.sh --skip-desktop-fx # skip tiling / wallpapers / desktop FX
 #   ./install.sh --skip-syncthing  # skip hardened Android↔PC Syncthing share
+#   ./install.sh --skip-claude     # skip official Claude Code CLI + launcher
+#   ./install.sh --skip-pdf        # skip X47 PDF (ONLYOFFICE / Arranger / Xournal++)
+#   ./install.sh --skip-ark        # skip X47 Ark (Windows backup + disk reclaim)
 #   ./install.sh --desktop-mode both|visual|performance
 #       both (default/recommended): install Visual + Performance; start Performance;
 #       toggle anytime from the top-bar chip. visual / performance = that stack only.
@@ -37,6 +40,9 @@ X47_SKIP_DEBLOAT=0
 X47_SKIP_PERF=0
 X47_SKIP_DESKTOP_FX=0
 X47_SKIP_SYNCTHING=0
+X47_SKIP_CLAUDE=0
+X47_SKIP_PDF=0
+X47_SKIP_ARK=0
 X47_USER_ONLY=0
 X47_WITH_AMNESIA=0
 X47_PUTTY_CLIPBOARD=1
@@ -46,7 +52,7 @@ X47_DESKTOP_MODE="${X47_DESKTOP_MODE:-}"
 X47_ONLY=""
 
 usage() {
-  sed -n '2,25p' "$0" | sed 's/^# \?//'
+  sed -n '2,28p' "$0" | sed 's/^# \?//'
   exit 0
 }
 
@@ -58,6 +64,9 @@ while [[ $# -gt 0 ]]; do
     --skip-perf) X47_SKIP_PERF=1; shift ;;
     --skip-desktop-fx) X47_SKIP_DESKTOP_FX=1; shift ;;
     --skip-syncthing) X47_SKIP_SYNCTHING=1; shift ;;
+    --skip-claude) X47_SKIP_CLAUDE=1; shift ;;
+    --skip-pdf) X47_SKIP_PDF=1; shift ;;
+    --skip-ark) X47_SKIP_ARK=1; shift ;;
     --desktop-mode)
       X47_DESKTOP_MODE="${2:-}"
       [[ -n "$X47_DESKTOP_MODE" ]] || die "--desktop-mode needs both|visual|performance"
@@ -86,7 +95,7 @@ else
 fi
 
 export X47_SKIP_APT X47_SKIP_HARDENING X47_SKIP_DEBLOAT X47_SKIP_PERF X47_SKIP_DESKTOP_FX \
-  X47_SKIP_SYNCTHING \
+  X47_SKIP_SYNCTHING X47_SKIP_CLAUDE X47_SKIP_PDF X47_SKIP_ARK \
   X47_USER_ONLY X47_WITH_AMNESIA X47_PUTTY_CLIPBOARD X47_WIN_SCREENSHOT X47_DESKTOP_MODE
 
 MODULES=(
@@ -103,6 +112,9 @@ MODULES=(
   23-tools-release.sh
   24-syncthing.sh
   25-updates.sh
+  26-claude-code.sh
+  27-pdf.sh
+  28-ark.sh
   30-icons.sh
   31-launchers.sh
   40-hardening.sh

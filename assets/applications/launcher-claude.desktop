@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Claude Code
+Comment=Anthropic Claude Code (terminal)
+Exec=env X47_TERM_SIZE=tool $HOME/.local/bin/wezterm start --always-new-process --class claude-code -- bash -lc "claude; exec bash"
+Icon=x47-claude
+Terminal=false
+Type=Application
+Categories=Development;Utility;
+Keywords=claude;anthropic;ai;code;dev;
+StartupWMClass=claude-code

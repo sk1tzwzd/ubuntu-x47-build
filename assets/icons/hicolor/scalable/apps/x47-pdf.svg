@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="X47 PDF">
+  <defs>
+    <linearGradient id="bg" x1="18" y1="8" x2="110" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#b42318"/>
+      <stop offset="0.55" stop-color="#9f1239"/>
+      <stop offset="1" stop-color="#4c0519"/>
+    </linearGradient>
+    <linearGradient id="page" x1="40" y1="22" x2="92" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff7ed"/>
+      <stop offset="1" stop-color="#fed7aa"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#bg)"/>
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="none" stroke="#fecaca" stroke-opacity="0.22" stroke-width="2"/>
+  <!-- Folded page -->
+  <path d="M40 28h36l18 18v56a8 8 0 0 1-8 8H40a8 8 0 0 1-8-8V36a8 8 0 0 1 8-8z" fill="url(#page)"/>
+  <path d="M76 28v14a6 6 0 0 0 6 6h16" fill="#fdba74"/>
+  <path d="M76 28l22 22" fill="none" stroke="#9a3412" stroke-opacity="0.25" stroke-width="2"/>
+  <!-- PDF mark -->
+  <rect x="44" y="72" width="40" height="18" rx="4" fill="#9f1239"/>
+  <text x="64" y="85.5" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" fill="#fff7ed">PDF</text>
+  <path d="M48 48h32M48 56h24M48 64h28" fill="none" stroke="#9a3412" stroke-opacity="0.45" stroke-width="3" stroke-linecap="round"/>
+</svg>

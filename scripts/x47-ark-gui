@@ -1,0 +1,819 @@
+#!/usr/bin/env python3
+"""X47 Ark — GTK assistant for Windows backup + Ubuntu disk reclaim."""
+
+from __future__ import annotations
+
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+from pathlib import Path
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango
+
+Vte = None
+try:
+    gi.require_version("Vte", "3.91")
+    from gi.repository import Vte as _Vte
+
+    Vte = _Vte
+except (ValueError, ImportError):
+    Vte = None
+
+STEPS = ("Welcome", "Scan", "USB", "Copy", "Reclaim")
+TEAL = "#2dd4bf"
+
+
+def _which_ark() -> str:
+    here = Path(__file__).resolve().parent
+    for cand in (
+        here / "x47-ark",
+        Path.home() / ".local/share/ubuntu-x47-build/bin/x47-ark",
+        Path.home() / ".local/bin/x47-ark",
+    ):
+        if cand.is_file():
+            return str(cand)
+    found = shutil.which("x47-ark")
+    if found:
+        return found
+    raise SystemExit("x47-ark helper not found")
+
+
+ARK = _which_ark()
+
+
+def _run(args: list[str], env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    full_env = os.environ.copy()
+    if env:
+        full_env.update(env)
+    return subprocess.run(
+        [ARK, *args],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=full_env,
+        check=False,
+    )
+
+
+def _human(n: int) -> str:
+    try:
+        return subprocess.check_output(
+            ["numfmt", "--to=iec", "--suffix=B", str(n)], text=True
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return f"{n} B"
+
+
+class ArkWindow(Adw.ApplicationWindow):
+    def __init__(self, app: Adw.Application) -> None:
+        super().__init__(application=app, title="X47 Ark", default_width=820, default_height=740)
+        self.set_content(self._build())
+        self.step = 0
+        self.dest = ""
+        self.detect_ok = False
+        self.verify_ok = False
+        self.move_required = False
+        self.unlock_needed = False
+        self.unlock_ok = False
+        self.busy = False
+        self._job_done = None
+        self._job_log = Path.home() / ".cache/x47/ark-job.log"
+        GLib.idle_add(self._show_step, 0)
+
+    def _build(self) -> Gtk.Widget:
+        toolbar = Adw.ToolbarView()
+        header = Adw.HeaderBar()
+        title = Adw.WindowTitle(title="X47 Ark", subtitle="Save Windows files, then give the disk to Ubuntu")
+        header.set_title_widget(title)
+        guide = Gtk.Button(label="Guide")
+        guide.add_css_class("flat")
+        guide.connect("clicked", lambda *_: self._spawn([ARK, "guide"]))
+        header.pack_end(guide)
+        toolbar.add_top_bar(header)
+
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.step_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8, halign=Gtk.Align.CENTER)
+        self.step_box.set_margin_top(14)
+        self.step_box.set_margin_bottom(8)
+        self.step_labels: list[Gtk.Label] = []
+        for i, name in enumerate(STEPS):
+            lab = Gtk.Label(label=f"{i + 1}  {name}")
+            lab.add_css_class("heading" if i == 0 else "dim-label")
+            self.step_labels.append(lab)
+            self.step_box.append(lab)
+            if i < len(STEPS) - 1:
+                sep = Gtk.Label(label="·")
+                sep.add_css_class("dim-label")
+                self.step_box.append(sep)
+        outer.append(self.step_box)
+
+        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        self.stack.set_hexpand(True)
+        self.stack.set_vexpand(True)
+        self.stack.add_named(self._page_welcome(), "welcome")
+        self.stack.add_named(self._page_scan(), "scan")
+        self.stack.add_named(self._page_usb(), "usb")
+        self.stack.add_named(self._page_copy(), "copy")
+        self.stack.add_named(self._page_reclaim(), "reclaim")
+        outer.append(self.stack)
+
+        term_wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        term_wrap.set_margin_start(16)
+        term_wrap.set_margin_end(16)
+        term_wrap.set_margin_top(4)
+        term_lab = Gtk.Label(label="Process", xalign=0)
+        term_lab.add_css_class("heading")
+        term_wrap.append(term_lab)
+        term_wrap.append(self._make_term())
+        outer.append(term_wrap)
+
+        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        bar.set_margin_start(18)
+        bar.set_margin_end(18)
+        bar.set_margin_top(10)
+        bar.set_margin_bottom(16)
+        self.back_btn = Gtk.Button(label="Back")
+        self.back_btn.connect("clicked", lambda *_: self._goto(self.step - 1))
+        self.next_btn = Gtk.Button(label="Scan disk")
+        self.next_btn.add_css_class("suggested-action")
+        self.next_btn.connect("clicked", lambda *_: self._on_next())
+        bar.append(self.back_btn)
+        bar.append(Gtk.Box(hexpand=True))
+        bar.append(self.next_btn)
+        outer.append(bar)
+
+        toolbar.set_content(outer)
+        return toolbar
+
+    def _make_term(self) -> Gtk.Widget:
+        frame = Gtk.Frame()
+        frame.add_css_class("ark-term-frame")
+        frame.set_hexpand(True)
+        if Vte is not None:
+            self.vte = Vte.Terminal()
+            self.vte.set_font(Pango.FontDescription("Monospace 10"))
+            self.vte.set_scrollback_lines(8000)
+            self.vte.set_mouse_autohide(True)
+            fg, bg = Gdk.RGBA(), Gdk.RGBA()
+            fg.parse("#a7f3d0")
+            bg.parse("#07110f")
+            self.vte.set_color_foreground(fg)
+            self.vte.set_color_background(bg)
+            try:
+                self.vte.set_size(80, 9)
+            except TypeError:
+                pass
+            self.vte.connect("child-exited", self._on_vte_exit)
+            self.term_view = None
+            frame.set_child(self.vte)
+            self._feed_term("X47 Ark process terminal. Scan, unlock, copy, and verify show up here.\r\n")
+        else:
+            self.vte = None
+            self.term_view = Gtk.TextView(
+                editable=False, cursor_visible=False, wrap_mode=Gtk.WrapMode.CHAR
+            )
+            self.term_view.add_css_class("ark-term")
+            sw = Gtk.ScrolledWindow()
+            sw.set_min_content_height(160)
+            sw.set_max_content_height(200)
+            sw.set_child(self.term_view)
+            frame.set_child(sw)
+            self._feed_term("X47 Ark process log (install gir1.2-vte-3.91 for a live TTY).\n")
+        frame.set_size_request(-1, 180)
+        return frame
+
+    def _feed_term(self, text: str) -> None:
+        if getattr(self, "vte", None) is not None:
+            data = text.replace("\n", "\r\n").encode("utf-8", "replace")
+            self.vte.feed(data)
+            return
+        view = getattr(self, "term_view", None)
+        if view is None:
+            return
+        buf = view.get_buffer()
+        buf.insert(buf.get_end_iter(), text)
+        view.scroll_to_mark(buf.get_insert(), 0.0, False, 0, 1)
+
+    def _run_in_term(self, args: list[str], on_done, env: dict[str, str] | None = None) -> None:
+        self._job_done = on_done
+        self._job_log.parent.mkdir(parents=True, exist_ok=True)
+        self._job_log.write_text("", encoding="utf-8")
+        banner = "$ x47-ark " + " ".join(shlex.quote(a) for a in args)
+        self._feed_term(f"\n\x1b[36m{banner}\x1b[0m\n")
+        extra_env = os.environ.copy()
+        if env:
+            extra_env.update(env)
+        inner = " ".join(shlex.quote(a) for a in [ARK, *args])
+        exports = ""
+        if env:
+            exports = " ".join(f"{k}={shlex.quote(v)}" for k, v in env.items()) + " "
+        script = (
+            f"set -o pipefail; {exports}stdbuf -oL -eL {inner} 2>&1 "
+            f"| tee {shlex.quote(str(self._job_log))}; exit ${{PIPESTATUS[0]}}"
+        )
+        argv = ["bash", "-lc", script]
+        if self.vte is not None:
+            envp = [f"{k}={v}" for k, v in extra_env.items()]
+            self.vte.spawn_async(
+                Vte.PtyFlags.DEFAULT,
+                str(Path.home()),
+                argv,
+                envp,
+                GLib.SpawnFlags.DEFAULT,
+                None,
+                None,
+                -1,
+                None,
+                self._on_vte_spawn,
+            )
+            return
+
+        def work() -> None:
+            proc = subprocess.Popen(
+                argv,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                env=extra_env,
+                bufsize=1,
+            )
+            assert proc.stdout is not None
+            for line in proc.stdout:
+                GLib.idle_add(self._feed_term, line)
+            rc = proc.wait()
+            out = self._job_log.read_text(encoding="utf-8", errors="replace")
+            GLib.idle_add(self._finish_job, rc, out)
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _on_vte_spawn(self, _term, _pid, error) -> None:
+        if error is not None:
+            self._feed_term(f"spawn failed: {error}\r\n")
+            self._finish_job(1, str(error))
+
+    def _on_vte_exit(self, _term, status: int) -> None:
+        if self._job_done is None:
+            return
+        try:
+            rc = os.waitstatus_to_exitcode(status)
+        except ValueError:
+            rc = 1 if status else 0
+        out = ""
+        if self._job_log.is_file():
+            out = self._job_log.read_text(encoding="utf-8", errors="replace")
+        self._finish_job(rc, out)
+
+    def _finish_job(self, rc: int, out: str) -> bool:
+        cb = self._job_done
+        self._job_done = None
+        if cb is not None:
+            cb(rc, out)
+        return False
+
+    def _scroller(self, child: Gtk.Widget) -> Gtk.ScrolledWindow:
+        sw = Gtk.ScrolledWindow()
+        sw.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        sw.set_child(child)
+        sw.set_hexpand(True)
+        sw.set_vexpand(True)
+        return sw
+
+    def _page_welcome(self) -> Gtk.Widget:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        box.set_margin_start(28)
+        box.set_margin_end(28)
+        box.set_margin_top(8)
+        lead = Gtk.Label(
+            label="The USB is the ark. Copy what you want to keep, check the copy, then let Windows go.",
+            wrap=True,
+            xalign=0,
+        )
+        lead.add_css_class("title-4")
+        box.append(lead)
+
+        for title, body in (
+            ("1. Copy", "Documents, Desktop, Downloads, Pictures, Videos, and Music — not AppData or the Windows install."),
+            ("2. Check", "Ark writes a file list and sample checksums. Reclaim stays locked until verify is OK."),
+            ("3. Reclaim", "Deletes Windows / MSR / Recovery only. EFI and Ubuntu stay. Type DELETE WINDOWS to confirm."),
+        ):
+            row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            t = Gtk.Label(label=title, xalign=0)
+            t.add_css_class("heading")
+            b = Gtk.Label(label=body, wrap=True, xalign=0)
+            b.add_css_class("dim-label")
+            row.append(t)
+            row.append(b)
+            box.append(row)
+
+        warn = Gtk.Label(
+            label="Plug in an external USB first. The backup cannot live on the dual-boot disk. If BitLocker is on, unlock it on the Scan step with your recovery key — you do not need to boot Windows.",
+            wrap=True,
+            xalign=0,
+        )
+        warn.add_css_class("warning")
+        box.append(warn)
+        return self._scroller(box)
+
+    def _page_scan(self) -> Gtk.Widget:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.set_margin_start(20)
+        box.set_margin_end(20)
+        box.set_margin_top(4)
+        self.scan_status = Gtk.Label(label="Click Scan disk to read the layout.", wrap=True, xalign=0)
+        box.append(self.scan_status)
+        self.layout_box = Gtk.ListBox()
+        self.layout_box.add_css_class("boxed-list")
+        self.layout_box.set_selection_mode(Gtk.SelectionMode.NONE)
+        box.append(self.layout_box)
+        self.scan_extra = Gtk.Label(label="", wrap=True, xalign=0)
+        self.scan_extra.add_css_class("dim-label")
+        box.append(self.scan_extra)
+
+        bl = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        bl.add_css_class("card")
+        bl.set_margin_top(8)
+        bl_title = Gtk.Label(label="BitLocker — unlock here (no Windows boot)", xalign=0)
+        bl_title.add_css_class("heading")
+        bl.append(bl_title)
+        bl_help = Gtk.Label(
+            label="Paste the 48-digit recovery key from account.microsoft.com → Devices → BitLocker keys, or the paper printout. A BitLocker password works too. TPM-only disks still need that recovery key. This unlocks the volume so Ark can copy files; it does not permanently decrypt Windows (you do not need that if you are about to delete the partition).",
+            wrap=True,
+            xalign=0,
+        )
+        bl_help.add_css_class("dim-label")
+        bl.append(bl_help)
+        self.bl_key = Gtk.Entry()
+        self.bl_key.set_visibility(False)
+        self.bl_key.set_placeholder_text("Recovery key  XXXXXX-XXXXXX-XXXXXX-…")
+        bl.append(self.bl_key)
+        self.bl_pass = Gtk.Entry()
+        self.bl_pass.set_visibility(False)
+        self.bl_pass.set_placeholder_text("Or BitLocker password (optional)")
+        bl.append(self.bl_pass)
+        self.bl_btn = Gtk.Button(label="Unlock BitLocker")
+        self.bl_btn.add_css_class("suggested-action")
+        self.bl_btn.connect("clicked", lambda *_: self._start_unlock())
+        bl.append(self.bl_btn)
+        self.bl_status = Gtk.Label(label="", wrap=True, xalign=0)
+        bl.append(self.bl_status)
+        box.append(bl)
+        return self._scroller(box)
+
+    def _page_usb(self) -> Gtk.Widget:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.set_margin_start(20)
+        box.set_margin_end(20)
+        box.set_margin_top(4)
+        hint = Gtk.Label(
+            label="Pick the external drive. Same-disk destinations are refused.",
+            wrap=True,
+            xalign=0,
+        )
+        box.append(hint)
+        tools = Gtk.Box(spacing=8)
+        refresh = Gtk.Button(label="Refresh")
+        refresh.connect("clicked", lambda *_: self._load_dests())
+        browse = Gtk.Button(label="Browse…")
+        browse.connect("clicked", lambda *_: self._browse_folder())
+        tools.append(refresh)
+        tools.append(browse)
+        box.append(tools)
+        self.dest_list = Gtk.ListBox()
+        self.dest_list.add_css_class("boxed-list")
+        self.dest_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.dest_list.connect("row-selected", self._on_dest_row)
+        box.append(self.dest_list)
+        self.dest_label = Gtk.Label(label="No destination selected.", xalign=0)
+        self.dest_label.add_css_class("dim-label")
+        box.append(self.dest_label)
+        return self._scroller(box)
+
+    def _page_copy(self) -> Gtk.Widget:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.set_margin_start(20)
+        box.set_margin_end(20)
+        box.set_margin_top(4)
+        self.copy_status = Gtk.Label(label="Ready to copy Windows user folders. Watch the terminal below.", wrap=True, xalign=0)
+        box.append(self.copy_status)
+        self.progress = Gtk.ProgressBar()
+        self.progress.set_show_text(True)
+        box.append(self.progress)
+        hint = Gtk.Label(label="rsync / verify output streams in the Process terminal.", wrap=True, xalign=0)
+        hint.add_css_class("dim-label")
+        box.append(hint)
+        return box
+
+    def _page_reclaim(self) -> Gtk.Widget:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.set_margin_start(20)
+        box.set_margin_end(20)
+        box.set_margin_top(4)
+        self.reclaim_status = Gtk.Label(
+            label="Backup-only is fine. Reclaim deletes Windows partitions.",
+            wrap=True,
+            xalign=0,
+        )
+        box.append(self.reclaim_status)
+        self.confirm_entry = Gtk.Entry()
+        self.confirm_entry.set_placeholder_text("Type DELETE WINDOWS to enable reclaim")
+        self.confirm_entry.connect("changed", self._on_confirm_changed)
+        box.append(self.confirm_entry)
+        hint = Gtk.Label(label="Reclaim commands run in the Process terminal below.", wrap=True, xalign=0)
+        hint.add_css_class("dim-label")
+        box.append(hint)
+        return box
+
+    def _show_step(self, n: int) -> bool:
+        self.step = max(0, min(n, len(STEPS) - 1))
+        names = ("welcome", "scan", "usb", "copy", "reclaim")
+        self.stack.set_visible_child_name(names[self.step])
+        for i, lab in enumerate(self.step_labels):
+            if i == self.step:
+                lab.remove_css_class("dim-label")
+                lab.add_css_class("heading")
+            else:
+                lab.remove_css_class("heading")
+                lab.add_css_class("dim-label")
+        self.back_btn.set_sensitive(self.step > 0 and not self.busy)
+        self._refresh_next_label()
+        if self.step == 1 and not self.detect_ok and not self.busy:
+            self._start_detect()
+        if self.step == 2:
+            self._load_dests()
+        return False
+
+    def _refresh_next_label(self) -> None:
+        labels = {
+            0: "Scan disk",
+            1: "Pick USB",
+            2: "Copy files",
+            3: "Continue",
+            4: "Close",
+        }
+        if self.step == 3 and not self.verify_ok:
+            self.next_btn.set_label("Copy files")
+        elif self.step == 4:
+            if self.confirm_entry.get_text().strip() == "DELETE WINDOWS" and self.verify_ok:
+                self.next_btn.set_label("Reclaim disk")
+            else:
+                self.next_btn.set_label("Close")
+        else:
+            self.next_btn.set_label(labels[self.step])
+        self.next_btn.set_sensitive(not self.busy)
+
+    def _goto(self, n: int) -> None:
+        if self.busy:
+            return
+        self._show_step(n)
+
+    def _on_next(self) -> None:
+        if self.busy:
+            return
+        if self.step == 0:
+            self._goto(1)
+        elif self.step == 1:
+            if not self.detect_ok:
+                self._start_detect()
+                return
+            if self.unlock_needed and not self.unlock_ok:
+                self.bl_status.set_text("Unlock BitLocker first (recovery key or password), then continue.")
+                return
+            self._goto(2)
+        elif self.step == 2:
+            if not self.dest:
+                self.dest_label.set_text("Select a drive or browse to a folder on the USB.")
+                return
+            self._goto(3)
+            self._start_backup()
+        elif self.step == 3:
+            if not self.verify_ok:
+                self._start_backup()
+                return
+            self._goto(4)
+        elif self.step == 4:
+            if self.confirm_entry.get_text().strip() == "DELETE WINDOWS" and self.verify_ok:
+                self._start_reclaim()
+            else:
+                self.close()
+
+    def _on_confirm_changed(self, *_args) -> None:
+        self._refresh_next_label()
+
+    def _clear_list(self, box: Gtk.ListBox) -> None:
+        child = box.get_first_child()
+        while child is not None:
+            nxt = child.get_next_sibling()
+            box.remove(child)
+            child = nxt
+
+    def _add_layout_row(self, path: str, role: str, fstype: str, label: str, size: str) -> None:
+        row = Adw.ActionRow()
+        row.set_title(f"{path}  ·  {size}")
+        row.set_subtitle(f"{role}  ·  {fstype}  ·  {label}")
+        if role == "bitlocker":
+            badge = Gtk.Label(label="locked")
+            badge.add_css_class("warning")
+            row.add_suffix(badge)
+        elif role in ("windows", "msr", "recovery"):
+            badge = Gtk.Label(label="delete")
+            badge.add_css_class("error")
+            row.add_suffix(badge)
+        elif role in ("efi", "ubuntu-root", "ubuntu-keep"):
+            badge = Gtk.Label(label="keep")
+            badge.add_css_class("success")
+            row.add_suffix(badge)
+        self.layout_box.append(row)
+
+    def _spawn(self, args: list[str]) -> None:
+        try:
+            subprocess.Popen(args, start_new_session=True)
+        except OSError:
+            pass
+
+    def _set_busy(self, busy: bool) -> None:
+        self.busy = busy
+        self.back_btn.set_sensitive((self.step > 0) and not busy)
+        self.next_btn.set_sensitive(not busy)
+        if busy:
+            self.progress.pulse()
+            GLib.timeout_add(120, self._pulse)
+
+    def _pulse(self) -> bool:
+        if not self.busy:
+            self.progress.set_fraction(1.0 if self.verify_ok else 0.0)
+            return False
+        self.progress.pulse()
+        return True
+
+    def _start_detect(self) -> None:
+        self._set_busy(True)
+        self.scan_status.set_text("Reading partitions…")
+        self._clear_list(self.layout_box)
+        self._run_in_term(["detect"], self._finish_detect)
+
+    def _finish_detect(self, rc: int, out: str) -> bool:
+        self._set_busy(False)
+        self.detect_ok = rc == 0
+        self.move_required = "move_required=1" in out
+        grow = "grow_in_place=1" in out
+        self._clear_list(self.layout_box)
+        for line in out.splitlines():
+            if line.startswith("/dev/") and "\t" in line:
+                parts = line.split("\t")
+                if len(parts) >= 5:
+                    self._add_layout_row(parts[0], parts[1], parts[2], parts[3], parts[4])
+        if rc != 0:
+            self.scan_status.set_text("Could not find a usable Windows partition.")
+            self.scan_extra.set_text(out.strip()[-800:])
+            return False
+        self.scan_status.set_text("Windows found. Red rows will be deleted on reclaim. Teal/green rows stay.")
+        if self.move_required:
+            extra = "Ubuntu sits after Windows (typical). After backup, finish from a live USB — this app will write the script onto the stick."
+        elif grow:
+            extra = "Ubuntu can grow in place after Windows is deleted."
+        else:
+            extra = "Layout is unusual. Backup still works; reclaim may need GParted."
+        bl_line = ""
+        for line in out.splitlines():
+            if line.startswith("bitlocker="):
+                bl_line = line.split("=", 1)[1].strip()
+            if line.startswith("unlock_needed="):
+                self.unlock_needed = line.split("=", 1)[1].strip() == "1"
+        if bl_line and bl_line != "none":
+            self.unlock_needed = True
+            extra = (
+                f"BitLocker is on {bl_line}. Unlock it below with your recovery key — "
+                "you do not need to boot Windows."
+            )
+            self.bl_status.set_text("Locked. Paste the recovery key and click Unlock BitLocker.")
+        else:
+            self.unlock_needed = False
+            self.unlock_ok = True
+            self.bl_status.set_text("No BitLocker detected. You can still try unlock if a volume is actually encrypted.")
+        self.scan_extra.set_text(extra)
+        self._refresh_next_label()
+        return False
+
+    def _start_unlock(self) -> None:
+        key = self.bl_key.get_text().strip()
+        password = self.bl_pass.get_text()
+        if not key and not password:
+            self.bl_status.set_text("Paste a recovery key or a BitLocker password first.")
+            return
+        self._set_busy(True)
+        self.bl_status.set_text("Unlocking… you may be asked for your Ubuntu password.")
+        fd, path = tempfile.mkstemp(prefix="x47-ark-bl-")
+        os.close(fd)
+        os.chmod(path, 0o600)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(key if key else password)
+        args = ["unlock", "--key-file" if key else "--password-file", path]
+
+        def after(rc: int, out: str) -> None:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+            self._finish_unlock(rc, out)
+
+        self._run_in_term(args, after)
+
+    def _finish_unlock(self, rc: int, out: str) -> bool:
+        self._set_busy(False)
+        safe = "\n".join(
+            ln for ln in out.splitlines()
+            if ln.startswith("unlock") or ln.startswith("unlocked") or ln.startswith("map=")
+            or "failed" in ln.lower() or "wrong" in ln.lower()
+        )
+        if rc == 0 and "unlock_verify=ok" in out:
+            self.unlock_ok = True
+            self.unlock_needed = False
+            users = files = bytes_n = samples = "?"
+            for ln in out.splitlines():
+                if ln.startswith("users="):
+                    users = ln.split("=", 1)[1]
+                elif ln.startswith("files="):
+                    files = ln.split("=", 1)[1]
+                elif ln.startswith("bytes="):
+                    bytes_n = ln.split("=", 1)[1]
+                elif ln.startswith("samples_ok="):
+                    samples = ln.split("=", 1)[1]
+            try:
+                bytes_h = _human(int(bytes_n))
+            except ValueError:
+                bytes_h = bytes_n
+            self.bl_status.set_text(
+                f"Unlocked and verified. {users} user(s), {files} files ({bytes_h}), "
+                f"{samples} sample reads OK. You can continue."
+            )
+            self.bl_key.set_text("")
+            self.bl_pass.set_text("")
+        elif rc == 0:
+            self.unlock_ok = False
+            self.bl_status.set_text("Unlocked but verify did not pass. Re-run Unlock BitLocker.")
+        else:
+            self.unlock_ok = False
+            self.bl_status.set_text(
+                "Unlock failed. Check the 48-digit key (Microsoft account → Devices → BitLocker keys). "
+                "TPM-only protection still needs that recovery key."
+            )
+            if safe.strip():
+                self.scan_extra.set_text(safe.strip()[-600:])
+        self._refresh_next_label()
+        return False
+
+    def _load_dests(self) -> None:
+        self._clear_list(self.dest_list)
+        proc = _run(["dests"])
+        rows = [ln for ln in proc.stdout.splitlines() if ln.strip()]
+        if not rows:
+            empty = Adw.ActionRow()
+            empty.set_title("No external drive mounted")
+            empty.set_subtitle("Plug in a USB, wait for Files to open it, then Refresh — or Browse.")
+            self.dest_list.append(empty)
+            return
+        for ln in rows:
+            cols = ln.split("\t")
+            if len(cols) < 5:
+                continue
+            _path, _pk, mnt, label, avail = cols[0], cols[1], cols[2], cols[3], cols[4]
+            try:
+                free = _human(int(avail))
+            except ValueError:
+                free = avail
+            row = Adw.ActionRow()
+            row.set_title(label or Path(mnt).name)
+            row.set_subtitle(f"{mnt}  ·  {free} free")
+            row.mnt = mnt  # type: ignore[attr-defined]
+            self.dest_list.append(row)
+
+    def _on_dest_row(self, _box: Gtk.ListBox, row: Gtk.ListBoxRow | None) -> None:
+        mnt = getattr(row, "mnt", "") if row is not None else ""
+        self.dest = mnt or ""
+        self.dest_label.set_text(f"Destination: {self.dest}" if self.dest else "No destination selected.")
+
+    def _browse_folder(self) -> None:
+        dialog = Gtk.FileDialog(title="X47 Ark — folder on the external drive")
+        dialog.select_folder(self, None, self._browse_done)
+
+    def _browse_done(self, dialog: Gtk.FileDialog, result: Gio.AsyncResult) -> None:
+        try:
+            folder = dialog.select_folder_finish(result)
+        except GLib.Error:
+            return
+        if folder is None:
+            return
+        path = folder.get_path()
+        if path:
+            self.dest = path
+            self.dest_label.set_text(f"Destination: {self.dest}")
+
+    def _start_backup(self) -> None:
+        if not self.dest:
+            self.copy_status.set_text("No USB selected.")
+            return
+        self.verify_ok = False
+        self._set_busy(True)
+        self.progress.set_fraction(0.05)
+        self.progress.set_text("Copying…")
+        self.copy_status.set_text(f"Copying Windows user folders to {self.dest}/X47-Ark/…")
+        self._run_in_term(["backup", self.dest], self._finish_backup)
+
+    def _finish_backup(self, rc: int, out: str) -> bool:
+        if rc != 0:
+            self._set_busy(False)
+            self.progress.set_text("Backup failed")
+            self.copy_status.set_text("Backup failed. Windows was not touched. See the log.")
+            return False
+        self.progress.set_text("Verifying…")
+        self.copy_status.set_text("Copy finished. Checking the backup…")
+        self._run_in_term(["verify"], self._finish_verify)
+        return False
+
+    def _finish_verify(self, rc: int, out: str) -> bool:
+        self._set_busy(False)
+        self.verify_ok = rc == 0
+        if rc == 0:
+            self.progress.set_fraction(1.0)
+            self.progress.set_text("Verified")
+            self.copy_status.set_text(
+                "Backup verified against the Windows source (file list + sample checksums). "
+                "Continue to reclaim, or close the app to stop here."
+            )
+            self.reclaim_status.set_text(
+                "Type DELETE WINDOWS to delete the Windows partitions. "
+                + (
+                    "This machine needs a live USB for the last move/grow step — Ark will write finish-ark.sh onto the stick."
+                    if self.move_required
+                    else "If Ubuntu can grow in place, that happens after confirmation."
+                )
+            )
+        else:
+            self.progress.set_text("Verify failed")
+            self.copy_status.set_text("Verify failed — Windows was not deleted. Keep the USB and try again.")
+        self._refresh_next_label()
+        return False
+
+    def _start_reclaim(self) -> None:
+        self._set_busy(True)
+        self.reclaim_status.set_text("Reclaiming… password prompt may appear.")
+        self._run_in_term(["reclaim"], self._finish_reclaim, env={"X47_ARK_CONFIRM": "DELETE WINDOWS"})
+
+    def _finish_reclaim(self, rc: int, out: str) -> bool:
+        self._set_busy(False)
+        if rc == 0:
+            self.reclaim_status.set_text("Done. Read the notes below — you may still need a live USB + GParted.")
+            self.next_btn.set_label("Close")
+            self.confirm_entry.set_sensitive(False)
+        else:
+            self.reclaim_status.set_text("Reclaim did not finish. Backup is still on the USB. Windows may still be there.")
+        self._refresh_next_label()
+        return False
+
+
+class ArkApp(Adw.Application):
+    def __init__(self) -> None:
+        super().__init__(application_id="net.vulnscape.x47.ark", flags=Gio.ApplicationFlags.FLAGS_NONE)
+        self.connect("activate", self._activate)
+
+    def _activate(self, _app: Adw.Application) -> None:
+        win = self.props.active_window
+        if win is None:
+            win = ArkWindow(self)
+            css = Gtk.CssProvider()
+            css.load_from_data(
+                b"""
+                .warning { color: #fbbf24; }
+                textview.monospace { font-family: monospace; font-size: 12px; }
+                textview.ark-term {
+                  font-family: monospace;
+                  font-size: 11px;
+                  background-color: #07110f;
+                  color: #a7f3d0;
+                }
+                .ark-term-frame { background-color: #07110f; border-radius: 8px; }
+                """
+            )
+            Gtk.StyleContext.add_provider_for_display(
+                Gdk.Display.get_default(),
+                css,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+            )
+        win.present()
+
+
+def main() -> int:
+    Adw.init()
+    return ArkApp().run(sys.argv)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

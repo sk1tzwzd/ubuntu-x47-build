@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=X47 PDF Editor
+GenericName=PDF Editor
+Comment=Edit, arrange, or annotate PDFs — ONLYOFFICE, PDF Arranger, Xournal++
+Exec=x47-pdf gui %F
+Icon=x47-pdf
+Terminal=false
+Categories=Office;Graphics;Viewer;
+MimeType=application/pdf;
+Keywords=pdf;editor;edit;adobe;acrobat;onlyoffice;xournal;arranger;x47;office;
+StartupNotify=true

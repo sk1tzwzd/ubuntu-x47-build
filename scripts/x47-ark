@@ -1,0 +1,1589 @@
+#!/usr/bin/env bash
+# X47 Ark — save Windows user files to a USB, then give the disk to Ubuntu.
+#
+# Usage:
+#   x47-ark                 # Zenity wizard
+#   x47-ark gui
+#   x47-ark detect          # print dual-boot layout
+#   x47-ark backup [DIR]    # copy Windows user folders to DIR (USB)
+#   x47-ark verify [DIR]    # verify last (or given) backup
+#   x47-ark reclaim         # delete Windows + grow Ubuntu (after verify)
+#   x47-ark finish [PLAN]   # live-USB finisher (move + grow)
+#   x47-ark unlock --key-file KEY.txt
+#   x47-ark status
+#   x47-ark guide
+set -euo pipefail
+
+export PATH="${HOME}/.local/bin:/snap/bin:/usr/local/bin:/usr/bin:${PATH}"
+
+STATUS_FILE="${X47_ARK_STATUS:-$HOME/.config/x47/ark-status.conf}"
+PLAN_FILE="${X47_ARK_PLAN:-$HOME/.config/x47/ark-plan.conf}"
+LOG_DIR="${X47_ARK_LOGDIR:-$HOME/.cache/x47}"
+LOG_FILE="${LOG_DIR}/ark.log"
+
+GUIDE_CANDIDATES=(
+  "${X47_ARK_GUIDE:-}"
+  "$HOME/.local/share/ubuntu-x47-build/docs/x47-ark-guide.html"
+  "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/assets/docs/x47-ark-guide.html"
+)
+
+WIN_FOLDERS=(Documents Desktop Downloads Pictures Videos Music)
+SKIP_USERS_REGEX='^(Default|Default User|Public|All Users|WDAGUtilityAccount|Guest|DefaultAppPool|systemprofile)$'
+
+_usage() {
+  cat <<'EOF'
+X47 Ark — save Windows files, then give the disk to Ubuntu
+
+  x47-ark                 Open the wizard
+  x47-ark gui             Force Zenity UI
+  x47-ark detect          Show Windows / Ubuntu layout
+  x47-ark backup [DIR]    Copy user folders to an external drive
+  x47-ark verify [DIR]    Check the backup
+  x47-ark reclaim         Delete Windows and grow Ubuntu (after verify)
+  x47-ark finish [PLAN]   Live-USB finish step (move + grow)
+  x47-ark dests           List backup destinations (TSV)
+  x47-ark unlock          Unlock BitLocker with a recovery key (no Windows boot)
+  x47-ark unlock-verify   Prove the unlocked volume is readable
+  x47-ark status          Last backup / verify state
+  x47-ark guide           Offline walkthrough
+
+The USB is the ark: copy what you want to keep, then let Windows go.
+Reclaim never runs unless verify succeeded. Type DELETE WINDOWS to confirm.
+If Ubuntu sits after Windows, finish from a live USB — do not move a mounted root.
+EOF
+}
+
+_have() { command -v "$1" >/dev/null 2>&1; }
+
+_is_gui() { [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; }
+
+_ensure_dirs() {
+  mkdir -p "$(dirname "$STATUS_FILE")" "$(dirname "$PLAN_FILE")" "$LOG_DIR"
+}
+
+_log() {
+  _ensure_dirs
+  printf '%s %s\n' "$(date -Is)" "$*" >>"$LOG_FILE"
+  printf '%s\n' "$*"
+}
+
+_err() { printf '%s\n' "$*" >&2; _log "ERROR: $*"; }
+
+_status_set() {
+  local key="$1" val="$2"
+  _ensure_dirs
+  touch "$STATUS_FILE"
+  python3 - "$STATUS_FILE" "$key" "$val" <<'PY'
+import pathlib, sys
+path, key, val = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+lines = path.read_text().splitlines() if path.stat().st_size else []
+out, found = [], False
+for line in lines:
+    if line.startswith(key + "="):
+        out.append(f"{key}={val}")
+        found = True
+    else:
+        out.append(line)
+if not found:
+    out.append(f"{key}={val}")
+path.write_text("\n".join(out) + "\n")
+PY
+}
+
+_status_get() {
+  local key="$1" def="${2:-}"
+  [[ -f "$STATUS_FILE" ]] || { printf '%s' "$def"; return 0; }
+  local line
+  line="$(grep -E "^${key}=" "$STATUS_FILE" 2>/dev/null | tail -n1 || true)"
+  if [[ -n "$line" ]]; then
+    printf '%s' "${line#*=}"
+  else
+    printf '%s' "$def"
+  fi
+}
+
+_priv() {
+  if [[ "$(id -u)" -eq 0 ]]; then
+    env "$@"
+    return
+  fi
+  if _is_gui && _have pkexec; then
+    pkexec env "$@"
+    return
+  fi
+  if _have sudo; then
+    sudo env "$@"
+    return
+  fi
+  _err "sudo or pkexec required"
+  return 1
+}
+
+_zenity() {
+  _have zenity || return 1
+  zenity "$@" 2>/dev/null
+}
+
+_escape() {
+  printf '%s' "$1" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g'
+}
+
+_guide_path() {
+  local p
+  for p in "${GUIDE_CANDIDATES[@]}"; do
+    [[ -n "$p" && -f "$p" ]] && { printf '%s' "$p"; return 0; }
+  done
+  return 1
+}
+
+cmd_guide() {
+  local p
+  if ! p="$(_guide_path)"; then
+    _err "guide not found — re-run modules/28-ark.sh"
+    return 1
+  fi
+  if _have xdg-open; then
+    xdg-open "$p" >/dev/null 2>&1 &
+  else
+    printf '%s\n' "$p"
+  fi
+}
+
+_source_plan() {
+  local f="${1:-$PLAN_FILE}"
+  [[ -f "$f" ]] || { _err "no plan — run: x47-ark detect"; return 1; }
+  set -a
+  # shellcheck disable=SC1090
+  . "$f"
+  set +a
+}
+
+_plan_set() {
+  local key="$1" val="$2" f="${3:-$PLAN_FILE}"
+  [[ -f "$f" ]] || return 1
+  python3 - "$f" "$key" "$val" <<'PY'
+import pathlib, shlex, sys
+path, key, val = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+quoted = shlex.quote(val)
+lines = path.read_text().splitlines()
+out, found = [], False
+for line in lines:
+    if line.startswith(key + "="):
+        out.append(f"{key}={quoted}")
+        found = True
+    else:
+        out.append(line)
+if not found:
+    out.append(f"{key}={quoted}")
+path.write_text("\n".join(out) + "\n")
+PY
+}
+
+_disk_of() {
+  local src="$1" pk
+  pk="$(lsblk -no PKNAME "$src" 2>/dev/null | head -n1 || true)"
+  if [[ -n "$pk" ]]; then
+    printf '/dev/%s' "$pk"
+    return 0
+  fi
+  lsblk -no PATH -s "$src" 2>/dev/null | tail -n1
+}
+
+_is_live() {
+  [[ "${X47_ARK_FORCE:-0}" == "1" ]] && return 0
+  [[ -d /cdrom/casper || -d /run/live || -d /lib/live ]] && return 0
+  grep -qE ' (overlay|aufs) ' /proc/mounts 2>/dev/null && return 0
+  findmnt -n -o FSTYPE / 2>/dev/null | grep -qiE 'overlay|squashfs' && return 0
+  return 1
+}
+
+# --- detect ---------------------------------------------------------------
+
+_detect_write_plan() {
+  _ensure_dirs
+  local out
+  out="$(python3 - "$PLAN_FILE" <<'PY'
+import json, os, re, shlex, subprocess, sys
+
+plan_path = sys.argv[1]
+
+def run(cmd):
+    return subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL).strip()
+
+def run0(cmd):
+    try:
+        return run(cmd)
+    except subprocess.CalledProcessError:
+        return ""
+
+root_src = run0(["findmnt", "-n", "-o", "SOURCE", "/"])
+root_fstype = run0(["findmnt", "-n", "-o", "FSTYPE", "/"]) or "unknown"
+if not root_src:
+    print("detect failed: cannot find root device", file=sys.stderr)
+    sys.exit(1)
+
+walk = run0(["lsblk", "-ns", "-o", "PATH,TYPE", root_src])
+root_part = ""
+disk = ""
+crypt_name = ""
+lvm_name = ""
+for line in walk.splitlines():
+    parts = line.split()
+    if len(parts) < 2:
+        continue
+    path, typ = parts[0], parts[1]
+    if typ == "part" and not root_part:
+        root_part = path
+    if typ == "disk":
+        disk = path
+    if typ == "crypt":
+        crypt_name = path
+    if typ == "lvm":
+        lvm_name = path
+if not root_part:
+    root_part = root_src
+if not disk:
+    pk = run0(["lsblk", "-no", "PKNAME", root_part])
+    disk = f"/dev/{pk}" if pk else ""
+
+ls = json.loads(run(["lsblk", "-J", "-b", "-o",
+                     "NAME,PATH,PKNAME,TYPE,FSTYPE,PARTTYPE,PARTLABEL,LABEL,SIZE,MOUNTPOINT,START"]))
+
+EFI = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
+MSR = "e3c9e316-0b5c-4db8-817d-f92df00215ae"
+MSDATA = "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7"
+WINRE = "de94bba4-06d1-4d40-a16a-bfd50179d6ac"
+LINUX = "0fc63daf-8483-4772-8e79-3d69d8477de4"
+SWAP = "0657fd6d-a4a5-3903-84f1-b9068f2a50d0"
+
+def flatten(nodes, acc=None):
+    acc = acc or []
+    for n in nodes:
+        acc.append(n)
+        flatten(n.get("children") or [], acc)
+    return acc
+
+nodes = flatten(ls.get("blockdevices") or [])
+disk_name = os.path.basename(disk) if disk else ""
+
+def partnum(path):
+    m = re.search(r"(\d+)$", path or "")
+    return int(m.group(1)) if m else 0
+
+def start_of(n, path):
+    s = n.get("start")
+    if s not in (None, ""):
+        return int(s)
+    sysf = f"/sys/class/block/{os.path.basename(path)}/start"
+    try:
+        return int(open(sysf).read().strip())
+    except OSError:
+        return 0
+
+keep_mounts = {"/", "/boot", "/boot/efi", "/home"}
+keep_parts = set()
+efi_part = ""
+swap_parts = []
+win_parts = []
+delete_parts = []
+bitlocker = []
+rows = []
+
+for n in nodes:
+    if n.get("type") != "part":
+        continue
+    path = n.get("path") or ("/dev/" + n.get("name", ""))
+    pk = n.get("pkname") or ""
+    if disk_name and pk and pk != disk_name:
+        continue
+    if disk_name and not pk:
+        continue
+    fstype = (n.get("fstype") or "").lower()
+    if not fstype or fstype in ("crypto_unknown", "unknown"):
+        probed = run0(["blkid", "-o", "value", "-s", "TYPE", path]).lower()
+        if probed:
+            fstype = probed
+    ptype = (n.get("parttype") or "").lower()
+    plabel = (n.get("partlabel") or "")
+    label = (n.get("label") or "")
+    mnt = n.get("mountpoint") or ""
+    size = int(n.get("size") or 0)
+    start = start_of(n, path)
+    tags = []
+    role = "other"
+
+    if path == root_part or mnt == "/":
+        role = "ubuntu-root"
+        keep_parts.add(path)
+        tags.append("ubuntu-root")
+    elif mnt in keep_mounts:
+        role = "ubuntu-keep"
+        keep_parts.add(path)
+        tags.append(mnt)
+    if ptype == EFI or mnt == "/boot/efi" or (fstype == "vfat" and "efi" in (plabel + label).lower()):
+        role = "efi"
+        efi_part = path
+        keep_parts.add(path)
+        tags.append("efi")
+    elif ptype == MSR or "microsoft reserved" in (plabel + " " + label).lower():
+        role = "msr"
+        delete_parts.append(path)
+        tags.append("msr")
+    elif ptype == WINRE or re.search(r"recovery|winre", (plabel + " " + label), re.I):
+        role = "recovery"
+        delete_parts.append(path)
+        tags.append("recovery")
+    elif "bitlocker" in fstype:
+        role = "bitlocker"
+        bitlocker.append(path)
+        win_parts.append(path)
+        delete_parts.append(path)
+        tags.append("bitlocker")
+    elif fstype == "swap" or ptype == SWAP:
+        role = "swap"
+        swap_parts.append(path)
+        tags.append("swap")
+    elif fstype == "ntfs" or ptype == MSDATA:
+        role = "windows"
+        win_parts.append(path)
+        delete_parts.append(path)
+        tags.append("windows")
+    elif ptype == LINUX or fstype.startswith("ext") or fstype in ("btrfs", "xfs"):
+        if role == "other":
+            role = "linux"
+            keep_parts.add(path)
+            tags.append("linux")
+
+    rows.append({
+        "path": path, "role": role, "fstype": fstype or "-",
+        "label": label or plabel or "-", "size": size, "start": start,
+        "num": partnum(path), "mount": mnt or "-", "tags": ",".join(tags) or role,
+    })
+
+# Unique delete list, no keep
+delete_parts = [p for p in dict.fromkeys(delete_parts) if p not in keep_parts]
+win_parts = [p for p in dict.fromkeys(win_parts)]
+
+root_row = next((r for r in rows if r["path"] == root_part), None)
+root_start = root_row["start"] if root_row else 0
+root_num = root_row["num"] if root_row else partnum(root_part)
+
+del_rows = [r for r in rows if r["path"] in delete_parts]
+swap_after = [r for r in rows if r["path"] in swap_parts and r["start"] >= root_start]
+keep_after = [r for r in rows if r["path"] in keep_parts and r["path"] != root_part
+              and r["path"] != efi_part and r["start"] > root_start
+              and r["role"] not in ("swap",)]
+
+windows_before = any(r["start"] < root_start for r in del_rows)
+windows_after = any(r["start"] >= root_start for r in del_rows)
+grow_in_place = 0
+move_required = 0
+if del_rows and not windows_before and not keep_after:
+    grow_in_place = 1
+if windows_before:
+    move_required = 1
+if keep_after and windows_after and not windows_before:
+    # hole after a kept /home — cannot swallow the whole disk
+    grow_in_place = 0
+
+fs_ok = root_fstype.startswith("ext") and not lvm_name
+if lvm_name:
+    grow_in_place = 0
+    # still allow delete; grow PV is left to the finisher notes
+if not fs_ok and grow_in_place and not crypt_name:
+    grow_in_place = 0
+
+def kv(key, val):
+    return f"{key}={shlex.quote(str(val))}"
+
+lines = [
+    "ARK_VERSION=1",
+    kv("DISK", disk),
+    kv("ROOT_PART", root_part),
+    kv("ROOT_SRC", root_src),
+    kv("ROOT_FSTYPE", root_fstype),
+    kv("ROOT_START", root_start),
+    kv("ROOT_NUM", root_num),
+    kv("ROOT_CRYPT", crypt_name),
+    kv("ROOT_LVM", lvm_name),
+    kv("EFI_PART", efi_part),
+    kv("WIN_PARTS", " ".join(win_parts)),
+    kv("DELETE_PARTS", " ".join(delete_parts)),
+    kv("DELETE_NUMS", " ".join(str(r["num"]) for r in sorted(del_rows, key=lambda x: -x["num"]))),
+    kv("SWAP_PARTS", " ".join(swap_parts)),
+    kv("SWAP_AFTER_ROOT", " ".join(r["path"] for r in swap_after)),
+    kv("GROW_IN_PLACE", grow_in_place),
+    kv("MOVE_REQUIRED", move_required),
+    kv("BITLOCKER", " ".join(bitlocker)),
+    kv("KEEP_AFTER", " ".join(r["path"] for r in keep_after)),
+]
+tmp = plan_path + ".tmp"
+with open(tmp, "w") as f:
+    f.write("\n".join(lines) + "\n")
+    for r in sorted(rows, key=lambda x: (x["start"], x["num"])):
+        sz = r["size"] / (1024 ** 3)
+        f.write(f"#| {r['path']}\t{r['role']}\t{r['fstype']}\t{r['label']}\t{sz:.1f}G\t{r['mount']}\n")
+os.replace(tmp, plan_path)
+print(plan_path)
+PY
+)"
+  [[ -n "$out" && -f "$PLAN_FILE" ]] || { _err "detect failed"; return 1; }
+}
+
+_layout_text() {
+  python3 - "${1:-$PLAN_FILE}" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+rows = []
+for line in p.read_text().splitlines():
+    if line.startswith("#| "):
+        rows.append(line[3:])
+if not rows:
+    sys.exit(0)
+print("PARTITION\tROLE\tFS\tLABEL\tSIZE\tMOUNT")
+print("\n".join(rows))
+PY
+}
+
+cmd_detect() {
+  _log "detecting disk layout"
+  _detect_write_plan
+  _source_plan
+  echo "X47 Ark — disk layout"
+  echo "disk=$DISK"
+  echo "ubuntu_root=$ROOT_PART ($ROOT_FSTYPE)"
+  echo "windows=${WIN_PARTS:-none}"
+  echo "delete=${DELETE_PARTS:-none}"
+  echo "bitlocker=${BITLOCKER:-none}"
+  echo "unlock_needed=$([[ -n "${BITLOCKER:-}" ]] && echo 1 || echo 0)"
+  echo "grow_in_place=$GROW_IN_PLACE"
+  echo "move_required=$MOVE_REQUIRED"
+  echo
+  _layout_text
+  if [[ -n "${BITLOCKER:-}" ]]; then
+    echo
+    echo "BitLocker is on ${BITLOCKER}"
+    echo "Unlock from the Ark window with your recovery key, or:"
+    echo "  x47-ark unlock --key-file /path/to/recovery-key.txt"
+    echo "You do not need to boot Windows. TPM-only volumes still need the 48-digit recovery key."
+  fi
+  if [[ -z "${WIN_PARTS:-}" && -z "${BITLOCKER:-}" ]]; then
+    echo
+    echo "No Windows NTFS / BitLocker partition found on $DISK."
+    _status_set detect_ok 0
+    return 1
+  fi
+  _status_set detect_ok 1
+  _status_set last_detect "$(date -Is)"
+  _status_set unlock_needed "$([[ -n "${BITLOCKER:-}" ]] && echo 1 || echo 0)"
+}
+
+# --- mount / USB ----------------------------------------------------------
+
+UNLOCK_MAP="${X47_ARK_UNLOCK_MAP:-/run/x47-ark/mounts}"
+
+_already_mounted() {
+  findmnt -n -o TARGET "$1" 2>/dev/null | head -n1
+}
+
+_unlock_mnt_for() {
+  local part="$1"
+  [[ -f "$UNLOCK_MAP" ]] || return 1
+  grep -E "^${part}=" "$UNLOCK_MAP" 2>/dev/null | tail -n1 | cut -d= -f2-
+}
+
+_mount_windows() {
+  local part="$1"
+  local existing mapped
+  mapped="$(_unlock_mnt_for "$part" || true)"
+  if [[ -n "$mapped" && -d "$mapped" ]]; then
+    printf '%s' "$mapped"
+    return 0
+  fi
+  existing="$(_already_mounted "$part" || true)"
+  if [[ -n "$existing" ]]; then
+    printf '%s' "$existing"
+    return 0
+  fi
+  if _have udisksctl; then
+    local msg
+    if msg="$(udisksctl mount -b "$part" -o ro 2>&1)"; then
+      printf '%s' "$msg" | awk -F'at ' '/Mounted/ {print $2; exit}'
+      return 0
+    fi
+    if printf '%s' "$msg" | grep -qiE 'hiber|unclean|dirty|fast startup'; then
+      _err "$part looks hibernated (Windows Fast Startup). Boot Windows, disable Fast Startup, shut down fully, then retry."
+      return 3
+    fi
+  fi
+  local mnt
+  mnt="$(mktemp -d /tmp/x47-ark-win.XXXXXX)"
+  if _priv mount -o ro,uid="$(id -u)",gid="$(id -g)",umask=022 "$part" "$mnt"; then
+    printf '%s' "$mnt"
+    return 0
+  fi
+  rmdir "$mnt" 2>/dev/null || true
+  _err "could not mount $part read-only"
+  return 1
+}
+
+_format_recovery_key() {
+  local raw digits
+  raw="$(tr -d '[:space:]' <"$1")"
+  digits="$(printf '%s' "$raw" | tr -cd '0-9')"
+  if [[ ${#digits} -eq 48 ]]; then
+    printf '%s-%s-%s-%s-%s-%s-%s-%s' \
+      "${digits:0:6}" "${digits:6:6}" "${digits:12:6}" "${digits:18:6}" \
+      "${digits:24:6}" "${digits:30:6}" "${digits:36:6}" "${digits:42:6}"
+    return 0
+  fi
+  printf '%s' "$raw"
+}
+
+cmd_unlock() {
+  local keyfile="" mode="recovery"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --key-file|--recovery-file)
+        keyfile="${2:-}"
+        mode="recovery"
+        shift 2
+        ;;
+      --password-file)
+        keyfile="${2:-}"
+        mode="password"
+        shift 2
+        ;;
+      -h|--help)
+        echo "x47-ark unlock --key-file RECOVERY.txt"
+        echo "x47-ark unlock --password-file password.txt"
+        echo "The key is never written to the Ark log. You do not need to boot Windows."
+        return 0
+        ;;
+      *)
+        _err "unknown unlock option: $1"
+        return 2
+        ;;
+    esac
+  done
+  [[ -n "$keyfile" && -f "$keyfile" && -s "$keyfile" ]] || {
+    _err "need a non-empty --key-file (48-digit recovery key) or --password-file"
+    return 1
+  }
+  _have dislocker || { _err "dislocker is not installed — re-run modules/28-ark.sh"; return 1; }
+  _detect_write_plan >/dev/null
+  _source_plan
+  local parts="${BITLOCKER:-}"
+  if [[ -z "$parts" ]]; then
+    parts="${WIN_PARTS:-}"
+  fi
+  [[ -n "$parts" ]] || { _err "no Windows / BitLocker partition to unlock"; return 1; }
+
+  local secret_file tmp
+  secret_file="$(mktemp /tmp/x47-ark-bl.XXXXXX)"
+  chmod 0600 "$secret_file"
+  if [[ "$mode" == "recovery" ]]; then
+    _format_recovery_key "$keyfile" >"$secret_file"
+  else
+    tr -d '\n' <"$keyfile" >"$secret_file"
+  fi
+  [[ -s "$secret_file" ]] || { rm -f "$secret_file"; _err "empty BitLocker secret"; return 1; }
+
+  tmp="$(mktemp /tmp/x47-ark-unlock.XXXXXX.sh)"
+  cat >"$tmp" <<'EOS'
+#!/usr/bin/env bash
+set -euo pipefail
+MODE="$1"
+SECRET_FILE="$2"
+MAP="$3"
+shift 3
+SECRET="$(cat "$SECRET_FILE")"
+rm -f "$SECRET_FILE"
+install -m 0755 -d /run/x47-ark
+: >"$MAP"
+ok=0
+for part in "$@"; do
+  [[ -b "$part" ]] || continue
+  base="$(basename "$part")"
+  fuse="/run/x47-ark/dislocker-$base"
+  ntfs="/run/x47-ark/win-$base"
+  mkdir -p "$fuse" "$ntfs"
+  umount "$ntfs" 2>/dev/null || true
+  umount "$fuse" 2>/dev/null || true
+  if [[ "$MODE" == "recovery" ]]; then
+    if ! dislocker -V "$part" -p"$SECRET" -- "$fuse"; then
+      echo "dislocker failed on $part (wrong recovery key?)" >&2
+      continue
+    fi
+  else
+    if ! dislocker -V "$part" -u"$SECRET" -- "$fuse"; then
+      echo "dislocker failed on $part (wrong password?)" >&2
+      continue
+    fi
+  fi
+  if [[ ! -e "$fuse/dislocker-file" ]]; then
+    echo "no dislocker-file for $part" >&2
+    continue
+  fi
+  if ! mount -o ro,loop,uid=65534,gid=65534,umask=022 "$fuse/dislocker-file" "$ntfs"; then
+    mount -o ro,loop "$fuse/dislocker-file" "$ntfs" || { echo "mount failed for $part" >&2; continue; }
+  fi
+  echo "${part}=${ntfs}" >>"$MAP"
+  echo "unlocked $part -> $ntfs"
+  ok=1
+done
+unset SECRET
+[[ "$ok" -eq 1 ]]
+EOS
+  chmod 0700 "$tmp"
+  local rc=0
+  _priv bash "$tmp" "$mode" "$secret_file" "$UNLOCK_MAP" $parts || rc=$?
+  rm -f "$tmp" "$secret_file"
+  if [[ "$rc" -ne 0 ]]; then
+    _err "BitLocker unlock failed. Check the 48-digit recovery key (Microsoft account → Devices → BitLocker keys)."
+    return 1
+  fi
+  _log "BitLocker unlocked (key not logged)"
+  echo "unlock=ok"
+  echo "map=$UNLOCK_MAP"
+  cat "$UNLOCK_MAP" 2>/dev/null || true
+  echo
+  echo "=== unlock verify ==="
+  if ! cmd_unlock_verify; then
+    _status_set unlock_ok 0
+    return 1
+  fi
+  _status_set unlock_ok 1
+}
+
+UNLOCK_VERIFY="${X47_ARK_UNLOCK_VERIFY:-/run/x47-ark/UNLOCK-VERIFY.txt}"
+
+cmd_unlock_verify() {
+  _source_plan 2>/dev/null || true
+  local parts="${BITLOCKER:-${WIN_PARTS:-}}"
+  [[ -n "$parts" ]] || { _err "no Windows / BitLocker partition to verify"; return 1; }
+
+  local report users_n=0 folders_n=0 files_n=0 bytes_n=0 samples_ok=0 samples_bad=0
+  local part mnt user folder p f
+  report="$(mktemp)"
+  {
+    echo "X47 Ark unlock verify — $(date -Is)"
+    echo
+  } >"$report"
+
+  for part in $parts; do
+    mnt="$(_mount_windows "$part")" || {
+      echo "FAIL mount $part" >>"$report"
+      samples_bad=$((samples_bad + 1))
+      continue
+    }
+    echo "mount $part -> $mnt" >>"$report"
+    if [[ ! -d "$mnt/Users" ]]; then
+      echo "FAIL no Users/ on $part" >>"$report"
+      samples_bad=$((samples_bad + 1))
+      continue
+    fi
+    while IFS= read -r user; do
+      users_n=$((users_n + 1))
+      echo "user $user" >>"$report"
+      for folder in "${WIN_FOLDERS[@]}"; do
+        p="$mnt/Users/$user/$folder"
+        [[ -d "$p" ]] || continue
+        folders_n=$((folders_n + 1))
+        local fc bc
+        fc="$(find "$p" -type f 2>/dev/null | wc -l | tr -d ' ')"
+        bc="$(du -sb "$p" 2>/dev/null | awk '{print $1}')"
+        files_n=$((files_n + fc))
+        bytes_n=$((bytes_n + bc))
+        echo "  $folder files=$fc bytes=$bc" >>"$report"
+        # Read up to 8 files per folder: list + first 64KiB + sha256
+        local n=0
+        while IFS= read -r f; do
+          [[ -z "$f" ]] && continue
+          if ! dd if="$f" of=/dev/null bs=65536 count=1 status=none 2>/dev/null; then
+            echo "  FAIL read $f" >>"$report"
+            samples_bad=$((samples_bad + 1))
+            continue
+          fi
+          if sha256sum -- "$f" >/dev/null; then
+            samples_ok=$((samples_ok + 1))
+          else
+            echo "  FAIL checksum $f" >>"$report"
+            samples_bad=$((samples_bad + 1))
+          fi
+          n=$((n + 1))
+          [[ "$n" -ge 8 ]] && break
+        done < <(find "$p" -type f 2>/dev/null | head -n 8)
+      done
+    done < <(_win_users "$mnt")
+  done
+
+  {
+    echo
+    echo "users=$users_n"
+    echo "folders=$folders_n"
+    echo "files=$files_n"
+    echo "bytes=$bytes_n"
+    echo "samples_ok=$samples_ok"
+    echo "samples_bad=$samples_bad"
+  } >>"$report"
+
+  if [[ "$users_n" -lt 1 || "$folders_n" -lt 1 || "$samples_bad" -gt 0 ]]; then
+    echo "UNLOCK_VERIFY=FAIL" >>"$report"
+    _priv install -m 0644 "$report" "$UNLOCK_VERIFY" 2>/dev/null || cp "$report" "$HOME/.cache/x47/UNLOCK-VERIFY.txt"
+    cat "$report"
+    rm -f "$report"
+    _status_set unlock_verify_ok 0
+    _err "unlock verify failed — volume is not safely readable"
+    return 1
+  fi
+  echo "UNLOCK_VERIFY=OK" >>"$report"
+  _priv install -m 0644 "$report" "$UNLOCK_VERIFY" 2>/dev/null || {
+    mkdir -p "$HOME/.cache/x47"
+    cp "$report" "$HOME/.cache/x47/UNLOCK-VERIFY.txt"
+  }
+  cat "$report"
+  rm -f "$report"
+  _status_set unlock_verify_ok 1
+  _status_set unlock_files "$files_n"
+  _status_set unlock_bytes "$bytes_n"
+  echo "unlock_verify=ok"
+}
+
+_list_usb_mounts() {
+  python3 - "$DISK" <<'PY'
+import json, os, subprocess, sys
+system_disk = os.path.basename(sys.argv[1] or "")
+ls = json.loads(subprocess.check_output(
+    ["lsblk", "-J", "-b", "-o",
+     "NAME,PATH,PKNAME,TYPE,FSTYPE,SIZE,FSAVAIL,MOUNTPOINT,TRAN,RM,LABEL,HOTPLUG"],
+    text=True))
+
+def flatten(nodes, acc=None, tran=None, rm=0):
+    acc = acc or []
+    for n in nodes:
+        n = dict(n)
+        n["_tran"] = n.get("tran") or tran
+        n["_rm"] = n.get("rm") if n.get("rm") is not None else rm
+        acc.append(n)
+        flatten(n.get("children") or [], acc, n["_tran"], n["_rm"])
+    return acc
+
+rows = []
+for n in flatten(ls.get("blockdevices") or []):
+    if n.get("type") != "part":
+        continue
+    mnt = n.get("mountpoint") or ""
+    if not mnt or mnt in ("/", "/boot", "/boot/efi", "/home"):
+        continue
+    pk = n.get("pkname") or ""
+    if system_disk and pk == system_disk:
+        continue
+    removable = bool(n.get("_rm") or n.get("hotplug") or (n.get("_tran") == "usb"))
+    if not removable and n.get("_tran") not in ("usb",):
+        # still allow any mounted non-system disk (second internal)
+        pass
+    avail = int(n.get("fsavail") or 0)
+    label = n.get("label") or os.path.basename(mnt)
+    path = n.get("path") or ("/dev/" + n["name"])
+    rows.append((path, pk, mnt, label, avail))
+
+for path, pk, mnt, label, avail in rows:
+    print(f"{path}\t{pk}\t{mnt}\t{label}\t{avail}")
+PY
+}
+
+_dest_ok() {
+  local dest="$1"
+  [[ -d "$dest" && -w "$dest" ]] || { _err "destination not writable: $dest"; return 1; }
+  local src disk
+  src="$(findmnt -n -o SOURCE --target "$dest" 2>/dev/null || true)"
+  [[ -n "$src" ]] || { _err "cannot find device for $dest"; return 1; }
+  disk="$(_disk_of "$src")"
+  if [[ -n "${DISK:-}" && "$disk" == "$DISK" ]]; then
+    _err "refusing to write the backup onto the dual-boot disk ($DISK)"
+    return 1
+  fi
+  return 0
+}
+
+_pick_dest() {
+  local dest="${1:-}"
+  if [[ -n "$dest" ]]; then
+    printf '%s' "$dest"
+    return 0
+  fi
+  local rows
+  rows="$(_list_usb_mounts || true)"
+  if [[ -z "$rows" ]]; then
+    if _is_gui && _have zenity; then
+      dest="$(_zenity --file-selection --directory --title='X47 Ark — pick the external drive folder' || true)"
+    else
+      _err "plug in an external drive and mount it, or pass a folder: x47-ark backup /media/you/USB"
+      return 1
+    fi
+  elif _is_gui && _have zenity; then
+    local args=() line path pk mnt label avail human
+    while IFS=$'\t' read -r path pk mnt label avail; do
+      [[ -z "$path" ]] && continue
+      human="$(numfmt --to=iec --suffix=B "$avail" 2>/dev/null || echo "$avail")"
+      args+=(FALSE "$mnt" "$label" "$human")
+    done <<<"$rows"
+    dest="$(_zenity --list --radiolist --title='X47 Ark — backup destination' --width=640 --height=320 \
+      --text='Pick an external drive. The backup cannot live on the Windows/Ubuntu disk.' \
+      --column=Pick --column=Mount --column=Label --column=Free \
+      "${args[@]}" || true)"
+  else
+    echo "Available destinations:" >&2
+    echo "$rows" | awk -F'\t' '{printf "  %s  (%s, free %s)\n", $3, $4, $5}' >&2
+    read -r -p "Folder: " dest
+  fi
+  [[ -n "$dest" ]] || return 1
+  printf '%s' "$dest"
+}
+
+# --- backup / verify ------------------------------------------------------
+
+_win_users() {
+  local root="$1"
+  local users="$root/Users"
+  [[ -d "$users" ]] || return 1
+  local d name
+  for d in "$users"/*; do
+    [[ -d "$d" ]] || continue
+    name="$(basename "$d")"
+    [[ "$name" =~ $SKIP_USERS_REGEX ]] && continue
+    printf '%s\n' "$name"
+  done
+}
+
+_estimate_bytes() {
+  local root="$1" total=0 user folder p
+  while IFS= read -r user; do
+    for folder in "${WIN_FOLDERS[@]}"; do
+      p="$root/Users/$user/$folder"
+      [[ -d "$p" ]] || continue
+      total=$((total + $(du -sb "$p" 2>/dev/null | awk '{print $1}')))
+    done
+  done < <(_win_users "$root")
+  printf '%s' "$total"
+}
+
+_write_readme() {
+  local dest="$1"
+  cat >"$dest/ARK-README.txt" <<EOF
+X47 Ark backup
+==============
+
+Created: $(date -Is)
+Host:    $(hostname)
+Disk:    ${DISK:-unknown}
+Windows: ${WIN_PARTS:-unknown}
+
+This folder is a copy of Windows user files only:
+  Documents, Desktop, Downloads, Pictures, Videos, Music
+
+AppData, Program Files, and the Windows install itself were not copied.
+
+Next steps
+----------
+1. Open Users/ and confirm your files are here.
+2. Keep this USB somewhere safe.
+3. To give the whole disk to Ubuntu:
+     - If the wizard said Ubuntu can grow in place:
+         x47-ark reclaim
+     - If Ubuntu sits after Windows (typical dual-boot):
+         Boot any Ubuntu live USB, plug this stick in, then:
+           sudo bash /path/to/X47-Ark/finish-ark.sh
+       Type DELETE WINDOWS when asked.
+
+Do not store this backup on the same drive you are about to wipe.
+EOF
+}
+
+_write_finisher() {
+  local ark_root="$1"
+  local self
+  self="$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")"
+  mkdir -p "$ark_root"
+  if [[ -f "$PLAN_FILE" ]]; then
+    install -m 0644 "$PLAN_FILE" "$ark_root/ark-plan.conf"
+  fi
+  if [[ -f "$self" ]]; then
+    install -m 0755 "$self" "$ark_root/x47-ark"
+  fi
+  cat >"$ark_root/finish-ark.sh" <<'EOF'
+#!/usr/bin/env bash
+# X47 Ark live-USB finisher — run from an Ubuntu live session, not the installed OS.
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLAN="$HERE/ark-plan.conf"
+BIN="$HERE/x47-ark"
+if [[ "$(id -u)" -ne 0 ]]; then
+  exec sudo -E bash "$0" "$@"
+fi
+if [[ -x "$BIN" ]]; then
+  exec bash "$BIN" finish "$PLAN"
+fi
+echo "missing $BIN" >&2
+exit 1
+EOF
+  chmod 0755 "$ark_root/finish-ark.sh"
+  cat >"$ark_root/FINISH-README.txt" <<'EOF'
+Finish X47 Ark from a live USB
+==============================
+
+Use this only after the backup on this stick verified OK.
+
+1. Shut down the installed Ubuntu.
+2. Boot any Ubuntu live USB (Try Ubuntu) — or the X47 ISO.
+3. Plug in THIS backup stick.
+4. Open Files, open X47-Ark, then in a terminal:
+
+     sudo bash /media/ubuntu/*/X47-Ark/finish-ark.sh
+
+5. Read the partition plan. Type: DELETE WINDOWS
+6. Wait for move/grow + GRUB update. Reboot and remove the live USB.
+
+This step permanently deletes the Windows partitions listed in ark-plan.conf.
+EOF
+}
+
+cmd_backup() {
+  cmd_detect >/dev/null
+  _source_plan
+  if [[ -n "${BITLOCKER:-}" ]]; then
+    local need_unlock=0 part
+    for part in $BITLOCKER; do
+      if [[ -z "$(_unlock_mnt_for "$part" || true)" ]]; then
+        need_unlock=1
+      fi
+    done
+    if [[ "$need_unlock" -eq 1 ]]; then
+      if [[ -n "${X47_ARK_BITLOCKER_KEY_FILE:-}" ]]; then
+        cmd_unlock --key-file "$X47_ARK_BITLOCKER_KEY_FILE" || return 2
+      elif [[ -n "${X47_ARK_BITLOCKER_PASSWORD_FILE:-}" ]]; then
+        cmd_unlock --password-file "$X47_ARK_BITLOCKER_PASSWORD_FILE" || return 2
+      else
+        _err "BitLocker is on ${BITLOCKER} — unlock in the Ark window, or: x47-ark unlock --key-file KEY.txt"
+        return 2
+      fi
+    fi
+    if [[ "$(_status_get unlock_verify_ok 0)" != "1" ]]; then
+      echo "=== unlock verify ==="
+      cmd_unlock_verify || return 2
+    fi
+  fi
+  [[ -n "${WIN_PARTS:-}" ]] || { _err "no Windows partition to back up"; return 1; }
+
+  local dest_root stamp dest part mnt ours=0
+  dest_root="$(_pick_dest "${1:-}")" || return 1
+  _dest_ok "$dest_root" || return 1
+
+  stamp="$(date -u +%Y-%m-%dT%H%MZ)"
+  dest="${dest_root%/}/X47-Ark/${stamp}"
+  mkdir -p "$dest/Users"
+
+  local need=0 avail have_users=0
+  for part in $WIN_PARTS; do
+    mnt="$(_mount_windows "$part")" || return $?
+    if _win_users "$mnt" >/dev/null; then
+      have_users=1
+      need=$((need + $(_estimate_bytes "$mnt")))
+    else
+      _log "note: $part has no Users folder — skipped for file copy (still marked for reclaim)"
+    fi
+  done
+  if [[ "$have_users" -eq 0 ]]; then
+    _err "mounted Windows partition(s) but found no Users folders"
+    return 1
+  fi
+  avail="$(df -B1 --output=avail "$dest_root" | tail -n1 | tr -d ' ')"
+  if [[ "$avail" -lt $((need + need / 10 + 64*1024*1024)) ]]; then
+    _err "not enough free space on $dest_root (need ~$(numfmt --to=iec "$need"), have $(numfmt --to=iec "$avail"))"
+    return 1
+  fi
+
+  _log "backup → $dest  (estimate $(numfmt --to=iec "$need"))"
+  local user folder src_p
+  for part in $WIN_PARTS; do
+    mnt="$(_already_mounted "$part" || _mount_windows "$part")" || return 1
+    while IFS= read -r user; do
+      for folder in "${WIN_FOLDERS[@]}"; do
+        src_p="$mnt/Users/$user/$folder"
+        [[ -d "$src_p" ]] || continue
+        mkdir -p "$dest/Users/$user/$folder"
+        _log "rsync $part:$user/$folder"
+        if [[ -t 1 ]]; then
+          rsync -a --info=progress2 --human-readable "$src_p/" "$dest/Users/$user/$folder/"
+        else
+          rsync -a --info=stats2 --human-readable "$src_p/" "$dest/Users/$user/$folder/"
+        fi
+      done
+    done < <(_win_users "$mnt")
+  done
+
+  (cd "$dest" && find Users -type f -printf '%s\t%p\n' | sort -k2) >"$dest/MANIFEST.txt"
+  _write_readme "$dest"
+  install -m 0644 "$PLAN_FILE" "$dest/ark-plan.conf" 2>/dev/null || true
+  _write_finisher "${dest_root%/}/X47-Ark"
+
+  local files bytes usb_plan
+  files="$(grep -c . "$dest/MANIFEST.txt" || true)"
+  bytes="$(awk '{s+=$1} END{print s+0}' "$dest/MANIFEST.txt")"
+  _plan_set BACKUP_DIR "$dest"
+  _plan_set BACKUP_OK 1
+  _plan_set BACKUP_FILES "$files"
+  _plan_set BACKUP_BYTES "$bytes"
+  usb_plan="${dest_root%/}/X47-Ark/ark-plan.conf"
+  if [[ -f "$usb_plan" ]]; then
+    _plan_set BACKUP_DIR "$dest" "$usb_plan"
+    _plan_set BACKUP_OK 1 "$usb_plan"
+    _plan_set BACKUP_FILES "$files" "$usb_plan"
+    _plan_set BACKUP_BYTES "$bytes" "$usb_plan"
+  fi
+
+  _status_set last_backup "$dest"
+  _status_set backup_ok 1
+  _status_set backup_files "$files"
+  _status_set backup_bytes "$bytes"
+  _status_set verify_ok 0
+  _log "backup complete: $files files, $(numfmt --to=iec "$bytes") → $dest"
+  echo "backup_dir=$dest"
+  echo "files=$files"
+  echo "bytes=$bytes"
+}
+
+_sample_checksums() {
+  local dest="$1" n=32
+  [[ -s "$dest/MANIFEST.txt" ]] || return 1
+  local picks
+  picks="$(set +o pipefail
+    awk -F'\t' '{print $2}' "$dest/MANIFEST.txt" \
+      | awk 'BEGIN{srand()} {print rand()"\t"$0}' \
+      | sort -n | head -n "$n" | cut -f2-)"
+  local f ok=0 bad=0
+  : >"$dest/SAMPLE-SHA256.txt"
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    if [[ -f "$dest/$f" ]]; then
+      (cd "$dest" && sha256sum -- "$f") >>"$dest/SAMPLE-SHA256.txt"
+      ok=$((ok + 1))
+    else
+      echo "MISSING $f" >>"$dest/SAMPLE-SHA256.txt"
+      bad=$((bad + 1))
+    fi
+  done <<<"$picks"
+  echo "$ok $bad"
+}
+
+cmd_verify() {
+  local dest="${1:-$(_status_get last_backup)}"
+  [[ -n "$dest" && -d "$dest" ]] || { _err "no backup dir — pass it or run backup first"; return 1; }
+  [[ -f "$dest/MANIFEST.txt" ]] || { _err "MANIFEST.txt missing in $dest"; return 1; }
+  _dest_ok "$(dirname "$(dirname "$dest")")" 2>/dev/null || _dest_ok "$(dirname "$dest")" || true
+
+  local listed actual missing bytes_m bytes_d
+  listed="$(grep -c . "$dest/MANIFEST.txt" || true)"
+  actual="$(find "$dest/Users" -type f 2>/dev/null | wc -l | tr -d ' ')"
+  bytes_m="$(awk '{s+=$1} END{print s+0}' "$dest/MANIFEST.txt")"
+  bytes_d="$(du -sb "$dest/Users" 2>/dev/null | awk '{print $1}')"
+  missing=0
+  while IFS=$'\t' read -r sz path; do
+    [[ -f "$dest/$path" ]] || missing=$((missing + 1))
+  done <"$dest/MANIFEST.txt"
+
+  local sample_ok=0 sample_bad=0
+  read -r sample_ok sample_bad < <(_sample_checksums "$dest")
+
+  local cmp_ok=0 cmp_bad=0 cmp_skip=0
+  _source_plan 2>/dev/null || true
+  if [[ -s "$dest/SAMPLE-SHA256.txt" ]]; then
+    local line hash rel src_hash mnt part found
+    : >"$dest/COMPARE-SHA256.txt"
+    while IFS= read -r line; do
+      [[ -z "$line" || "$line" == MISSING* ]] && continue
+      hash="${line%% *}"
+      rel="${line#* }"
+      rel="${rel# }"
+      [[ -z "$hash" || -z "$rel" ]] && continue
+      found=0
+      for part in ${WIN_PARTS:-} ${BITLOCKER:-}; do
+        mnt="$(_mount_windows "$part" 2>/dev/null || true)"
+        [[ -n "$mnt" && -f "$mnt/$rel" ]] || continue
+        src_hash="$(sha256sum -- "$mnt/$rel" | awk '{print $1}')"
+        if [[ "$src_hash" == "$hash" ]]; then
+          echo "MATCH $rel" >>"$dest/COMPARE-SHA256.txt"
+          cmp_ok=$((cmp_ok + 1))
+        else
+          echo "MISMATCH $rel" >>"$dest/COMPARE-SHA256.txt"
+          cmp_bad=$((cmp_bad + 1))
+        fi
+        found=1
+        break
+      done
+      if [[ "$found" -eq 0 ]]; then
+        echo "SOURCE_MISSING $rel" >>"$dest/COMPARE-SHA256.txt"
+        cmp_skip=$((cmp_skip + 1))
+      fi
+    done <"$dest/SAMPLE-SHA256.txt"
+  fi
+
+  {
+    echo "X47 Ark verify — $(date -Is)"
+    echo "dir=$dest"
+    echo "manifest_files=$listed"
+    echo "found_files=$actual"
+    echo "missing=$missing"
+    echo "manifest_bytes=$bytes_m"
+    echo "du_bytes=$bytes_d"
+    echo "sample_ok=$sample_ok"
+    echo "sample_missing=$sample_bad"
+    echo "source_match=$cmp_ok"
+    echo "source_mismatch=$cmp_bad"
+    echo "source_missing=$cmp_skip"
+  } | tee "$dest/VERIFY.txt"
+
+  if [[ "$missing" -gt 0 || "$sample_bad" -gt 0 || "$listed" -eq 0 || "$cmp_bad" -gt 0 ]]; then
+    echo "VERIFY=FAIL" | tee -a "$dest/VERIFY.txt"
+    _status_set verify_ok 0
+    _err "verify failed"
+    return 1
+  fi
+  if [[ "$cmp_ok" -eq 0 && "$sample_ok" -gt 0 ]]; then
+    echo "VERIFY=FAIL (could not re-read any source files to compare)" | tee -a "$dest/VERIFY.txt"
+    _status_set verify_ok 0
+    _err "verify failed — source compare empty"
+    return 1
+  fi
+  echo "VERIFY=OK" | tee -a "$dest/VERIFY.txt"
+  _status_set verify_ok 1
+  _status_set last_verify "$(date -Is)"
+  _plan_set VERIFY_OK 1 || true
+  _plan_set BACKUP_DIR "$dest" || true
+  echo "verify=ok"
+}
+
+# --- reclaim / finish -----------------------------------------------------
+
+_confirm_delete() {
+  local typed=""
+  if [[ "${X47_ARK_CONFIRM:-}" == "DELETE WINDOWS" ]]; then
+    return 0
+  fi
+  if _is_gui && _have zenity; then
+    typed="$(_zenity --entry --title='X47 Ark — confirm' --width=480 \
+      --text='This permanently deletes the Windows partitions on this disk.\n\nType DELETE WINDOWS to continue.' || true)"
+  else
+    echo
+    echo "This permanently deletes the Windows partitions on ${DISK:-this disk}."
+    read -r -p "Type DELETE WINDOWS to continue: " typed
+  fi
+  [[ "$typed" == "DELETE WINDOWS" ]] || { _err "confirmation not given — aborted"; return 1; }
+}
+
+_reclaim_preview() {
+  _source_plan "${1:-$PLAN_FILE}"
+  cat <<EOF
+X47 Ark reclaim plan
+--------------------
+disk:            $DISK
+keep EFI:        ${EFI_PART:-none}
+keep Ubuntu:     $ROOT_PART ($ROOT_FSTYPE)
+delete:          ${DELETE_PARTS:-none}
+grow in place:   $GROW_IN_PLACE
+move required:   $MOVE_REQUIRED
+bitlocker:       ${BITLOCKER:-none}
+
+$(_layout_text)
+
+Rules: EFI and Ubuntu are never deleted. Backup verify must be OK.
+EOF
+}
+
+_update_grub_and_efi() {
+  if _have update-grub; then
+    update-grub || true
+  elif [[ -x /usr/sbin/update-grub ]]; then
+    /usr/sbin/update-grub || true
+  fi
+  if _have efibootmgr; then
+    local line boot
+    while IFS= read -r line; do
+      printf '%s' "$line" | grep -qi 'windows' || continue
+      boot="$(printf '%s' "$line" | grep -oE 'Boot[0-9A-Fa-f]{4}' | head -n1 | sed 's/Boot//')"
+      [[ -n "$boot" ]] || continue
+      efibootmgr -b "$boot" -B || true
+    done < <(efibootmgr 2>/dev/null || true)
+  fi
+}
+
+_grow_ext() {
+  local part="$1" mapper="${2:-}"
+  udevadm settle 2>/dev/null || true
+  if [[ -n "$mapper" ]]; then
+    local name
+    name="$(basename "$mapper")"
+    cryptsetup resize "$name" || true
+    resize2fs "$mapper"
+  else
+    resize2fs "$part"
+  fi
+}
+
+_do_delete_and_grow() {
+  # Must run as root. Plan already sourced.
+  local num part
+  for part in $DELETE_PARTS ${SWAP_AFTER_ROOT:-}; do
+    [[ -b "$part" ]] || continue
+    findmnt "$part" >/dev/null 2>&1 && umount "$part" || true
+    swapoff "$part" 2>/dev/null || true
+    wipefs -a "$part" || true
+  done
+  for num in $DELETE_NUMS; do
+    echo "parted rm $num on $DISK"
+    parted -s "$DISK" rm "$num" || true
+  done
+  # If we listed swap-after-root and it was not in DELETE_NUMS, drop it too when growing.
+  if [[ -n "${SWAP_AFTER_ROOT:-}" && "$GROW_IN_PLACE" == "1" ]]; then
+    local sp sn
+    for sp in $SWAP_AFTER_ROOT; do
+      [[ -b "$sp" ]] || continue
+      sn="$(echo "$sp" | grep -oE '[0-9]+$')"
+      wipefs -a "$sp" || true
+      parted -s "$DISK" rm "$sn" || true
+    done
+  fi
+  echo "parted resizepart $ROOT_NUM 100%"
+  if ! parted -s "$DISK" resizepart "$ROOT_NUM" 100%; then
+    printf 'Yes\n' | parted ---pretend-input-tty "$DISK" resizepart "$ROOT_NUM" 100% || true
+  fi
+  udevadm settle 2>/dev/null || true
+  partprobe "$DISK" 2>/dev/null || true
+  if [[ "$ROOT_FSTYPE" == ext4 || "$ROOT_FSTYPE" == ext3 || "$ROOT_FSTYPE" == ext2 ]]; then
+    _grow_ext "$ROOT_PART" "${ROOT_CRYPT:-}"
+  elif [[ "$ROOT_FSTYPE" == btrfs ]]; then
+    btrfs filesystem resize max / || true
+  else
+    echo "filesystem $ROOT_FSTYPE: grow the filesystem yourself if the partition grew"
+  fi
+  _update_grub_and_efi
+  echo "DONE — Windows partitions removed; Ubuntu grown when possible."
+}
+
+_do_move_and_grow() {
+  # Live USB: delete Windows. Auto-move only a plain ext4 root with nothing
+  # (boot / LUKS / LVM) in the way — otherwise stop at GParted instructions.
+  local num part
+  for part in $DELETE_PARTS; do
+    [[ -b "$part" ]] || continue
+    findmnt "$part" >/dev/null 2>&1 && umount "$part" || true
+    wipefs -a "$part" || true
+  done
+  for num in $DELETE_NUMS; do
+    echo "parted rm $num on $DISK"
+    parted -s "$DISK" rm "$num" || true
+  done
+  udevadm settle 2>/dev/null || true
+  partprobe "$DISK" 2>/dev/null || true
+
+  local auto=1
+  if [[ -n "${ROOT_LVM:-}" || -n "${ROOT_CRYPT:-}" ]]; then
+    auto=0
+    echo "Ubuntu is LUKS and/or LVM — not auto-moving encrypted volumes."
+  fi
+  if [[ -f "${PLAN_FILE:-}" ]] && grep -qE '^#\| .*(ubuntu-keep|/boot)' "$PLAN_FILE"; then
+    auto=0
+    echo "A separate /boot (or other Linux) partition must move with root."
+  fi
+
+  local moved=0
+  if [[ "$auto" -eq 1 ]] && _have sfdisk && sfdisk --help 2>&1 | grep -q -- '--move-data'; then
+    echo "relocating $ROOT_PART left with sfdisk --move-data (this can take a while)"
+    local new_start="2048"
+    if [[ -n "${EFI_PART:-}" && -b "$EFI_PART" ]]; then
+      local efi_start efi_size
+      efi_start="$(cat "/sys/class/block/$(basename "$EFI_PART")/start")"
+      efi_size="$(cat "/sys/class/block/$(basename "$EFI_PART")/size")"
+      new_start=$((efi_start + efi_size))
+    fi
+    if printf '%s,\n' "$new_start" | sfdisk --move-data -N "$ROOT_NUM" "$DISK"; then
+      moved=1
+    else
+      echo "sfdisk --move-data failed."
+    fi
+  fi
+
+  if [[ "$moved" -eq 1 ]]; then
+    if ! parted -s "$DISK" resizepart "$ROOT_NUM" 100%; then
+      printf 'Yes\n' | parted ---pretend-input-tty "$DISK" resizepart "$ROOT_NUM" 100% || true
+    fi
+    udevadm settle 2>/dev/null || true
+    partprobe "$DISK" 2>/dev/null || true
+    e2fsck -f -p "$ROOT_PART" || true
+    if [[ "$ROOT_FSTYPE" == ext4 || "$ROOT_FSTYPE" == ext3 || "$ROOT_FSTYPE" == ext2 ]]; then
+      resize2fs "$ROOT_PART" || true
+    fi
+  else
+    cat <<EOF
+
+Windows partitions are gone. Finish in GParted (installed on the live USB):
+
+  1. sudo gparted $DISK
+  2. Move every remaining Linux partition (/boot, LUKS/root) left into the
+     freed space, keeping their order. Do not touch the EFI partition.
+  3. Grow the last Linux partition to fill the disk.
+  4. Apply. This can take a long time.
+  5. Reboot into Ubuntu. If the root is LUKS+LVM:
+       sudo cryptsetup resize <crypt-name>
+       sudo pvresize $ROOT_PART
+       sudo lvextend -l +100%FREE <logical-volume>
+       sudo resize2fs <logical-volume>
+  6. sudo update-grub
+
+EOF
+  fi
+  echo "DONE — Windows deleted. Complete the move/grow in GParted if prompted above."
+}
+
+cmd_reclaim() {
+  [[ "$(_status_get verify_ok 0)" == "1" ]] || { _err "verify has not succeeded — run: x47-ark verify"; return 1; }
+  local bdir
+  bdir="$(_status_get last_backup)"
+  [[ -n "$bdir" && -d "$bdir" && -f "$bdir/VERIFY.txt" ]] || { _err "backup folder missing — plug the USB back in"; return 1; }
+  grep -q 'VERIFY=OK' "$bdir/VERIFY.txt" || { _err "VERIFY=OK not found in $bdir/VERIFY.txt"; return 1; }
+
+  _detect_write_plan
+  _source_plan
+  [[ -n "${DELETE_PARTS:-}" ]] || { _err "nothing to delete"; return 1; }
+
+  _reclaim_preview
+  if [[ "$MOVE_REQUIRED" == "1" ]]; then
+    echo
+    echo "Ubuntu sits after Windows. The installed system cannot move a mounted root."
+    echo "A finisher was written next to the backup (X47-Ark/finish-ark.sh)."
+    echo "Boot a live USB and run that script."
+    local usb_root
+    usb_root="$(dirname "$bdir")"
+    _write_finisher "$usb_root"
+    if _is_gui && _have zenity; then
+      _zenity --info --title='X47 Ark' --width=520 \
+        --text="Backup is safe.\n\nUbuntu is after Windows, so the last step must run from a live USB.\n\nBoot any Ubuntu live image, plug this stick in, and run:\n\n<tt>sudo bash ${usb_root}/finish-ark.sh</tt>"
+    fi
+    return 0
+  fi
+  if [[ "$GROW_IN_PLACE" != "1" ]]; then
+    _err "cannot grow in place (extra Linux partition after root, or unsupported layout). Delete Windows in GParted after the backup, or use the live-USB finisher."
+    return 1
+  fi
+
+  _confirm_delete || return 1
+
+  local tmp
+  tmp="$(mktemp /tmp/x47-ark-reclaim.XXXXXX.sh)"
+  {
+    echo '#!/usr/bin/env bash'
+    echo 'set -euo pipefail'
+    echo "PLAN_FILE=$(printf '%q' "$PLAN_FILE")"
+    echo "STATUS_FILE=$(printf '%q' "$STATUS_FILE")"
+    echo "LOG_FILE=$(printf '%q' "$LOG_FILE")"
+    # shellcheck disable=SC2016
+    echo 'set -a; . "$PLAN_FILE"; set +a'
+    declare -f _have _update_grub_and_efi _grow_ext _do_delete_and_grow
+    echo '_do_delete_and_grow'
+  } >"$tmp"
+  chmod 0755 "$tmp"
+  _log "reclaim start"
+  local rc=0
+  _priv bash "$tmp" || rc=$?
+  rm -f "$tmp"
+  if [[ "$rc" -eq 0 ]]; then
+    _status_set reclaim_ok 1
+    _status_set last_reclaim "$(date -Is)"
+  fi
+  return "$rc"
+}
+
+cmd_finish() {
+  local plan="${1:-}"
+  if [[ -z "$plan" ]]; then
+    local here
+    here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [[ -f "$here/ark-plan.conf" ]]; then
+      plan="$here/ark-plan.conf"
+    else
+      plan="$PLAN_FILE"
+    fi
+  fi
+  [[ -f "$plan" ]] || { _err "plan not found: $plan"; return 1; }
+  PLAN_FILE="$plan"
+  _source_plan "$plan"
+
+  if ! _is_live; then
+    _err "finish is meant for an Ubuntu live USB (moving partitions)."
+    _err "From the installed system use: x47-ark reclaim"
+    _err "Override only if you know what you are doing: X47_ARK_FORCE=1"
+    return 1
+  fi
+  [[ "$(id -u)" -eq 0 ]] || { _err "finish must run as root (sudo)"; return 1; }
+  [[ -n "${DELETE_PARTS:-}" ]] || { _err "nothing to delete"; return 1; }
+
+  _reclaim_preview "$plan"
+  _confirm_delete || return 1
+
+  if [[ "$MOVE_REQUIRED" == "1" ]]; then
+    _do_move_and_grow
+  elif [[ "$GROW_IN_PLACE" == "1" ]]; then
+    _do_delete_and_grow
+  else
+    _err "layout is not a simple grow or move — use GParted with this plan as a guide"
+    return 1
+  fi
+}
+
+cmd_dests() {
+  _detect_write_plan >/dev/null
+  _source_plan
+  _list_usb_mounts
+}
+
+cmd_status() {
+  echo "last_detect=$(_status_get last_detect never)"
+  echo "detect_ok=$(_status_get detect_ok 0)"
+  echo "last_backup=$(_status_get last_backup)"
+  echo "backup_ok=$(_status_get backup_ok 0)"
+  echo "backup_files=$(_status_get backup_files 0)"
+  echo "verify_ok=$(_status_get verify_ok 0)"
+  echo "last_verify=$(_status_get last_verify never)"
+  echo "reclaim_ok=$(_status_get reclaim_ok 0)"
+  echo "unlock_needed=$(_status_get unlock_needed 0)"
+  echo "unlock_ok=$(_status_get unlock_ok 0)"
+  echo "unlock_verify_ok=$(_status_get unlock_verify_ok 0)"
+  if [[ -f "$PLAN_FILE" ]]; then
+    echo "plan=$PLAN_FILE"
+  fi
+}
+
+# --- GUI ------------------------------------------------------------------
+
+_find_gui() {
+  local here self
+  self="$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")"
+  here="$(cd "$(dirname "$self")" && pwd)"
+  local c
+  for c in \
+    "$here/x47-ark-gui" \
+    "$HOME/.local/share/ubuntu-x47-build/bin/x47-ark-gui" \
+    "$HOME/.local/bin/x47-ark-gui"
+  do
+    [[ -f "$c" ]] && { printf '%s' "$c"; return 0; }
+  done
+  return 1
+}
+
+cmd_gui() {
+  local gui
+  if gui="$(_find_gui)"; then
+    exec python3 "$gui" "$@"
+  fi
+  if ! _have zenity; then
+    echo "zenity not found — text flow" >&2
+    cmd_detect || true
+    echo
+    read -r -p "Back up Windows user files now? [y/N] " ans || ans=n
+    case "${ans,,}" in
+      y|yes)
+        cmd_backup
+        cmd_verify
+        echo
+        read -r -p "Continue to reclaim (deletes Windows)? [y/N] " ans2 || ans2=n
+        case "${ans2,,}" in
+          y|yes) cmd_reclaim ;;
+          *) echo "Stopped after backup. Run x47-ark reclaim later if you want." ;;
+        esac
+        ;;
+      *) echo "Cancelled." ;;
+    esac
+    return 0
+  fi
+
+  if ! _zenity --question --title='X47 Ark' --width=520 \
+    --ok-label='Continue' --cancel-label='Open guide' \
+    --text="<b>X47 Ark</b>\n\n1. Copy Windows Documents, Desktop, Downloads, Pictures, Videos, and Music to an external USB.\n2. After the copy checks out, delete Windows and give the disk to Ubuntu.\n\nThe backup cannot live on the same drive you are about to wipe.\nBitLocker and Fast Startup must be off.\n\nContinue?"; then
+    cmd_guide || true
+    return 0
+  fi
+
+  local det
+  if ! det="$(cmd_detect 2>&1)"; then
+    _zenity --error --title='X47 Ark' --width=520 \
+      --text="Could not find a Windows partition to back up.\n\n<pre>$(_escape "$(printf '%s' "$det" | tail -c 1800)")</pre>"
+    return 1
+  fi
+  if ! _zenity --question --title='X47 Ark — layout' --width=640 --height=480 \
+    --ok-label='Pick USB' --cancel-label='Cancel' \
+    --text="<b>Detected layout</b>\n\n<pre>$(_escape "$(printf '%s' "$det" | tail -c 2800)")</pre>"; then
+    return 0
+  fi
+
+  local dest
+  dest="$(_pick_dest)" || { _zenity --info --text='Cancelled.'; return 0; }
+  if ! _zenity --question --title='X47 Ark — start backup' --width=480 \
+    --ok-label='Copy files' --cancel-label='Cancel' \
+    --text="Copy Windows user folders to:\n\n<tt>$(_escape "$dest")/X47-Ark/…</tt>\n\nThis can take a while."; then
+    return 0
+  fi
+
+  local bout
+  if ! bout="$(cmd_backup "$dest" 2>&1)"; then
+    _zenity --error --title='X47 Ark' --width=560 \
+      --text="Backup failed.\n\n<pre>$(_escape "$(printf '%s' "$bout" | tail -c 1800)")</pre>"
+    return 1
+  fi
+
+  local vout
+  if ! vout="$(cmd_verify 2>&1)"; then
+    _zenity --error --title='X47 Ark' --width=560 \
+      --text="Verify failed — Windows was <b>not</b> deleted.\n\n<pre>$(_escape "$(printf '%s' "$vout" | tail -c 1800)")</pre>"
+    return 1
+  fi
+
+  if ! _zenity --question --title='X47 Ark — backup OK' --width=520 \
+    --ok-label='Reclaim disk' --cancel-label='Stop here' \
+    --text="<b>Backup verified.</b>\n\n<pre>$(_escape "$(printf '%s' "$vout" | tail -c 1200)")</pre>\n\nStop here if you only wanted a copy.\nReclaim disk deletes Windows partitions."; then
+    _zenity --info --title='X47 Ark' --width=420 \
+      --text="Backup kept. Reclaim later with <tt>x47-ark reclaim</tt> or the live-USB finisher on the stick."
+    return 0
+  fi
+
+  local rout
+  if ! rout="$(cmd_reclaim 2>&1)"; then
+    _zenity --error --title='X47 Ark' --width=560 \
+      --text="Reclaim did not finish.\n\n<pre>$(_escape "$(printf '%s' "$rout" | tail -c 1800)")</pre>"
+    return 1
+  fi
+  _zenity --info --title='X47 Ark' --width=520 \
+    --text="<b>Done.</b>\n\n<pre>$(_escape "$(printf '%s' "$rout" | tail -c 1800)")</pre>"
+}
+
+main() {
+  local cmd="${1:-}"
+  shift || true
+  case "$cmd" in
+    ""|gui) cmd_gui "$@" ;;
+    detect) cmd_detect "$@" ;;
+    backup) cmd_backup "$@" ;;
+    verify) cmd_verify "$@" ;;
+    reclaim) cmd_reclaim "$@" ;;
+    finish) cmd_finish "$@" ;;
+    dests|destinations) cmd_dests "$@" ;;
+    unlock) cmd_unlock "$@" ;;
+    unlock-verify) cmd_unlock_verify "$@" ;;
+    status) cmd_status "$@" ;;
+    guide) cmd_guide "$@" ;;
+    -h|--help|help) _usage ;;
+    *) echo "unknown command: $cmd" >&2; _usage; exit 2 ;;
+  esac
+}
+
+main "$@"

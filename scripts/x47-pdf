@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+# X47 PDF — one front door for free PDF editing.
+#
+# Usage:
+#   x47-pdf                 # chooser (Zenity)
+#   x47-pdf gui [FILE...]
+#   x47-pdf edit [FILE...]  # ONLYOFFICE — change text and images
+#   x47-pdf pages [FILE...] # PDF Arranger — merge / split / reorder
+#   x47-pdf mark [FILE...]  # Xournal++ — highlight / sign / scribble
+#   x47-pdf guide           # full step-by-step guide
+set -euo pipefail
+
+export PATH="${HOME}/.local/bin:/snap/bin:/usr/local/bin:/usr/bin:${PATH}"
+
+GUIDE_CANDIDATES=(
+  "${X47_PDF_GUIDE:-}"
+  "$HOME/.local/share/ubuntu-x47-build/docs/x47-pdf-guide.html"
+  "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/assets/docs/x47-pdf-guide.html"
+)
+
+_have() { command -v "$1" >/dev/null 2>&1; }
+
+_usage() {
+  cat <<'EOF'
+X47 PDF — edit PDFs without Adobe
+
+  x47-pdf                 Open the chooser
+  x47-pdf edit [FILE]     Edit text and images (ONLYOFFICE)
+  x47-pdf pages [FILE]    Merge, split, reorder, crop (PDF Arranger)
+  x47-pdf mark [FILE]     Highlight, sign, fill, scribble (Xournal++)
+  x47-pdf guide           Open the full step-by-step guide
+
+Tip: in Files, right-click a PDF → Open With → X47 PDF.
+EOF
+}
+
+_guide_path() {
+  local p
+  for p in "${GUIDE_CANDIDATES[@]}"; do
+    [[ -n "$p" && -f "$p" ]] && { printf '%s' "$p"; return 0; }
+  done
+  return 1
+}
+
+_find_onlyoffice() {
+  local c
+  for c in onlyoffice-desktopeditors desktopeditors \
+           /snap/bin/onlyoffice-desktopeditors \
+           /opt/onlyoffice/desktopeditors/DesktopEditors \
+           /usr/bin/onlyoffice-desktopeditors; do
+    if [[ -x "$c" ]] || _have "$c"; then
+      printf '%s' "$c"
+      return 0
+    fi
+  done
+  return 1
+}
+
+_notify_missing() {
+  local name="$1" hint="$2"
+  local msg="${name} is not installed yet.\n\n${hint}"
+  if _have zenity; then
+    zenity --error --title='X47 PDF' --width=420 --text="$msg" 2>/dev/null || true
+  else
+    printf '%s\n' "${name} is not installed. ${hint}" >&2
+  fi
+}
+
+_open_guide() {
+  local guide
+  if ! guide="$(_guide_path)"; then
+    _notify_missing "PDF guide" "Re-run the X47 PDF module, or open assets/docs/x47-pdf-guide.html in the repo."
+    return 1
+  fi
+  if _have xdg-open; then
+    xdg-open "$guide" >/dev/null 2>&1 &
+  else
+    printf '%s\n' "$guide"
+  fi
+}
+
+_launch() {
+  local bin="$1"
+  shift
+  if [[ $# -gt 0 ]]; then
+    nohup "$bin" "$@" >/dev/null 2>&1 &
+  else
+    nohup "$bin" >/dev/null 2>&1 &
+  fi
+}
+
+cmd_edit() {
+  local bin
+  if ! bin="$(_find_onlyoffice)"; then
+    _notify_missing "ONLYOFFICE" "Install with: sudo apt install onlyoffice-desktopeditors\nor re-run modules/27-pdf.sh"
+    return 1
+  fi
+  _launch "$bin" "$@"
+}
+
+cmd_pages() {
+  if ! _have pdfarranger; then
+    _notify_missing "PDF Arranger" "Install with: sudo apt install pdfarranger"
+    return 1
+  fi
+  _launch pdfarranger "$@"
+}
+
+cmd_mark() {
+  if ! _have xournalpp; then
+    _notify_missing "Xournal++" "Install with: sudo apt install xournalpp"
+    return 1
+  fi
+  _launch xournalpp "$@"
+}
+
+cmd_gui() {
+  if ! _have zenity; then
+    echo "zenity not found — use: x47-pdf edit|pages|mark|guide" >&2
+    _usage
+    return 1
+  fi
+
+  local files=("$@")
+  local hint="Pick what you want to do."
+  if ((${#files[@]} > 0)); then
+    hint="File: $(basename "${files[0]}")"
+    if ((${#files[@]} > 1)); then
+      hint="${#files[@]} files selected"
+    fi
+  fi
+
+  local choice
+  choice="$(zenity --list --title='X47 PDF' --width=560 --height=380 \
+    --text="<b>Free PDF tools — no Adobe needed.</b>\n${hint}" \
+    --column=id --column='Do this' --column='Uses' \
+    --hide-column=1 --print-column=1 --hide-header \
+    edit 'Edit text and images' 'ONLYOFFICE' \
+    pages 'Merge, split, reorder, crop pages' 'PDF Arranger' \
+    mark 'Highlight, sign, fill, scribble' 'Xournal++' \
+    guide 'Open the full step-by-step guide' 'Guide' \
+    2>/dev/null || true)"
+
+  case "$choice" in
+    edit) cmd_edit "${files[@]}" ;;
+    pages) cmd_pages "${files[@]}" ;;
+    mark) cmd_mark "${files[@]}" ;;
+    guide) _open_guide ;;
+    *) return 0 ;;
+  esac
+}
+
+main() {
+  local cmd="${1:-}"
+  if [[ -n "$cmd" ]]; then
+    shift || true
+  fi
+  case "$cmd" in
+    ""|gui) cmd_gui "$@" ;;
+    edit) cmd_edit "$@" ;;
+    pages|arrange) cmd_pages "$@" ;;
+    mark|annotate|sign) cmd_mark "$@" ;;
+    guide|help-guide) _open_guide ;;
+    -h|--help|help) _usage ;;
+    *)
+      # A PDF dropped on the launcher: treat remaining + this arg as files.
+      if [[ -f "$cmd" ]]; then
+        cmd_gui "$cmd" "$@"
+      else
+        echo "unknown command: $cmd" >&2
+        _usage
+        exit 2
+      fi
+      ;;
+  esac
+}
+
+main "$@"

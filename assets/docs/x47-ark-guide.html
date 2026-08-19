@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>X47 Ark guide</title>
+  <style>
+    :root {
+      --bg: #0c1413;
+      --card: #13201e;
+      --ink: #ecfdf8;
+      --muted: #b6cfc8;
+      --line: #2a403c;
+      --red: #e11d48;
+      --rose: #fb7185;
+      --teal: #2dd4bf;
+      --ok: #34d399;
+      --warn: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+    body { font: 17px/1.55 ui-sans-serif, system-ui, sans-serif; }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 32px 20px 80px; }
+    h1 { font-size: 2rem; letter-spacing: -0.03em; margin: 0 0 8px; }
+    h2 { font-size: 1.35rem; margin: 2.2rem 0 0.6rem; }
+    h3 { font-size: 1.05rem; margin: 1.4rem 0 0.4rem; color: var(--teal); }
+    p, li { color: var(--muted); }
+    a { color: var(--teal); }
+    .lead { font-size: 1.1rem; color: var(--ink); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin: 14px 0;
+    }
+    .k { display: inline-block; background: #1a2c29; border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; font-size: 0.85em; color: var(--ink); }
+    ol { padding-left: 1.25rem; }
+    ol li { margin: 0.45rem 0; }
+    .warn { border-left: 4px solid var(--warn); }
+    .ok { border-left: 4px solid var(--ok); }
+    .bad { border-left: 4px solid var(--red); }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; color: #99f6e4; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--ink); }
+    .tag { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--teal); font-weight: 700; }
+    footer { margin-top: 3rem; color: #6b8a84; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="tag">X47 Ark</p>
+    <h1>Save Windows files, then give the disk to Ubuntu</h1>
+    <p class="lead">
+      The USB is the ark. Copy what you want to keep, check the copy, then let
+      Windows go so Ubuntu can own the whole drive.
+    </p>
+
+    <div class="card ok">
+      <strong style="color:var(--ink)">Start here</strong>
+      <ol>
+        <li>Plug in an <strong>external USB / HDD</strong> (not the dual-boot disk).</li>
+        <li>Open the app grid → <strong>X47 Ark</strong> (Utilities folder). A windowed assistant walks you through it.</li>
+        <li>Follow the steps: Scan → USB → Copy → optional Reclaim.</li>
+      </ol>
+    </div>
+
+    <div class="card bad">
+      <strong style="color:var(--ink)">This can wipe Windows</strong>
+      <p>
+        Reclaim deletes the Windows / MSR / Recovery partitions on the dual-boot
+        disk. It never runs unless verify succeeded, and you must type
+        <code>DELETE WINDOWS</code>. The EFI System Partition and Ubuntu root
+        are never deleted.
+      </p>
+    </div>
+
+    <h2>What gets copied</h2>
+    <p>Per Windows user, these folders only:</p>
+    <table>
+      <tr><th>Copied</th><td>Documents, Desktop, Downloads, Pictures, Videos, Music</td></tr>
+      <tr><th>Skipped</th><td>AppData, Program Files, the Windows install itself, Default / Public accounts</td></tr>
+    </table>
+    <p>
+      Layout on the stick:
+      <code>X47-Ark/&lt;timestamp&gt;/Users/&lt;name&gt;/…</code>
+      plus <code>MANIFEST.txt</code>, <code>ARK-README.txt</code>, and a verify report.
+    </p>
+
+    <h2>Before you start</h2>
+    <div class="card warn">
+      <h3>BitLocker</h3>
+      <p>
+        You do <strong>not</strong> need to boot Windows. On the Scan step, paste
+        the 48-digit recovery key (Microsoft account → Devices → BitLocker keys,
+        or the paper printout) or your BitLocker password, then
+        <strong>Unlock BitLocker</strong>. Ark uses <code>dislocker</code> to
+        open the volume read-only and copy your files. That does not permanently
+        turn BitLocker off — you do not need that if you are about to delete
+        Windows. TPM-only protection still needs the recovery key; Ark will not
+        guess or bypass it.
+      </p>
+      <p>CLI: <code>x47-ark unlock --key-file recovery.txt</code> (runs <code>unlock-verify</code> automatically).</p>
+      <h3>Verify</h3>
+      <p>
+        After unlock, Ark reads user folders and sample files from the volume
+        (<code>UNLOCK_VERIFY=OK</code>). After the USB copy, it checks the
+        manifest, sample checksums, and compares those samples back to the
+        Windows source. Reclaim stays locked unless both checks pass.
+      </p>
+      <h3>Fast Startup / hibernation</h3>
+      <p>
+        Windows often leaves the NTFS volume “dirty.” Boot Windows, disable
+        <strong>Fast Startup</strong>, then <strong>Shut down</strong> (not restart / sleep).
+        Ark mounts Windows read-only and aborts if the volume looks hibernated.
+      </p>
+      <h3>External drive only</h3>
+      <p>
+        The backup cannot live on the same disk you are about to wipe. Ark
+        compares device names and refuses a same-disk destination. You need
+        about 1.1× the size of those user folders in free space.
+      </p>
+    </div>
+
+    <h2>Reclaim — two layouts</h2>
+    <div class="card">
+      <h3>Ubuntu can grow in place</h3>
+      <p>
+        Windows sits <em>after</em> Ubuntu. After verify, Ark can delete the
+        Windows partitions and grow the ext4 root from the running system
+        (<code>parted</code> + <code>resize2fs</code>), then refresh GRUB and
+        drop the Windows EFI boot entry.
+      </p>
+      <h3>Ubuntu sits after Windows (typical dual-boot)</h3>
+      <p>
+        A running Ubuntu cannot move its own root partition. Ark writes
+        <code>X47-Ark/finish-ark.sh</code> onto the backup stick. Then:
+      </p>
+      <ol>
+        <li>Shut down the installed system.</li>
+        <li>Boot any Ubuntu live USB (Try Ubuntu) or the X47 ISO.</li>
+        <li>Plug in the backup stick.</li>
+        <li>Run <code>sudo bash /media/ubuntu/*/X47-Ark/finish-ark.sh</code></li>
+        <li>Read the plan. Type <code>DELETE WINDOWS</code>.</li>
+        <li>If the automatic move is skipped, open GParted: move Ubuntu left into the hole, then grow it to fill the disk. Reboot and run <code>sudo update-grub</code> if asked.</li>
+      </ol>
+    </div>
+
+    <h2>CLI</h2>
+    <div class="card">
+      <p><code>x47-ark</code> — wizard</p>
+      <p><code>x47-ark detect</code> — print the layout</p>
+      <p><code>x47-ark backup /media/you/USB</code> — copy only</p>
+      <p><code>x47-ark verify</code> — check the last backup</p>
+      <p><code>x47-ark reclaim</code> — delete Windows after verify (or write the live-USB finisher)</p>
+      <p><code>x47-ark finish /path/to/ark-plan.conf</code> — live-USB finish step</p>
+      <p><code>x47-ark status</code> — last backup / verify state</p>
+    </div>
+
+    <h2>Safety rules</h2>
+    <ul>
+      <li>Privileged steps use pkexec / sudo.</li>
+      <li>Backup-only is a first-class path — you can stop after verify.</li>
+      <li>Verify must be <code>OK</code> before reclaim.</li>
+      <li>EFI stays. Only the Windows boot menu entry is removed after GRUB updates.</li>
+      <li>Separate <code>/home</code> after the root partition blocks “one big partition”; Ark will say so instead of eating it.</li>
+    </ul>
+
+    <h2>Install / skip</h2>
+    <div class="card">
+      <p>Installed by <code>modules/28-ark.sh</code> with ntfs-3g, rsync, parted, e2fsprogs, zenity.</p>
+      <p><code>./install.sh --skip-ark</code></p>
+      <p><code>./install.sh --only 28-ark</code></p>
+    </div>
+
+    <footer>X47 Ark — part of Ubuntu X47 Build. The USB is the ark; the disk is the flood.</footer>
+  </div>
+</body>
+</html>

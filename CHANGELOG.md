@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Windows URL redirects** — `windows.html` and `windows-install.html` send people to [X47-Win](https://sk1tzwzd.github.io/X47-Win/) instead of 404.
+- **Docs: new features** — X47 PDF Editor, X47 Ark, Claude Code called out on the site and README. PDF lives in an Office folder + desktop shortcut (search “PDF”).
 
 
 

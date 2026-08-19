@@ -4,6 +4,9 @@ Idempotent installer that reproduces a custom Ubuntu 24.04 / 26 desktop:
 
 - **WezTerm** as the default terminal (compact spawn size, **X47 watermark** on the right, tab-bar chrome with always-visible Gnome-style min/max/close); GNOME Terminal is removed
 - **Mullvad VPN** (apt) and **Tor Browser** (latest from Tor Project, registered in the app menu)
+- **X47 PDF Editor** (`x47-pdf`) — ONLYOFFICE + PDF Arranger + Xournal++. Search “PDF” or the Office folder
+- **X47 Ark** — backup Windows user files to USB, then reclaim the disk for Ubuntu
+- **Claude Code** — official Anthropic CLI in Dev Tools
 - Pentest + developer toolchain (apt, Go, pipx, cargo, GitHub release binaries, gems)
 - Custom **app-grid launchers** and icons (`kali-*` pack, custom `kali-cool-*`, `x47duster` fallback — no Kali dragon)
 - Hardened services snapshotted from the reference machine (UFW, fail2ban, AppArmor, auditd, unattended-upgrades, sysctl)

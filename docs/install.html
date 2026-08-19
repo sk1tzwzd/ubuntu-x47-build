@@ -98,6 +98,8 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
             <tr><td><code>--desktop-mode both\|visual\|performance</code></td><td>Install both stacks (recommended), Visual only, or Performance only. Both starts lean; toggle from the top-bar chip</td></tr>
             <tr><td><code>--skip-putty-clipboard</code></td><td>Disable PuTTY-style WezTerm clipboard (select copy / right-click paste / Ctrl+C·V)</td></tr>
             <tr><td><code>--skip-win-screenshot</code></td><td>Do not bind Super+Shift+S (Print still works)</td></tr>
+            <tr><td><code>--skip-pdf</code></td><td>Skip X47 PDF Editor (ONLYOFFICE, PDF Arranger, Xournal++)</td></tr>
+            <tr><td><code>--skip-claude</code></td><td>Skip official Claude Code CLI + Dev Tools launcher</td></tr>
             <tr><td><code>--skip-ark</code></td><td>Skip X47 Ark (Windows file backup + Ubuntu disk reclaim)</td></tr>
             <tr><td><code>--with-amnesia</code></td><td>Create the amnesiac Tor-forced <code>anon</code> user</td></tr>
             <tr><td><code>--only 10-terminal,30-icons</code></td><td>Run a subset of modules</td></tr>
@@ -116,6 +118,8 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
           <li><strong>Terminal</strong> — WezTerm AppImage (wide window + watermark); GNOME Terminal removed</li>
           <li><strong>Privacy</strong> — Mullvad VPN (apt), Tor Browser (latest from Tor Project)</li>
           <li><strong>Tools</strong> — nmap, Metasploit, wireshark, hashcat, Go recon suite, pipx AD tools, cargo utilities, release binaries</li>
+          <li><strong>X47 PDF Editor</strong> — <code>x47-pdf</code> chooser + ONLYOFFICE + PDF Arranger + Xournal++. Search “PDF” or the Office folder</li>
+          <li><strong>Claude Code</strong> — official Anthropic CLI in Dev Tools</li>
           <li><strong>X47 Ark</strong> — backup Windows user files to USB, then reclaim the disk for Ubuntu</li>
           <li><strong>Icons &amp; launchers</strong> — kali-* pack, custom cool icons, x47duster fallback (no Kali dragon)</li>
           <li><strong>Hardening</strong> — files under <code>config/</code> restored to <code>/etc</code></li>

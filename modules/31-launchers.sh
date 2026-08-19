@@ -52,7 +52,8 @@ module_launchers() {
       case "$base" in
         launcher-bat.desktop|launcher-eza.desktop|launcher-fd.desktop| \
         launcher-zoxide.desktop|launcher-lazygit.desktop|launcher-delta.desktop| \
-        launcher-uv.desktop|launcher-yq.desktop|launcher-http.desktop)
+        launcher-uv.desktop|launcher-yq.desktop|launcher-http.desktop| \
+        launcher-claude.desktop)
           dev+=("'$base'")
           ;;
         *)

@@ -1,9 +1,13 @@
 [/]
-folder-children=['System', 'Utilities', 'YaST', 'Pardus', 'DevTools', 'PentestTools']
+folder-children=['System', 'Utilities', 'Office', 'YaST', 'Pardus', 'DevTools', 'PentestTools']
 
 [folders/DevTools]
-apps=['code.desktop', 'cursor.desktop', 'launcher-bat.desktop', 'launcher-eza.desktop', 'launcher-fd.desktop', 'launcher-zoxide.desktop', 'launcher-lazygit.desktop', 'launcher-delta.desktop', 'launcher-uv.desktop', 'launcher-yq.desktop', 'launcher-http.desktop']
+apps=['code.desktop', 'cursor.desktop', 'launcher-claude.desktop', 'launcher-bat.desktop', 'launcher-eza.desktop', 'launcher-fd.desktop', 'launcher-zoxide.desktop', 'launcher-lazygit.desktop', 'launcher-delta.desktop', 'launcher-uv.desktop', 'launcher-yq.desktop', 'launcher-http.desktop']
 name='Dev Tools'
+
+[folders/Office]
+apps=['x47-pdf.desktop', 'onlyoffice-desktopeditors.desktop', 'com.github.jeromerobert.pdfarranger.desktop', 'com.github.xournalpp.xournalpp.desktop']
+name='Office'
 
 [folders/Pardus]
 categories=['X-Pardus-Apps']
@@ -21,7 +25,7 @@ name='X-GNOME-Shell-System.directory'
 translate=true
 
 [folders/Utilities]
-apps=['org.gnome.Papers.desktop', 'org.gnome.font-viewer.desktop', 'org.gnome.Loupe.desktop', 'org.gnome.seahorse.Application.desktop']
+apps=['org.gnome.Papers.desktop', 'x47-pdf.desktop', 'x47-ark.desktop', 'onlyoffice-desktopeditors.desktop', 'com.github.jeromerobert.pdfarranger.desktop', 'com.github.xournalpp.xournalpp.desktop', 'org.gnome.font-viewer.desktop', 'org.gnome.Loupe.desktop', 'org.gnome.seahorse.Application.desktop']
 name='X-GNOME-Shell-Utilities.directory'
 translate=true
 

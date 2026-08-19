@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=X47 Ark
+GenericName=Windows backup and disk reclaim
+Comment=Save Windows files to USB, then give the disk to Ubuntu
+Exec=x47-ark gui
+Icon=x47-ark
+Terminal=false
+Categories=System;Utility;
+Keywords=windows;backup;usb;partition;reclaim;dual-boot;ntfs;x47;ark;
+StartupNotify=true

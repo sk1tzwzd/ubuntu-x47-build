@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>X47 PDF guide</title>
+  <style>
+    :root {
+      --bg: #14110f;
+      --card: #1e1916;
+      --ink: #f5efe8;
+      --muted: #c4b8ae;
+      --line: #3a312c;
+      --red: #e11d48;
+      --rose: #fb7185;
+      --teal: #2dd4bf;
+      --ok: #34d399;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+    body { font: 17px/1.55 ui-sans-serif, system-ui, sans-serif; }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 32px 20px 80px; }
+    h1 { font-size: 2rem; letter-spacing: -0.03em; margin: 0 0 8px; }
+    h2 { font-size: 1.35rem; margin: 2.2rem 0 0.6rem; }
+    h3 { font-size: 1.05rem; margin: 1.4rem 0 0.4rem; color: var(--rose); }
+    p, li { color: var(--muted); }
+    a { color: var(--teal); }
+    .lead { font-size: 1.1rem; color: var(--ink); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin: 14px 0;
+    }
+    .pick { display: grid; gap: 10px; }
+    .pick .card { margin: 0; }
+    .pick strong { display: block; color: var(--ink); font-size: 1.05rem; }
+    .k { display: inline-block; background: #2a2320; border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; font-size: 0.85em; color: var(--ink); }
+    ol { padding-left: 1.25rem; }
+    ol li { margin: 0.45rem 0; }
+    .warn { border-left: 4px solid #f59e0b; }
+    .ok { border-left: 4px solid var(--ok); }
+    .bad { border-left: 4px solid var(--red); }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; color: #fecdd3; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--ink); }
+    .tag { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--rose); font-weight: 700; }
+    footer { margin-top: 3rem; color: #8a7d74; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="tag">X47 PDF</p>
+    <h1>Edit PDFs without Adobe</h1>
+    <p class="lead">
+      One app — <strong>X47 PDF</strong> — asks what you want to do, then opens the
+      right free tool. This page is the full walkthrough.
+    </p>
+
+    <div class="card ok">
+      <strong style="color:var(--ink)">Start here</strong>
+      <ol>
+        <li>Open the app grid and launch <strong>X47 PDF</strong> (red PDF tile).</li>
+        <li>Or in Files: right-click a PDF → <strong>Open With</strong> → <strong>X47 PDF</strong>.</li>
+        <li>Pick one of the four rows. That is the whole workflow.</li>
+      </ol>
+    </div>
+
+    <h2>Which row do I pick?</h2>
+    <div class="pick">
+      <div class="card">
+        <strong>Edit text and images</strong>
+        Opens <em>ONLYOFFICE</em>. Use this to change words, swap a logo, add a text box, or fill a typed form.
+      </div>
+      <div class="card">
+        <strong>Merge, split, reorder, crop pages</strong>
+        Opens <em>PDF Arranger</em>. Use this to combine contracts, drop a page, rotate a scan, or crop margins.
+      </div>
+      <div class="card">
+        <strong>Highlight, sign, fill, scribble</strong>
+        Opens <em>Xournal++</em>. Use this to mark up a document, draw a signature, or write on a scan.
+      </div>
+      <div class="card">
+        <strong>Open the full step-by-step guide</strong>
+        This page.
+      </div>
+    </div>
+
+    <h2>1. Edit text and images — ONLYOFFICE</h2>
+    <p>This is the closest free Linux app to “click the PDF and change the words.”</p>
+    <ol>
+      <li>From <strong>X47 PDF</strong> choose <em>Edit text and images</em>. If you already picked a file, it opens that PDF.</li>
+      <li>If the start screen appears instead: <strong>Open file</strong> and choose your PDF. You can also drag the PDF onto the window.</li>
+      <li>Click a line of text. Type the new words. Click outside the box when you are done.</li>
+      <li>To add new text: toolbar → <strong>Insert</strong> → <strong>Text Box</strong>, then click the page.</li>
+      <li>To replace a picture: click the image → <strong>Replace</strong> (or delete it and Insert → Image).</li>
+      <li>Save: <span class="k">Ctrl</span>+<span class="k">S</span>. Prefer <strong>File → Save as</strong> the first time so you keep the original.</li>
+    </ol>
+    <div class="card warn">
+      <strong style="color:var(--ink)">If the layout jumps</strong>
+      <p>PDFs are not Word files. Fancy multi-column or designed pages can shift when you edit. If a paragraph will not reflow, add a text box on top of the old line, or use <strong>File → Download as → DOCX</strong>, edit that, then export a new PDF.</p>
+    </div>
+    <h3>Forms and comments in ONLYOFFICE</h3>
+    <ul>
+      <li>Typed form fields: click the field and type. If the PDF is a flat scan with no fields, use a text box instead.</li>
+      <li>Comments / highlights: look for the <strong>Comment</strong> or review tools in the right sidebar.</li>
+      <li>You can also open Word / Excel / PowerPoint in the same app. Ignore that if you only care about PDFs.</li>
+    </ul>
+
+    <h2>2. Merge, split, reorder — PDF Arranger</h2>
+    <p>Think of this as a light table of page thumbnails. It does not change the words on a page.</p>
+    <ol>
+      <li>From <strong>X47 PDF</strong> choose <em>Merge, split, reorder, crop pages</em>.</li>
+      <li>Drag one or more PDFs into the window, or use <strong>+</strong> / Open.</li>
+      <li><strong>Reorder:</strong> drag a thumbnail left or right.</li>
+      <li><strong>Delete a page:</strong> select it → <span class="k">Delete</span>.</li>
+      <li><strong>Rotate:</strong> select page(s) → rotate buttons in the toolbar.</li>
+      <li><strong>Merge:</strong> open several PDFs in the same window, order the thumbnails, export once.</li>
+      <li><strong>Split:</strong> select the pages you want, then <strong>Export</strong> (or save a selection) to a new file.</li>
+      <li><strong>Crop:</strong> select a page → crop tool → drag the box → apply. Export when it looks right.</li>
+      <li>Always <strong>Export</strong> / Save as a new PDF. Do not overwrite the original until you have checked the result in Papers.</li>
+    </ol>
+
+    <h2>3. Highlight, sign, scribble — Xournal++</h2>
+    <p>This draws <em>on top of</em> the PDF. The original text stays underneath. Perfect for signatures and markup.</p>
+    <ol>
+      <li>From <strong>X47 PDF</strong> choose <em>Highlight, sign, fill, scribble</em>.</li>
+      <li>If you opened a blank notebook instead of your PDF: <strong>File → Annotate PDF</strong> and pick the file.</li>
+      <li><strong>Highlighter</strong> in the toolbar: drag over text.</li>
+      <li><strong>Pen</strong>: sign or circle something. Use a mouse, or a stylus if you have one.</li>
+      <li><strong>Text</strong> tool: click and type (good for short form answers on a scan).</li>
+      <li><strong>Eraser</strong> removes only your ink, not the original PDF.</li>
+      <li>To reuse a signature: sign once, <strong>Edit → Select Object</strong>, copy, paste onto later pages. Or Insert → Image if you have a PNG of your signature.</li>
+      <li>Export: <strong>File → Export as PDF</strong>. This flattens your marks into a normal PDF other people can open.</li>
+    </ol>
+    <div class="card warn">
+      <strong style="color:var(--ink)">Do not stop at Save</strong>
+      <p><strong>File → Save</strong> writes a <code>.xopp</code> project. Other people cannot open that. When you are done, always <strong>Export as PDF</strong>.</p>
+    </div>
+
+    <h2>Everyday recipes</h2>
+    <table>
+      <thead>
+        <tr><th>I need to…</th><th>Do this</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Fix a typo on a digital PDF</td>
+          <td>X47 PDF → Edit text → click the line → type → Save as</td>
+        </tr>
+        <tr>
+          <td>Combine three PDFs into one</td>
+          <td>X47 PDF → Arrange pages → add all three → drag into order → Export</td>
+        </tr>
+        <tr>
+          <td>Remove one page from a pack</td>
+          <td>Arrange pages → select the thumbnail → Delete → Export</td>
+        </tr>
+        <tr>
+          <td>Sign a form</td>
+          <td>X47 PDF → Highlight / sign → Pen (or paste a signature image) → Export as PDF</td>
+        </tr>
+        <tr>
+          <td>Fill a scanned paper form</td>
+          <td>Highlight / sign → Text tool for each blank → Export as PDF</td>
+        </tr>
+        <tr>
+          <td>Mark comments on a contract</td>
+          <td>Highlight / sign → Highlighter + Text → Export as PDF</td>
+        </tr>
+        <tr>
+          <td>Replace a logo</td>
+          <td>Edit text → click the image → Replace</td>
+        </tr>
+        <tr>
+          <td>Just read a PDF</td>
+          <td>Double-click it. That still opens <strong>Papers</strong> (the viewer). X47 PDF is only for editing.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>From the terminal</h2>
+    <div class="card">
+      <p><code>x47-pdf</code> — chooser</p>
+      <p><code>x47-pdf edit ~/file.pdf</code> — ONLYOFFICE</p>
+      <p><code>x47-pdf pages ~/a.pdf ~/b.pdf</code> — PDF Arranger</p>
+      <p><code>x47-pdf mark ~/file.pdf</code> — Xournal++</p>
+      <p><code>x47-pdf guide</code> — this page</p>
+    </div>
+
+    <h2>What this cannot do like Adobe Acrobat Pro</h2>
+    <div class="card bad">
+      <ul>
+        <li>Heavy print-prepress (bleed, colour separations, preflight).</li>
+        <li>Guaranteed font-perfect edits on designed marketing PDFs — layout can shift.</li>
+        <li>Adobe-only DRM / some enterprise form features.</li>
+        <li>One-click OCR of a bad scan. For that, look at <code>ocrmypdf</code> later if you need it.</li>
+      </ul>
+      <p>For almost every day-to-day PDF (typos, merges, signatures, markup), the three tools above are enough and they stay free.</p>
+    </div>
+
+    <h2>If a tool is missing</h2>
+    <p>Re-run the installer module from the X47 repo:</p>
+    <div class="card">
+      <p><code>./install.sh --only 27-pdf</code></p>
+      <p>Or by hand:</p>
+      <p><code>sudo apt install pdfarranger xournalpp</code></p>
+      <p><code>sudo apt install onlyoffice-desktopeditors</code> (after the official ONLYOFFICE repo is added)</p>
+    </div>
+
+    <footer>
+      X47 PDF is part of the Ubuntu X47 build. Viewing PDFs stays in Papers.
+      Editing always goes through the X47 PDF chooser so you pick the right tool on purpose.
+    </footer>
+  </div>
+</body>
+</html>
