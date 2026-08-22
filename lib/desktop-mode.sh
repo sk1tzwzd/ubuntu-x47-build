@@ -10,10 +10,24 @@ X47_HEAVY_FX_UUIDS=(
 )
 
 # Never enabled — no wobbly windows, no open/close window FX.
+# Left on disk they come back after a login or an extension update.
 X47_WINDOW_FX_UUIDS=(
   "burn-my-windows@schneegans.github.com"
   "compiz-windows-effect@hermes83.github.com"
 )
+
+# Disable + uninstall so GNOME cannot load them on the next session.
+x47_purge_window_fx() {
+  local uuid dir
+  for uuid in "${X47_WINDOW_FX_UUIDS[@]}"; do
+    gnome-extensions disable "$uuid" 2>/dev/null || true
+    gnome-extensions uninstall "$uuid" 2>/dev/null || true
+    dir="$HOME/.local/share/gnome-shell/extensions/$uuid"
+    [[ -e "$dir" ]] && rm -rf "$dir"
+    dir="$HOME/.local/share/gnome-shell/extension-updates/$uuid"
+    [[ -e "$dir" ]] && rm -rf "$dir"
+  done
+}
 
 # Always kept enabled in both modes (includes the top-bar mode toggle).
 X47_LEAN_FX_UUIDS=(

@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **Visual mode** — no wobbly windows and no Burn My Windows open/close animations. Cube, Coverflow, blur, and per-workspace walls stay.
+- **Visual mode** — no wobbly windows and no Burn My Windows open/close animations. Cube, Coverflow, blur, and per-workspace walls stay. Those two extensions are uninstalled (not just disabled) so they cannot reload after login.
 - **X47-Win 1.1.0** — companion site notes the Windows setup wizard (theme + feature checkboxes).
 - **Windows URL redirects** — `windows.html` and `windows-install.html` send people to [X47-Win](https://sk1tzwzd.github.io/X47-Win/) instead of 404.
 - **Docs: new features** — X47 PDF Editor, X47 Ark, Claude Code called out on the site and README. PDF lives in an Office folder + desktop shortcut (search “PDF”).

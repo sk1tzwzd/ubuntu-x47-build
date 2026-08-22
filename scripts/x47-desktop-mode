@@ -116,6 +116,7 @@ _show_dock() {
 
 _apply_performance() {
   local uuid
+  x47_purge_window_fx
   for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
     _ext_disable "$uuid"
   done
@@ -146,7 +147,8 @@ _apply_visual() {
   for uuid in "${X47_HEAVY_FX_UUIDS[@]}"; do
     _ext_enable "$uuid"
   done
-  # No wobble, no Burn My Windows open/close — even in Visual.
+  # Uninstall wobble + Burn My Windows so they cannot reload on login.
+  x47_purge_window_fx
   for uuid in "${X47_WINDOW_FX_UUIDS[@]}"; do
     _ext_disable "$uuid"
   done

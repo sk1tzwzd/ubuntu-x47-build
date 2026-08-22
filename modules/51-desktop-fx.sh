@@ -637,6 +637,7 @@ module_desktop_fx() {
   esac
   x47_seed_desktop_mode_settings "$installed" "$active"
   log "desktop-fx: install=$installed active=$active"
+  x47_purge_window_fx
 
   set_wallpaper
   show_apps_duster_icon
