@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **X47 Updates & Clean** — the updates app is also a CCleaner-style tidy tool: empty recycle bin, thumbnails, apt/snap leftovers, journals, crash reports, pip/npm caches. Preview first. Documents / passwords / cookies stay. Alias: `x47-clean`.
 - **Visual mode** — no wobbly windows and no Burn My Windows open/close animations. Cube, Coverflow, blur, and per-workspace walls stay. Those two extensions are uninstalled (not just disabled) so they cannot reload after login.
 - **X47-Win 1.1.0** — companion site notes the Windows setup wizard (theme + feature checkboxes).
 - **Windows URL redirects** — `windows.html` and `windows-install.html` send people to [X47-Win](https://sk1tzwzd.github.io/X47-Win/) instead of 404.

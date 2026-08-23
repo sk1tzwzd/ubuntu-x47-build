@@ -87,14 +87,17 @@ Firefox is left as the hardened snap (the earlier snap→deb swap was removed). 
 - **Main browser** — a system-wide enterprise policy at `/etc/firefox/policies/policies.json` (honored by the Firefox snap and deb): telemetry/studies/Pocket/sponsored content off, tracking protection with cryptomining + fingerprinting blocking, HTTPS-only, DNS-over-HTTPS, no prefetch/speculative connections. JavaScript stays on for normal browsing. The installer also sets **hardened Firefox as the default browser** (over Chrome).
 - **Anon browser** — Tor Browser "Safest" defaults (JS off, DoH hard-off). Firefox uses local Tor SOCKS (`127.0.0.1:9050`); other apps stay transparently torified by the UID kill-switch.
 
-## X47 Updates
+## X47 Updates & Clean
 
-Use the **X47 Updates** app (app menu) or CLI to check and apply full apt/snap/Cursor updates in one place (Ubuntu Software Updater remains available; unattended security upgrades stay on):
+Use the **X47 Updates & Clean** app (app menu / desktop) or CLI. Updates still cover apt, snap, and Cursor. Clean is a CCleaner-style tidy pass: preview sizes, then empty the recycle bin, drop caches and leftover packages. It never deletes Documents, Pictures, Desktop, Downloads, passwords, or cookies. Unattended security upgrades stay on.
 
 ```bash
-x47-updates              # Zenity: Check → list → Update all
-x47-updates check        # report only
+x47-updates              # GUI hub: updates / clean / both
+x47-updates check        # report pending updates
 x47-updates apply        # password prompt; progress in a terminal
+x47-updates clean-scan   # preview reclaimable junk
+x47-updates clean        # default tidy set (or x47-clean)
+x47-updates tidy         # scan, then clean defaults
 x47-updates repair-sources   # restore Mullvad apt list if missing
 ```
 
@@ -143,7 +146,7 @@ Shared in both modes: CTRL+drag tiling, notification click-to-focus, Show Apps, 
 - **Screenshot** — `Super+Shift+S` or `Print` (optional via X47 Settings).
 - **WezTerm (PuTTY-style)** — select copy / right-click paste / `Ctrl+C`·`V` (optional via X47 Settings).
 - **Syncthing (X47 Sync)** — optional hardened LAN sync (`x47-syncthing`); default share `~/X47Share`. Top-bar **SYNC** chip (right) + app icon opens the localhost GUI.
-- **X47 Updates** — check/apply apt + snap + Cursor; restores Mullvad apt source when needed.
+- **X47 Updates & Clean** — apt + snap + Cursor updates, plus trash/caches/leftover-package tidy (preview first).
 - **Claude Code** — official Anthropic CLI + Dev Tools launcher (Claude starburst icon).
 - **X47 PDF** — one app to edit / arrange / annotate PDFs (ONLYOFFICE + PDF Arranger + Xournal++) with an offline guide.
 - **X47-Win** (separate repo) — Windows 11 privacy kit. Encryption is optional. If you used BitLocker, import the USB key here with `x47-windows-import-key`.
@@ -178,7 +181,7 @@ To build it yourself: `sudo apt install xorriso`, then `./scripts/build-iso.sh` 
 - **Mullvad VPN** via official apt repo (`mullvad-vpn` in the apt manifest); GUI launcher uses `ELECTRON_OZONE_PLATFORM_HINT=x11` on Wayland
 - **Tor Browser** latest linux-x86_64 build → `~/tools/tor-browser`, registered with `--register-app`, CLI symlink `~/.local/bin/tor-browser`
 - **Syncthing (Android ↔ PC)** — official binary, LAN-first hardening (no cloud, no relays, no global discovery, GUI on `127.0.0.1` + password). Share folder `~/X47Share`. Helper: `x47-syncthing`. Skip with `--skip-syncthing`. Prefer F-Droid Syncthing on Android; approve devices manually.
-- **X47 Updates** — `x47-updates` (+ desktop entry) for full apt/snap/Cursor upgrades; restores Mullvad apt source if dropped
+- **X47 Updates & Clean** — `x47-updates` / `x47-clean` for apt/snap/Cursor upgrades plus trash/cache/leftover tidy; restores Mullvad apt source if dropped
 - **X47-Win** — separate Windows 11 kit: [sk1tzwzd.github.io/X47-Win](https://sk1tzwzd.github.io/X47-Win/). Encryption is optional (BitLocker or VeraCrypt). If BitLocker is on, import the USB key on Ubuntu with `x47-windows-import-key`.
 
 ### Tools (high level)

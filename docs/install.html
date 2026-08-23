@@ -179,7 +179,7 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
           <li><strong>Display comfort</strong> — top-bar brightness / blue-light / glare; Adaptive (Visual stack) follows time of day; Night Light off sticks</li>
           <li><strong>CTRL-only tiling</strong> — Tiling Shell; plain drag stays free</li>
           <li><strong>Syncthing</strong> — optional hardened LAN sync (<code>x47-syncthing</code>); default share <code>~/X47Share</code></li>
-          <li><strong>X47 Updates</strong> — app menu / <code>x47-updates</code> for apt + snap + Cursor (security unattended-upgrades stay on)</li>
+          <li><strong>X47 Updates &amp; Clean</strong> — app menu / <code>x47-updates</code> / <code>x47-clean</code> for apt + snap + Cursor, plus trash/caches/leftovers (security unattended-upgrades stay on)</li>
           <li><strong>Anon</strong> stays Performance-only</li>
         </ul>
       </section>
@@ -198,10 +198,14 @@ sha256sum -c SHA256SUMS --ignore-missing</code></pre>
       </section>
 
       <section>
-        <h2>X47 Updates &amp; Cursor</h2>
+        <h2>X47 Updates &amp; Clean</h2>
         <p class="section-lead">
-          Prefer the <strong>X47 Updates</strong> app (or <code>x47-updates check</code> /
-          <code>apply</code>) for apt, snap, and Cursor together. Cursor-only:
+          Prefer the <strong>X47 Updates &amp; Clean</strong> app (or
+          <code>x47-updates</code> / <code>x47-clean</code>). The hub can
+          install apt, snap, and Cursor updates, or preview-and-clean junk
+          (recycle bin, thumbnails, leftover packages, old snaps, journals).
+          It does not delete Documents, Pictures, Desktop, Downloads,
+          passwords, or cookies. Cursor-only:
         </p>
         <pre><code>update-cursor
 # or: sudo apt update &amp;&amp; sudo apt install --only-upgrade cursor</code></pre>

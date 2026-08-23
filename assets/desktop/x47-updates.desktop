@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=Application
-Name=X47 Updates
-GenericName=Software updates
-Comment=Check and install apt, snap, and Cursor updates
+Name=X47 Updates & Clean
+GenericName=Updates and system tidy
+Comment=Install updates and clean trash, caches, and leftovers
 Exec=x47-updates gui
 Icon=system-software-update
 Terminal=false
-Categories=System;Settings;
-Keywords=update;upgrade;apt;snap;cursor;x47;
+Categories=System;Settings;Utility;
+Keywords=update;upgrade;apt;snap;cursor;clean;ccleaner;trash;recycle;tidy;cache;x47;
 StartupNotify=true

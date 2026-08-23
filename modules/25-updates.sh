@@ -12,7 +12,8 @@ _install_updates_bin() {
   mkdir -p "$dest_dir" "$HOME/.local/bin"
   install -m 0755 "$src" "$dest_dir/x47-updates"
   ln -sfn "$dest_dir/x47-updates" "$link"
-  ok "x47-updates → $link"
+  ln -sfn "$dest_dir/x47-updates" "$HOME/.local/bin/x47-clean"
+  ok "x47-updates → $link (alias: x47-clean)"
 }
 
 _install_updates_desktop() {

@@ -1,39 +1,53 @@
 #!/usr/bin/env bash
-# X47 Updates — check and apply apt / snap / Cursor updates in one place.
+# X47 Updates & Clean — updates plus a CCleaner-style tidy pass.
 #
 # Usage:
-#   x47-updates              # GUI (Zenity) if available, else check + prompt
+#   x47-updates                 # GUI hub (updates / clean / both)
 #   x47-updates gui
-#   x47-updates check        # refresh indexes + print report
-#   x47-updates apply        # apply all updates (password prompt)
-#   x47-updates status       # last check summary
+#   x47-updates check           # refresh indexes + print report
+#   x47-updates apply           # apply all updates (password prompt)
+#   x47-updates status          # last check summary
 #   x47-updates repair-sources  # restore Mullvad (and similar) apt lists
+#   x47-updates clean-scan      # preview reclaimable junk (no deletes)
+#   x47-updates clean           # empty trash + default tidy set
+#   x47-updates tidy            # scan then clean defaults
 set -euo pipefail
 
 export PATH="${HOME}/.local/bin:${PATH}"
 
 STATUS_FILE="${X47_UPDATES_STATUS:-$HOME/.config/x47/updates-status.conf}"
 REPORT_FILE="${X47_UPDATES_REPORT:-$HOME/.cache/x47/updates-report.txt}"
+CLEAN_STATUS="${X47_CLEAN_STATUS:-$HOME/.config/x47/clean-status.conf}"
+CLEAN_REPORT="${X47_CLEAN_REPORT:-$HOME/.cache/x47/clean-report.txt}"
+CLEAN_SIZES="${X47_CLEAN_SIZES:-$HOME/.cache/x47/clean-sizes.conf}"
 
 _usage() {
   cat <<'EOF'
-X47 Updates — check and install system updates
+X47 Updates & Clean — updates plus a tidy pass (CCleaner-style)
 
-  x47-updates                 Open GUI (or text flow)
-  x47-updates gui             Force Zenity UI
+  x47-updates                 Open GUI hub
+  x47-updates gui             Force Zenity hub
   x47-updates check           Refresh indexes and list pending updates
   x47-updates apply           Apply apt + snap + Cursor updates
-  x47-updates status          Show last check summary
+  x47-updates status          Show last check / clean summary
   x47-updates repair-sources  Restore missing third-party apt sources (Mullvad)
+  x47-updates clean-scan      Preview reclaimable junk (nothing deleted)
+  x47-updates clean           Apply default tidy set (or named categories)
+  x47-updates tidy            Scan, then clean the default set
 
-Covers: apt packages, snap refreshes, Cursor (apt), Mullvad repo repair.
+Default clean (safe): trash, thumbnails, apt cache, leftover packages,
+old snap revisions, journals (keep 7 days), crash reports, pip/npm caches.
+
+Optional: browser-cache, recently-used, tracker
+Never: Documents, Pictures, Desktop, Downloads, passwords, cookies, ~/.config
 EOF
 }
 
 _have() { command -v "$1" >/dev/null 2>&1; }
 
 _ensure_dirs() {
-  mkdir -p "$(dirname "$STATUS_FILE")" "$(dirname "$REPORT_FILE")"
+  mkdir -p "$(dirname "$STATUS_FILE")" "$(dirname "$REPORT_FILE")" \
+    "$(dirname "$CLEAN_STATUS")" "$(dirname "$CLEAN_REPORT")" "$(dirname "$CLEAN_SIZES")"
 }
 
 _status_set() {
@@ -267,15 +281,432 @@ cmd_check() {
 
 cmd_status() {
   if [[ ! -f "$STATUS_FILE" ]]; then
-    echo "No check yet. Run: x47-updates check"
+    echo "No update check yet. Run: x47-updates check"
+  else
+    echo "last_check=$(_status_get last_check never)"
+    echo "apt_count=$(_status_get apt_count 0)"
+    echo "snap_count=$(_status_get snap_count 0)"
+    echo "reboot_required=$(_status_get reboot_required 0)"
+    [[ -f "$REPORT_FILE" ]] && echo "report=$REPORT_FILE"
+  fi
+  if [[ -f "$CLEAN_STATUS" ]]; then
+    echo "last_clean_scan=$(_kv_get "$CLEAN_STATUS" last_scan never)"
+    echo "last_clean=$(_kv_get "$CLEAN_STATUS" last_clean never)"
+    echo "last_reclaimed=$(_kv_get "$CLEAN_STATUS" last_reclaimed 0)"
+    [[ -f "$CLEAN_REPORT" ]] && echo "clean_report=$CLEAN_REPORT"
+  fi
+}
+
+_kv_set() {
+  local file="$1" key="$2" val="$3"
+  mkdir -p "$(dirname "$file")"
+  touch "$file"
+  if grep -qE "^${key}=" "$file" 2>/dev/null; then
+    sed -i "s|^${key}=.*|${key}=${val}|" "$file"
+  else
+    printf '%s=%s\n' "$key" "$val" >>"$file"
+  fi
+}
+
+_kv_get() {
+  local file="$1" key="$2" def="${3:-}"
+  [[ -f "$file" ]] || { printf '%s' "$def"; return 0; }
+  local line
+  line="$(grep -E "^${key}=" "$file" 2>/dev/null | tail -n1 || true)"
+  if [[ -n "$line" ]]; then
+    printf '%s' "${line#*=}"
+  else
+    printf '%s' "$def"
+  fi
+}
+
+_bytes_human() {
+  local b="${1:-0}"
+  awk -v b="$b" 'BEGIN {
+    if (b < 1024) printf "%d B", b
+    else if (b < 1048576) printf "%.1f KB", b/1024
+    else if (b < 1073741824) printf "%.1f MB", b/1048576
+    else printf "%.2f GB", b/1073741824
+  }'
+}
+
+_path_bytes() {
+  local total=0 p n
+  for p in "$@"; do
+    [[ -n "$p" && -e "$p" ]] || continue
+    n="$(du -sb "$p" 2>/dev/null | awk '{print $1}')"
+    [[ "$n" =~ ^[0-9]+$ ]] || n=0
+    total=$((total + n))
+  done
+  printf '%s' "$total"
+}
+
+_clean_default_keys() {
+  printf '%s\n' trash thumbnails apt_cache apt_autoremove snap_old journals crash dev_caches
+}
+
+_trash_paths() {
+  printf '%s\n' \
+    "$HOME/.local/share/Trash" \
+    "$HOME/.Trash"
+}
+
+_thumb_paths() {
+  printf '%s\n' \
+    "$HOME/.cache/thumbnails" \
+    "$HOME/.thumbnails"
+}
+
+_browser_cache_paths() {
+  printf '%s\n' \
+    "$HOME/.cache/mozilla/firefox" \
+    "$HOME/.cache/google-chrome" \
+    "$HOME/.cache/chromium" \
+    "$HOME/.cache/BraveSoftware" \
+    "$HOME/.cache/microsoft-edge" \
+    "$HOME/.var/app/org.mozilla.firefox/cache" \
+    "$HOME/.var/app/com.google.Chrome/cache" \
+    "$HOME/.var/app/com.brave.Browser/cache"
+}
+
+_dev_cache_paths() {
+  printf '%s\n' \
+    "$HOME/.cache/pip" \
+    "$HOME/.cache/pipx" \
+    "$HOME/.npm/_cacache" \
+    "$HOME/.cache/yarn" \
+    "$HOME/.cache/pnpm" \
+    "$HOME/.cache/fontconfig" \
+    "$HOME/.cache/mesa_shader_cache" \
+    "$HOME/.cache/mesa_shader_cache_db"
+}
+
+_tracker_paths() {
+  printf '%s\n' \
+    "$HOME/.cache/tracker3" \
+    "$HOME/.cache/tracker" \
+    "$HOME/.cache/localsearch"
+}
+
+_snap_old_revs() {
+  _have snap || return 0
+  snap list --all 2>/dev/null | awk '/disabled/{print $1, $3}' || true
+}
+
+_apt_autoremove_names() {
+  apt-get -s autoremove --purge 2>/dev/null \
+    | awk '/^Remv /{print $2}' || true
+}
+
+cmd_clean_scan() {
+  _ensure_dirs
+  local trash_b thumb_b apt_b auto_n snap_n journal_b crash_b dev_b br_b track_b rec_b
+  local auto_list snap_list
+  echo "Scanning junk (nothing will be deleted)…"
+
+  local -a paths
+  mapfile -t paths < <(_trash_paths)
+  trash_b="$(_path_bytes "${paths[@]:-}")"
+  mapfile -t paths < <(_thumb_paths)
+  thumb_b="$(_path_bytes "${paths[@]:-}")"
+  apt_b="$(_path_bytes /var/cache/apt/archives)"
+  auto_list="$(_apt_autoremove_names)"
+  if [[ -z "${auto_list// }" ]]; then auto_n=0; else auto_n="$(printf '%s\n' "$auto_list" | grep -c . || true)"; fi
+  snap_list="$(_snap_old_revs)"
+  if [[ -z "${snap_list// }" ]]; then snap_n=0; else snap_n="$(printf '%s\n' "$snap_list" | grep -c . || true)"; fi
+  journal_b=0
+  if _have journalctl; then
+    journal_b="$(journalctl --disk-usage 2>/dev/null | grep -oE '[0-9.]+[KMGTP]B?' | head -1 || true)"
+  fi
+  crash_b="$(_path_bytes /var/crash /var/lib/systemd/coredump)"
+  mapfile -t paths < <(_dev_cache_paths)
+  dev_b="$(_path_bytes "${paths[@]:-}")"
+  mapfile -t paths < <(_browser_cache_paths)
+  br_b="$(_path_bytes "${paths[@]:-}")"
+  mapfile -t paths < <(_tracker_paths)
+  track_b="$(_path_bytes "${paths[@]:-}")"
+  rec_b=0
+  [[ -f "$HOME/.local/share/recently-used.xbel" ]] && rec_b="$(_path_bytes "$HOME/.local/share/recently-used.xbel")"
+
+  : >"$CLEAN_SIZES"
+  _kv_set "$CLEAN_SIZES" trash "$trash_b"
+  _kv_set "$CLEAN_SIZES" thumbnails "$thumb_b"
+  _kv_set "$CLEAN_SIZES" apt_cache "$apt_b"
+  _kv_set "$CLEAN_SIZES" apt_autoremove_n "$auto_n"
+  _kv_set "$CLEAN_SIZES" snap_old_n "$snap_n"
+  _kv_set "$CLEAN_SIZES" crash "$crash_b"
+  _kv_set "$CLEAN_SIZES" dev_caches "$dev_b"
+  _kv_set "$CLEAN_SIZES" browser_cache "$br_b"
+  _kv_set "$CLEAN_SIZES" tracker "$track_b"
+  _kv_set "$CLEAN_SIZES" recently_used "$rec_b"
+  _kv_set "$CLEAN_SIZES" journals_note "${journal_b:-unknown}"
+
+  local default_b=$((trash_b + thumb_b + apt_b + crash_b + dev_b))
+  {
+    echo "X47 Clean scan — $(date -Is)"
+    echo
+    echo "Safe defaults (will run with: x47-updates clean)"
+    echo "  Trash / recycle bin     $(_bytes_human "$trash_b")"
+    echo "  Thumbnail cache         $(_bytes_human "$thumb_b")"
+    echo "  Apt download cache      $(_bytes_human "$apt_b")"
+    echo "  Leftover packages       ${auto_n} (apt autoremove --purge)"
+    if [[ "$auto_n" -gt 0 ]]; then
+      printf '%s\n' "$auto_list" | sed 's/^/    /'
+    fi
+    echo "  Old snap revisions      ${snap_n}"
+    if [[ "$snap_n" -gt 0 ]]; then
+      printf '%s\n' "$snap_list" | sed 's/^/    /'
+    fi
+    echo "  Journal logs            ${journal_b:-?} (vacuum to last 7 days)"
+    echo "  Crash / coredumps       $(_bytes_human "$crash_b")"
+    echo "  pip/npm/font/GPU cache  $(_bytes_human "$dev_b")"
+    echo
+    echo "Optional (off unless you ask)"
+    echo "  Browser caches only     $(_bytes_human "$br_b")  (not history/cookies)"
+    echo "  Tracker / localsearch   $(_bytes_human "$track_b")"
+    echo "  Recent-files list       $(_bytes_human "$rec_b")"
+    echo
+    echo "Never touched: Documents, Pictures, Desktop, Downloads,"
+    echo "passwords, cookies, browser profiles, ~/.config, SSH/GPG keys."
+    echo
+    echo "default_reclaim_est=$(_bytes_human "$default_b") + leftover packages + journals + snaps"
+  } >"$CLEAN_REPORT"
+
+  _kv_set "$CLEAN_STATUS" last_scan "$(date -Is)"
+  _kv_set "$CLEAN_STATUS" default_bytes "$default_b"
+  cat "$CLEAN_REPORT"
+}
+
+_rm_tree_contents() {
+  local root="$1"
+  [[ -d "$root" ]] || return 0
+  find "$root" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+}
+
+_clean_user_items() {
+  local key
+  for key in "$@"; do
+    case "$key" in
+      trash)
+        echo "--- empty recycle bin ---"
+        if _have gio; then
+          gio trash --empty 2>/dev/null || true
+        fi
+        local p
+        while IFS= read -r p; do
+          _rm_tree_contents "$p"
+        done < <(_trash_paths)
+        ;;
+      thumbnails)
+        echo "--- thumbnail cache ---"
+        while IFS= read -r p; do
+          _rm_tree_contents "$p"
+        done < <(_thumb_paths)
+        ;;
+      dev_caches)
+        echo "--- pip / npm / font / GPU caches ---"
+        while IFS= read -r p; do
+          rm -rf "$p" 2>/dev/null || true
+        done < <(_dev_cache_paths)
+        ;;
+      browser_cache)
+        echo "--- browser caches (not profiles / cookies) ---"
+        while IFS= read -r p; do
+          rm -rf "$p" 2>/dev/null || true
+        done < <(_browser_cache_paths)
+        ;;
+      tracker)
+        echo "--- tracker / localsearch cache ---"
+        while IFS= read -r p; do
+          rm -rf "$p" 2>/dev/null || true
+        done < <(_tracker_paths)
+        ;;
+      recently_used)
+        echo "--- recent-files list ---"
+        rm -f "$HOME/.local/share/recently-used.xbel" 2>/dev/null || true
+        ;;
+    esac
+  done
+}
+
+_clean_priv_script() {
+  # Emitted for pkexec/sudo: system-level tidy only.
+  cat <<'EOS'
+#!/usr/bin/env bash
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+ITEMS="$*"
+contains() { [[ " $ITEMS " == *" $1 "* ]]; }
+
+if contains apt_cache; then
+  echo "--- apt clean / autoclean ---"
+  apt-get clean || true
+  apt-get autoclean -y || true
+fi
+if contains apt_autoremove; then
+  echo "--- apt autoremove --purge ---"
+  apt-get autoremove --purge -y || true
+fi
+if contains journals; then
+  echo "--- journal vacuum (7 days) ---"
+  journalctl --vacuum-time=7d || true
+  find /var/log -type f \( -name '*.gz' -o -name '*.old' -o -name '*.1' \) -delete 2>/dev/null || true
+fi
+if contains crash; then
+  echo "--- crash reports / coredumps ---"
+  rm -f /var/crash/* 2>/dev/null || true
+  rm -rf /var/lib/systemd/coredump/* 2>/dev/null || true
+fi
+if contains snap_old && command -v snap >/dev/null 2>&1; then
+  echo "--- old snap revisions ---"
+  snap list --all 2>/dev/null | awk '/disabled/{print $1, $3}' | while read -r name rev; do
+    [[ -n "$name" && -n "$rev" ]] || continue
+    echo "removing $name revision $rev"
+    snap remove "$name" --revision="$rev" || true
+  done
+fi
+if contains trash; then
+  echo "--- root recycle bin ---"
+  rm -rf /root/.local/share/Trash/files/* /root/.local/share/Trash/info/* 2>/dev/null || true
+fi
+if command -v flatpak >/dev/null 2>&1 && contains apt_autoremove; then
+  echo "--- flatpak unused ---"
+  flatpak uninstall --unused -y 2>/dev/null || true
+fi
+echo "--- privileged tidy done ---"
+EOS
+}
+
+cmd_clean() {
+  local yes=0
+  local -a items=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --yes|-y) yes=1; shift ;;
+      --help|-h)
+        echo "x47-updates clean [--yes] [trash thumbnails apt_cache apt_autoremove snap_old journals crash dev_caches browser_cache tracker recently_used]"
+        return 0
+        ;;
+      *) items+=("$1"); shift ;;
+    esac
+  done
+  if [[ ${#items[@]} -eq 0 ]]; then
+    mapfile -t items < <(_clean_default_keys)
+  fi
+
+  if [[ "$yes" -ne 1 ]]; then
+    echo "Will clean: ${items[*]}"
+    echo "Never touches Documents / Pictures / Desktop / Downloads / passwords."
+    read -r -p "Continue? [y/N] " ans || ans=n
+    case "${ans,,}" in
+      y|yes) ;;
+      *) echo "Cancelled."; return 0 ;;
+    esac
+  fi
+
+  echo "=== X47 Clean ==="
+  _clean_user_items "${items[@]}"
+
+  local need_priv=0 k
+  for k in "${items[@]}"; do
+    case "$k" in
+      apt_cache|apt_autoremove|journals|crash|snap_old|trash) need_priv=1 ;;
+    esac
+  done
+
+  if [[ "$need_priv" -eq 1 ]]; then
+    local tmp
+    tmp="$(mktemp /tmp/x47-clean-priv.XXXXXX.sh)"
+    _clean_priv_script >"$tmp"
+    chmod 0755 "$tmp"
+    local rc=0
+    echo "System tidy (password may be required)…"
+    if [[ "$(id -u)" -eq 0 ]]; then
+      bash "$tmp" "${items[*]}" || rc=$?
+    elif [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && _have pkexec; then
+      pkexec bash "$tmp" "${items[*]}" || rc=$?
+    elif _have sudo; then
+      sudo bash "$tmp" "${items[*]}" || rc=$?
+    else
+      echo "warn: sudo/pkexec missing — skipped apt/journal/snap/crash" >&2
+    fi
+    rm -f "$tmp"
+    [[ "$rc" -eq 0 ]] || echo "warn: privileged tidy exited $rc" >&2
+  fi
+
+  _kv_set "$CLEAN_STATUS" last_clean "$(date -Is)"
+  echo
+  echo "DONE — recycle bin emptied (if selected). Documents were not touched."
+}
+
+cmd_tidy() {
+  cmd_clean_scan
+  echo
+  cmd_clean --yes
+}
+
+cmd_clean_gui() {
+  if ! _have zenity; then
+    cmd_tidy
     return 0
   fi
-  echo "last_check=$(_status_get last_check never)"
-  echo "apt_count=$(_status_get apt_count 0)"
-  echo "snap_count=$(_status_get snap_count 0)"
-  echo "reboot_required=$(_status_get reboot_required 0)"
-  if [[ -f "$REPORT_FILE" ]]; then
-    echo "report=$REPORT_FILE"
+  zenity --info --title='X47 Clean' --width=440 \
+    --text='Scan first. Nothing is deleted until you confirm.\nDocuments, Pictures, Desktop, Downloads, passwords, and cookies stay.' \
+    2>/dev/null || true
+
+  local scan_out
+  if ! scan_out="$(cmd_clean_scan 2>&1)"; then
+    zenity --error --title='X47 Clean' --width=480 \
+      --text="Scan failed:\n\n$(printf '%s' "$scan_out" | tail -c 1200)" 2>/dev/null || true
+    return 1
+  fi
+
+  local trash_b thumb_b apt_b auto_n snap_n crash_b dev_b br_b track_b rec_b jn
+  trash_b="$(_kv_get "$CLEAN_SIZES" trash 0)"
+  thumb_b="$(_kv_get "$CLEAN_SIZES" thumbnails 0)"
+  apt_b="$(_kv_get "$CLEAN_SIZES" apt_cache 0)"
+  auto_n="$(_kv_get "$CLEAN_SIZES" apt_autoremove_n 0)"
+  snap_n="$(_kv_get "$CLEAN_SIZES" snap_old_n 0)"
+  crash_b="$(_kv_get "$CLEAN_SIZES" crash 0)"
+  dev_b="$(_kv_get "$CLEAN_SIZES" dev_caches 0)"
+  br_b="$(_kv_get "$CLEAN_SIZES" browser_cache 0)"
+  track_b="$(_kv_get "$CLEAN_SIZES" tracker 0)"
+  rec_b="$(_kv_get "$CLEAN_SIZES" recently_used 0)"
+  jn="$(_kv_get "$CLEAN_SIZES" journals_note '?')"
+
+  local picked
+  picked="$(zenity --list --checklist --title='X47 Clean' --width=620 --height=520 \
+    --text='Tick what to remove. Safe defaults are on. Browser cache is off (history/cookies stay either way).' \
+    --column=On --column=Id --column=What \
+    --hide-column=2 --print-column=2 --separator=' ' \
+    TRUE trash "Recycle bin / trash ($(_bytes_human "$trash_b"))" \
+    TRUE thumbnails "Thumbnail cache ($(_bytes_human "$thumb_b"))" \
+    TRUE apt_cache "Apt download cache ($(_bytes_human "$apt_b"))" \
+    TRUE apt_autoremove "Leftover packages, old kernels (${auto_n})" \
+    TRUE snap_old "Old snap revisions (${snap_n})" \
+    TRUE journals "Old journal + rotated logs (keep 7 days, now ${jn})" \
+    TRUE crash "Crash reports / coredumps ($(_bytes_human "$crash_b"))" \
+    TRUE dev_caches "pip / npm / font / GPU caches ($(_bytes_human "$dev_b"))" \
+    FALSE browser_cache "Browser caches only — not history ($(_bytes_human "$br_b"))" \
+    FALSE tracker "Desktop search index cache ($(_bytes_human "$track_b"))" \
+    FALSE recently_used "GNOME recent-files list ($(_bytes_human "$rec_b"))" \
+    2>/dev/null)" || picked=""
+
+  if [[ -z "${picked// }" ]]; then
+    zenity --info --title='X47 Clean' --text='Cancelled — nothing deleted.' 2>/dev/null || true
+    return 0
+  fi
+
+  if zenity --question --title='X47 Clean' --width=480 \
+    --ok-label='Clean now' --cancel-label='Cancel' \
+    --text="<b>Clean these:</b>\n${picked}\n\nA terminal will show progress. Your files stay." \
+    2>/dev/null; then
+    _run_cmd_in_terminal clean --yes ${picked}
+    zenity --info --title='X47 Clean' --width=420 \
+      --text='Clean started in a terminal.\nThe recycle bin is emptied if you left it ticked.' \
+      2>/dev/null || true
+  else
+    zenity --info --title='X47 Clean' --text='Cancelled — nothing deleted.' 2>/dev/null || true
   fi
 }
 
@@ -378,11 +809,11 @@ EOS
   return "$rc"
 }
 
-_run_apply_in_terminal() {
-  local self
+_run_cmd_in_terminal() {
+  local self title cmd
   self="$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")"
-  local cmd
-  cmd=$(printf '%q ' "$self" apply)
+  title='X47 Updates & Clean'
+  cmd=$(printf '%q ' "$self" "$@")
   if [[ -x "$HOME/.local/bin/wezterm" ]] || _have wezterm; then
     local wt
     wt="$(command -v wezterm 2>/dev/null || echo "$HOME/.local/bin/wezterm")"
@@ -391,14 +822,18 @@ _run_apply_in_terminal() {
     return 0
   fi
   if _have gnome-terminal; then
-    gnome-terminal --title='X47 Updates' -- bash -lc "$cmd; echo; read -r -p 'Press Enter to close…' _" &
+    gnome-terminal --title="$title" -- bash -lc "$cmd; echo; read -r -p 'Press Enter to close…' _" &
     return 0
   fi
   # Fallback: run in current context
-  cmd_apply
+  "$self" "$@"
 }
 
-cmd_gui() {
+_run_apply_in_terminal() {
+  _run_cmd_in_terminal apply
+}
+
+cmd_updates_gui() {
   if ! _have zenity; then
     echo "zenity not found — falling back to text UI" >&2
     cmd_check
@@ -450,15 +885,76 @@ cmd_gui() {
   fi
 }
 
+cmd_both_gui() {
+  cmd_updates_gui
+  cmd_clean_gui
+}
+
+cmd_gui() {
+  if ! _have zenity; then
+    echo "X47 Updates & Clean"
+    echo "  1) Check & install updates"
+    echo "  2) Clean & tidy"
+    echo "  3) Updates, then clean"
+    echo "  4) Repair Mullvad apt source"
+    local ans
+    read -r -p "Choice [1]: " ans || ans=1
+    case "${ans:-1}" in
+      2) cmd_tidy ;;
+      3) cmd_check; read -r -p "Apply updates? [y/N] " a || a=n
+         case "${a,,}" in y|yes) cmd_apply ;; esac
+         cmd_tidy ;;
+      4) cmd_repair_sources ;;
+      *) cmd_updates_gui ;;
+    esac
+    return 0
+  fi
+
+  local pick
+  pick="$(zenity --list --radiolist --title='X47 Updates & Clean' \
+    --width=560 --height=340 \
+    --text='Keep this distro updated and tidy. Clean never deletes Documents, Pictures, Desktop, or Downloads.' \
+    --column=Pick --column=Id --column=Action \
+    --hide-column=2 --print-column=2 \
+    TRUE updates 'Check &amp; install updates (apt / snap / Cursor)' \
+    FALSE clean 'Clean &amp; tidy — empty trash, caches, leftovers (preview first)' \
+    FALSE both 'Updates, then clean' \
+    FALSE repair 'Repair Mullvad apt source' \
+    2>/dev/null)" || pick=""
+
+  case "$pick" in
+    updates) cmd_updates_gui ;;
+    clean) cmd_clean_gui ;;
+    both) cmd_both_gui ;;
+    repair) cmd_repair_sources
+      if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+        zenity --info --title='X47 Updates' --text='Mullvad source repair finished (or was already OK).' 2>/dev/null || true
+      fi
+      ;;
+    *) return 0 ;;
+  esac
+}
+
 main() {
   local cmd="${1:-}"
   shift || true
+  if [[ "$(basename -- "$0")" == "x47-clean" ]]; then
+    case "${cmd:-}" in
+      ""|gui) cmd=clean-gui ;;
+      scan) cmd=clean-scan ;;
+    esac
+  fi
   case "$cmd" in
     ""|gui) cmd_gui "$@" ;;
     check) cmd_check "$@" ;;
     apply) cmd_apply "$@" ;;
     status) cmd_status "$@" ;;
     repair-sources|repair) cmd_repair_sources "$@" ;;
+    clean-scan|scan) cmd_clean_scan "$@" ;;
+    clean) cmd_clean "$@" ;;
+    tidy) cmd_tidy "$@" ;;
+    clean-gui) cmd_clean_gui "$@" ;;
+    updates-gui) cmd_updates_gui "$@" ;;
     -h|--help|help) _usage ;;
     *) echo "unknown command: $cmd" >&2; _usage; exit 2 ;;
   esac
