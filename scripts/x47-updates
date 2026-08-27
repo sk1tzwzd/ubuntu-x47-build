@@ -28,14 +28,14 @@ X47 Updates & Clean — updates plus a tidy pass (CCleaner-style)
   x47-updates                 Open GUI hub
   x47-updates gui             Force Zenity hub
   x47-updates check           Refresh indexes and list pending updates
-  x47-updates apply           Apply apt + snap + Cursor + VS Code + Claude Code
+  x47-updates apply           Apply apt + snap + Cursor + VS Code + Claude Code extension
   x47-updates status          Show last check / clean summary
   x47-updates repair-sources  Restore missing third-party apt sources (Mullvad)
   x47-updates clean-scan      Preview reclaimable junk (nothing deleted)
   x47-updates clean           Apply default tidy set (or named categories)
   x47-updates tidy            Scan, then clean the default set
 
-Updates: apt, snap, Cursor, VS Code, Claude Code CLI + VS Code extension.
+Updates: apt, snap, Cursor, VS Code, Claude Code VS Code extension (no standalone CLI).
 Default clean (safe): trash, thumbnails, apt cache, leftover packages,
 old snap revisions, journals (keep 7 days), crash reports, pip/npm caches.
 
@@ -261,14 +261,10 @@ _harden_code_desktop() {
 }
 
 _update_claude_and_vscode_ext() {
-  echo "--- Claude Code CLI ---"
-  if [[ -x "$HOME/.local/bin/claude" ]]; then
-    "$HOME/.local/bin/claude" update || echo "warn: claude update failed" >&2
-  elif _have claude; then
-    claude update || echo "warn: claude update failed" >&2
-  else
-    echo "Claude Code CLI not installed"
-  fi
+  echo "--- Claude Code CLI (removed; VS Code extension only) ---"
+  rm -f "$HOME/.local/bin/claude"
+  rm -rf "$HOME/.local/share/claude/versions"
+  rm -f "$HOME/.local/share/applications/launcher-claude.desktop"
   echo "--- VS Code Claude Code extension ---"
   if _have code; then
     code --install-extension anthropic.claude-code --force || echo "warn: extension install failed" >&2
@@ -330,22 +326,13 @@ cmd_check() {
   fi
 
   local cli_v ext_v
-  cli_v="$(_claude_cli_ver)"
+  cli_v=""
   ext_v="$(_claude_ext_ver)"
-  if [[ -n "$cli_v" ]]; then
-    claude_note="CLI ${cli_v}"
-    if [[ -n "$ext_v" ]]; then
-      claude_note="${claude_note}; VS Code extension ${ext_v}"
-      if [[ "$cli_v" != "$ext_v" ]]; then
-        claude_note="${claude_note} — mismatch; Apply will update CLI + extension"
-        claude_pending=1
-      fi
-    else
-      claude_note="${claude_note}; VS Code extension missing — Apply will install it"
-      claude_pending=1
-    fi
+  if [[ -n "$ext_v" ]]; then
+    claude_note="VS Code extension ${ext_v} (CLI not used)"
   else
-    claude_note="CLI not installed"
+    claude_note="VS Code extension missing — Apply will install anthropic.claude-code"
+    claude_pending=1
   fi
 
   if dpkg -s mullvad-vpn >/dev/null 2>&1; then
@@ -1027,7 +1014,7 @@ cmd_gui() {
     --text='Keep this distro updated and tidy. Clean never deletes Documents, Pictures, Desktop, or Downloads.' \
     --column=Pick --column=Id --column=Action \
     --hide-column=2 --print-column=2 \
-    TRUE updates 'Check &amp; install updates (apt / snap / Cursor / VS Code / Claude)' \
+    TRUE updates 'Check &amp; install updates (apt / snap / Cursor / VS Code / Claude extension)' \
     FALSE clean 'Clean &amp; tidy — empty trash, caches, leftovers (preview first)' \
     FALSE both 'Updates, then clean' \
     FALSE repair 'Repair Mullvad apt source' \

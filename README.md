@@ -6,7 +6,7 @@ Idempotent installer that reproduces a custom Ubuntu 24.04 / 26 desktop:
 - **Mullvad VPN** (apt) and **Tor Browser** (latest from Tor Project, registered in the app menu)
 - **X47 PDF Editor** (`x47-pdf`) — ONLYOFFICE + PDF Arranger + Xournal++. Search “PDF” or the Office folder
 - **X47 Ark** — backup Windows user files to USB, then reclaim the disk for Ubuntu
-- **Claude Code** — official Anthropic CLI in Dev Tools
+- **Claude Code** — VS Code extension (no standalone CLI)
 - Pentest + developer toolchain (apt, Go, pipx, cargo, GitHub release binaries, gems)
 - Custom **app-grid launchers** and icons (`kali-*` pack, custom `kali-cool-*`, `x47duster` fallback — no Kali dragon)
 - Hardened services snapshotted from the reference machine (UFW, fail2ban, AppArmor, auditd, unattended-upgrades, sysctl)
@@ -49,7 +49,7 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 | `--skip-win-screenshot` | Do not bind Super+Shift+S (Print still works) |
 | `--with-amnesia` | Also create the amnesiac, Tor-forced `anon` user (opt-in) |
 | `--skip-syncthing` | Skip hardened Android↔PC Syncthing share |
-| `--skip-claude` | Skip official Claude Code CLI + Dev Tools launcher |
+| `--skip-claude` | Skip Claude Code VS Code extension |
 | `--skip-pdf` | Skip X47 PDF (ONLYOFFICE, PDF Arranger, Xournal++, guide) |
 | `--skip-ark` | Skip X47 Ark (Windows file backup + Ubuntu disk reclaim) |
 | `--only 10-terminal,30-icons` | Run a subset of modules |
@@ -89,7 +89,7 @@ Firefox is left as the hardened snap (the earlier snap→deb swap was removed). 
 
 ## X47 Updates & Clean
 
-Use the **X47 Updates & Clean** app (app menu / desktop) or CLI. Updates cover apt, snap, Cursor, VS Code, and Claude Code (CLI + VS Code extension). Clean is a CCleaner-style tidy pass: preview sizes, then empty the recycle bin, drop caches and leftover packages. It never deletes Documents, Pictures, Desktop, Downloads, passwords, or cookies. Unattended security upgrades stay on.
+Use the **X47 Updates & Clean** app (app menu / desktop) or CLI. Updates cover apt, snap, Cursor, VS Code, and the Claude Code VS Code extension. Clean is a CCleaner-style tidy pass: preview sizes, then empty the recycle bin, drop caches and leftover packages. It never deletes Documents, Pictures, Desktop, Downloads, passwords, or cookies. Unattended security upgrades stay on.
 
 ```bash
 x47-updates              # GUI hub: updates / clean / both
@@ -147,7 +147,7 @@ Shared in both modes: CTRL+drag tiling, notification click-to-focus, Show Apps, 
 - **WezTerm (PuTTY-style)** — select copy / right-click paste / `Ctrl+C`·`V` (optional via X47 Settings).
 - **Syncthing (X47 Sync)** — optional hardened LAN sync (`x47-syncthing`); default share `~/X47Share`. Top-bar **SYNC** chip (right) + app icon opens the localhost GUI.
 - **X47 Updates & Clean** — apt + snap + Cursor updates, plus trash/caches/leftover-package tidy (preview first).
-- **Claude Code** — official Anthropic CLI + Dev Tools launcher (Claude starburst icon).
+- **Claude Code** — VS Code extension only (no standalone CLI).
 - **X47 PDF** — one app to edit / arrange / annotate PDFs (ONLYOFFICE + PDF Arranger + Xournal++) with an offline guide.
 - **X47-Win** (separate repo) — Windows 11 privacy kit. Encryption is optional. If you used BitLocker, import the USB key here with `x47-windows-import-key`.
 - **X47 Ark** — copy Windows user files to an external USB, verify, then delete Windows and give the disk to Ubuntu (`x47-ark`). Typical dual-boot (Windows first) finishes from a live USB.
@@ -190,7 +190,7 @@ To build it yourself: `sudo apt install xorriso`, then `./scripts/build-iso.sh` 
 - **pipx**: netexec, impacket, bloodhound-python, smbmap, enum4linux-ng, arjun, wafw00f, …
 - **cargo**: bat, feroxbuster
 - **release bins**: rustscan, gitleaks, trufflehog, eza, fd, zoxide, delta
-- **Claude Code**: official Anthropic CLI (`~/.local/bin/claude`) + Dev Tools launcher. Skip with `--skip-claude`.
+- **Claude Code**: VS Code extension only (no standalone CLI). Skip with `--skip-claude`.
 - **X47 PDF**: `x47-pdf` chooser + ONLYOFFICE + PDF Arranger + Xournal++ + offline guide. Skip with `--skip-pdf`.
 - **X47 Ark**: GTK assistant (`x47-ark` / `x47-ark-gui`) backs up Windows user folders to USB, verifies, then reclaims the dual-boot disk. Skip with `--skip-ark`.
 - **gems**: evil-winrm, wpscan

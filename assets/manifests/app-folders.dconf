@@ -2,7 +2,7 @@
 folder-children=['System', 'Utilities', 'Office', 'YaST', 'Pardus', 'DevTools', 'PentestTools']
 
 [folders/DevTools]
-apps=['code.desktop', 'cursor.desktop', 'launcher-claude.desktop', 'launcher-bat.desktop', 'launcher-eza.desktop', 'launcher-fd.desktop', 'launcher-zoxide.desktop', 'launcher-lazygit.desktop', 'launcher-delta.desktop', 'launcher-uv.desktop', 'launcher-yq.desktop', 'launcher-http.desktop']
+apps=['code.desktop', 'cursor.desktop', 'launcher-bat.desktop', 'launcher-eza.desktop', 'launcher-fd.desktop', 'launcher-zoxide.desktop', 'launcher-lazygit.desktop', 'launcher-delta.desktop', 'launcher-uv.desktop', 'launcher-yq.desktop', 'launcher-http.desktop']
 name='Dev Tools'
 
 [folders/Office]

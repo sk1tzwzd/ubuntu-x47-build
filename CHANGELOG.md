@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- **VS Code + Claude Code** — `x47-updates` upgrades VS Code (`code`) and the Claude Code CLI + VS Code extension together. VS Code launcher gets `~/.local/bin` on PATH and the same Wayland ozone hint as Mullvad so Claude Code can find `claude`.
+- **Claude Code: VS Code only** — standalone CLI and WezTerm launcher removed. The `anthropic.claude-code` extension stays; `x47-updates` keeps VS Code and that extension current.
+- **VS Code** — `x47-updates` only-upgrades `code`. Launcher uses the Wayland ozone hint.
 - **Anon Profile: Mullvad VPN** — removed NymVPN daemon and GUI; anon profile now configures Mullvad VPN to auto-start minimized to tray with auto-connect, matching the normal profile.
 - **Anon Status widget** — updated `x47-anon-status@x47` desktop connection card to remove NYM status, monitoring `LINK` and `TOR` layers cleanly.
 - **X47 Updates & Clean** — the updates app is also a CCleaner-style tidy tool: empty recycle bin, thumbnails, apt/snap leftovers, journals, crash reports, pip/npm caches. Preview first. Documents / passwords / cookies stay. Alias: `x47-clean`.

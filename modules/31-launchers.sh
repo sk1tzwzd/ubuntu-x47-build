@@ -15,6 +15,8 @@ module_launchers() {
   local f
   for f in "$src"/*.desktop; do
     [[ -f "$f" ]] || continue
+    # Standalone Claude CLI launcher is retired — VS Code extension only.
+    [[ "$(basename "$f")" == "launcher-claude.desktop" ]] && continue
     path_expand "$f" "$dest/$(basename "$f")"
   done
 
@@ -52,8 +54,7 @@ module_launchers() {
       case "$base" in
         launcher-bat.desktop|launcher-eza.desktop|launcher-fd.desktop| \
         launcher-zoxide.desktop|launcher-lazygit.desktop|launcher-delta.desktop| \
-        launcher-uv.desktop|launcher-yq.desktop|launcher-http.desktop| \
-        launcher-claude.desktop)
+        launcher-uv.desktop|launcher-yq.desktop|launcher-http.desktop)
           dev+=("'$base'")
           ;;
         *)
