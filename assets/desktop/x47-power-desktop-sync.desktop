@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=X47 Power Desktop Sync
-Comment=Sync Visual / High Performance desktop with GNOME Power Mode
-Exec=x47-power-desktop-sync
-Icon=preferences-system-power
-X-GNOME-Autostart-enabled=true
-NoDisplay=true

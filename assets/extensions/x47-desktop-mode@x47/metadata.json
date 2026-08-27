@@ -1,7 +1,0 @@
-{
-  "uuid": "x47-desktop-mode@x47",
-  "name": "X47 Desktop Mode",
-  "description": "Top-bar chip (right) to toggle Visual vs Performance desktop.",
-  "shell-version": ["48", "49", "50"],
-  "url": "https://github.com/sk1tzwzd/ubuntu-x47-build"
-}

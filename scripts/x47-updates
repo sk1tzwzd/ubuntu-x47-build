@@ -28,14 +28,19 @@ X47 Updates & Clean — updates plus a tidy pass (CCleaner-style)
   x47-updates                 Open GUI hub
   x47-updates gui             Force Zenity hub
   x47-updates check           Refresh indexes and list pending updates
-  x47-updates apply           Apply apt + snap + Cursor + VS Code + Claude Code extension
+  x47-updates apply           Apply everything: apt, snap, firmware, Cursor, VS Code,
+                              Claude Code extension, pipx, cargo, go tools, gems,
+                              GitHub release binaries, ~/tools git clones
   x47-updates status          Show last check / clean summary
   x47-updates repair-sources  Restore missing third-party apt sources (Mullvad)
   x47-updates clean-scan      Preview reclaimable junk (nothing deleted)
   x47-updates clean           Apply default tidy set (or named categories)
   x47-updates tidy            Scan, then clean the default set
 
-Updates: apt, snap, Cursor, VS Code, Claude Code VS Code extension (no standalone CLI).
+Updates: apt, snap, firmware (fwupd), Cursor, VS Code, Claude Code VS Code
+extension (no standalone CLI), pipx, cargo crates, go tools, ruby gems,
+GitHub release binaries, and ~/tools git clones. The check also reports when
+a newer Ubuntu release exists (upgrade itself stays manual: do-release-upgrade).
 Default clean (safe): trash, thumbnails, apt cache, leftover packages,
 old snap revisions, journals (keep 7 days), crash reports, pip/npm caches.
 
@@ -185,7 +190,7 @@ _snap_refresh_list() {
 
 _write_report() {
   local apt_n="$1" snap_n="$2" cursor_note="$3" vscode_note="$4" claude_note="$5" mullvad_note="$6" reboot_note="$7"
-  local apt_list="$8" snap_list="$9"
+  local apt_list="$8" snap_list="$9" extras="${10:-}"
   _ensure_dirs
   {
     echo "X47 Updates report — $(date -Is)"
@@ -215,6 +220,10 @@ _write_report() {
     echo
     echo "=== Mullvad apt source ==="
     echo "$mullvad_note"
+    if [[ -n "$extras" ]]; then
+      echo
+      printf '%s\n' "$extras"
+    fi
     echo
     echo "=== Reboot ==="
     echo "$reboot_note"
@@ -272,6 +281,197 @@ _update_claude_and_vscode_ext() {
     echo "VS Code (code) not installed — skip extension"
   fi
   _harden_code_desktop
+}
+
+# --- Everything else the build installs -------------------------------------
+
+_manifests_dir() {
+  local here
+  here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" 2>/dev/null && pwd)"
+  if [[ -d "$here/../assets/manifests" ]]; then
+    echo "$here/../assets/manifests"
+  elif [[ -d "$HOME/.local/share/ubuntu-x47-build/manifests" ]]; then
+    echo "$HOME/.local/share/ubuntu-x47-build/manifests"
+  fi
+}
+
+# Newer Ubuntu release available? Checks meta-release (LTS + normal) so a new
+# Ubuntu version is reported, not just package updates. Report-only: a release
+# upgrade is a deliberate, terminal-led action (do-release-upgrade).
+_ubuntu_release_note() {
+  local cur prompt newest="" newest_lts="" newest_dev="" v
+  cur="$(. /etc/os-release; echo "${VERSION_ID:-}")"
+  [[ -n "$cur" ]] || { echo "unknown"; return; }
+  prompt="$(awk -F= '/^Prompt=/{print $2}' /etc/update-manager/release-upgrades 2>/dev/null || echo lts)"
+  local newer
+  newer() { # newer <version> -> 0 if newer than current
+    [[ "$1" =~ ^[0-9]+\.[0-9]+ ]] || return 1
+    [[ "$1" != "$cur" && "$(printf '%s\n%s\n' "$cur" "$1" | sort -V | tail -1)" == "$1" ]]
+  }
+  local body body_lts body_dev
+  body="$(curl -fsSL --max-time 12 https://changelogs.ubuntu.com/meta-release 2>/dev/null)" || true
+  body_lts="$(curl -fsSL --max-time 12 https://changelogs.ubuntu.com/meta-release-lts 2>/dev/null)" || true
+  body_dev="$(curl -fsSL --max-time 12 https://changelogs.ubuntu.com/meta-release-development 2>/dev/null)" || true
+  [[ -n "$body$body_lts$body_dev" ]] || { echo "check failed (network)"; return; }
+  while IFS= read -r v; do newer "$v" && newest="$v"; done \
+    < <(printf '%s\n' "$body" | sed -n 's/^Version: \([0-9.]*\).*/\1/p')
+  while IFS= read -r v; do newer "$v" && newest_lts="$v"; done \
+    < <(printf '%s\n' "$body_lts" | sed -n 's/^Version: \([0-9.]*\).*/\1/p')
+  while IFS= read -r v; do newer "$v" && newest_dev="$v"; done \
+    < <(printf '%s\n' "$body_dev" | sed -n 's/^Version: \([0-9.]*\).*/\1/p')
+
+  if [[ -n "$newest_lts" ]]; then
+    echo "Ubuntu $newest_lts (LTS) available (you run $cur) — upgrade in a terminal: sudo do-release-upgrade"
+  fi
+  if [[ -n "$newest" && "$newest" != "${newest_lts:-}" ]]; then
+    echo "Ubuntu $newest (interim) available — needs Prompt=normal in /etc/update-manager/release-upgrades, then: sudo do-release-upgrade"
+  fi
+  if [[ -n "$newest_dev" && "$newest_dev" != "${newest:-}" && "$newest_dev" != "${newest_lts:-}" ]]; then
+    echo "Ubuntu $newest_dev is in development — arrives via do-release-upgrade once released (or -d now, not recommended)"
+  fi
+  if [[ -z "$newest_lts" && -z "$newest" && -z "$newest_dev" ]]; then
+    echo "Ubuntu $cur is the newest release"
+  elif [[ -z "$newest_lts" && -z "$newest" ]]; then
+    echo "Ubuntu $cur is the newest stable release"
+  fi
+}
+
+_firmware_note() {
+  _have fwupdmgr || { echo "fwupd not installed"; return; }
+  local out n
+  out="$(fwupdmgr get-updates 2>/dev/null || true)"
+  n="$(printf '%s\n' "$out" | grep -cE '^\S.*(Update|upgrade)|^•' 2>/dev/null || true)"
+  if printf '%s' "$out" | grep -qiE 'no updates|up to date|No updatable'; then
+    echo "up to date"
+  elif [[ -n "${out// }" ]]; then
+    echo "updates may be available — Apply runs fwupdmgr refresh + update"
+  else
+    echo "unknown (Apply runs fwupdmgr refresh + update)"
+  fi
+}
+
+_pipx_note() {
+  _have pipx || { echo "pipx not installed"; return; }
+  local n
+  n="$(pipx list --short 2>/dev/null | grep -c . || true)"
+  echo "$n packages — upgraded on Apply (pipx upgrade-all)"
+}
+
+_cargo_note() {
+  _have cargo || { echo "cargo not installed"; return; }
+  local m crates
+  m="$(_manifests_dir)"
+  [[ -n "$m" && -f "$m/cargo-crates.txt" ]] || { echo "no manifest"; return; }
+  crates="$(grep -vE '^\s*(#|$)' "$m/cargo-crates.txt" | tr '\n' ' ')"
+  echo "crates: $crates— reinstalled to latest on Apply (compiles, can take minutes)"
+}
+
+_go_note() {
+  _have go || { echo "go not installed"; return; }
+  local m n
+  m="$(_manifests_dir)"
+  [[ -n "$m" && -f "$m/go-modules.txt" ]] || { echo "no manifest"; return; }
+  n="$(grep -cE '^[^#[:space:]]' "$m/go-modules.txt" 2>/dev/null || true)"
+  echo "$n tools — go install @latest on Apply"
+}
+
+_gem_note() {
+  _have gem || { echo "gem not installed"; return; }
+  local m gems
+  m="$(_manifests_dir)"
+  [[ -n "$m" && -f "$m/gems.txt" ]] || { echo "no manifest"; return; }
+  gems="$(grep -vE '^\s*(#|$)' "$m/gems.txt" | tr '\n' ' ')"
+  echo "gems: $gems— gem update on Apply"
+}
+
+_releasebins_note() {
+  local m n
+  m="$(_manifests_dir)"
+  [[ -n "$m" && -f "$m/release-bins.txt" ]] || { echo "no manifest"; return; }
+  n="$(grep -cE '^[^#[:space:]]' "$m/release-bins.txt" 2>/dev/null || true)"
+  echo "$n GitHub-release binaries — latest re-fetched on Apply"
+}
+
+_gitclones_note() {
+  local m n=0 d
+  m="$(_manifests_dir)"
+  [[ -n "$m" && -f "$m/git-clones.txt" ]] || { echo "no manifest"; return; }
+  while IFS='|' read -r name _url; do
+    [[ -z "${name// }" || "$name" == \#* ]] && continue
+    [[ -d "$HOME/tools/$name/.git" ]] && n=$((n + 1))
+  done < "$m/git-clones.txt"
+  echo "$n repos in ~/tools — git pull on Apply"
+}
+
+# User-level toolchain updates (run unprivileged after the root apply).
+_update_user_toolchains() {
+  local m
+  m="$(_manifests_dir)"
+  if [[ -z "$m" ]]; then
+    echo "--- toolchains: manifests not found — skip (re-run modules/25-updates.sh) ---"
+    return 0
+  fi
+
+  echo "--- pipx packages ---"
+  if _have pipx; then pipx upgrade-all || echo "warn: pipx upgrade-all had errors" >&2; fi
+
+  echo "--- cargo crates (compiles; can take a few minutes) ---"
+  if _have cargo && [[ -f "$m/cargo-crates.txt" ]]; then
+    local c
+    while IFS= read -r c; do
+      [[ -z "${c// }" || "$c" == \#* ]] && continue
+      cargo install --locked "$c" || echo "warn: cargo install $c failed" >&2
+    done < "$m/cargo-crates.txt"
+  fi
+
+  echo "--- go tools ---"
+  if _have go && [[ -f "$m/go-modules.txt" ]]; then
+    local name mod
+    while IFS='|' read -r name mod; do
+      [[ -z "${name// }" || "$name" == \#* || -z "${mod:-}" ]] && continue
+      go install "${mod%@*}@latest" || echo "warn: go install $name failed" >&2
+    done < "$m/go-modules.txt"
+  fi
+
+  echo "--- ruby gems ---"
+  if _have gem && [[ -f "$m/gems.txt" ]]; then
+    local g
+    while IFS= read -r g; do
+      [[ -z "${g// }" || "$g" == \#* ]] && continue
+      gem update --user-install --no-document "$g" || echo "warn: gem update $g failed" >&2
+    done < "$m/gems.txt"
+  fi
+
+  echo "--- GitHub release binaries ---"
+  local lib_common=""
+  for lib_common in "$HOME/.local/share/ubuntu-x47-build/lib/common.sh" \
+                    "$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." 2>/dev/null && pwd)/lib/common.sh"; do
+    [[ -f "$lib_common" ]] && break
+  done
+  if [[ -f "$lib_common" && -f "$m/release-bins.txt" ]]; then
+    # shellcheck disable=SC1090
+    . "$lib_common"
+    local line name repo rx bin
+    while IFS= read -r line; do
+      [[ -z "${line// }" || "$line" == \#* ]] && continue
+      IFS='|' read -r name repo rx bin <<< "$line"
+      install_release_bin "$name" "$repo" "$rx" "$bin" || true
+    done < "$m/release-bins.txt"
+  else
+    echo "skip (lib/common.sh or manifest missing)"
+  fi
+
+  echo "--- git clones (~/tools) ---"
+  if [[ -f "$m/git-clones.txt" ]]; then
+    local cname
+    while IFS='|' read -r cname _url; do
+      [[ -z "${cname// }" || "$cname" == \#* ]] && continue
+      if [[ -d "$HOME/tools/$cname/.git" ]]; then
+        git -C "$HOME/tools/$cname" pull --ff-only >/dev/null 2>&1 \
+          && echo "updated $cname" || echo "warn: $cname pull failed (local changes?)" >&2
+      fi
+    done < "$m/git-clones.txt"
+  fi
 }
 
 cmd_check() {
@@ -351,7 +551,33 @@ cmd_check() {
     reboot_note="no"
   fi
 
-  _write_report "$apt_n" "$snap_n" "$cursor_note" "$vscode_note" "$claude_note" "$mullvad_note" "$reboot_note" "$apt_list" "$snap_list"
+  echo "Checking Ubuntu release, firmware, and toolchains…"
+  local extras
+  extras="=== Ubuntu release ===
+$(_ubuntu_release_note)
+
+=== Firmware (fwupd) ===
+$(_firmware_note)
+
+=== pipx ===
+$(_pipx_note)
+
+=== cargo ===
+$(_cargo_note)
+
+=== go tools ===
+$(_go_note)
+
+=== ruby gems ===
+$(_gem_note)
+
+=== GitHub release binaries ===
+$(_releasebins_note)
+
+=== git clones (~/tools) ===
+$(_gitclones_note)"
+
+  _write_report "$apt_n" "$snap_n" "$cursor_note" "$vscode_note" "$claude_note" "$mullvad_note" "$reboot_note" "$apt_list" "$snap_list" "$extras"
   _status_set last_check "$(date -Is)"
   _status_set apt_count "$apt_n"
   _status_set snap_count "$snap_n"
@@ -827,6 +1053,11 @@ _apply_in_foreground() {
     echo "--- snap refresh ---"
     snap refresh || true
   fi
+  if command -v fwupdmgr >/dev/null 2>&1; then
+    echo "--- firmware (fwupd) ---"
+    fwupdmgr refresh --force 2>/dev/null || true
+    fwupdmgr update --no-reboot-check 2>/dev/null || true
+  fi
   # Perf drift guard: package updates have re-enabled the resident ClamAV
   # daemon before (~1 GB RSS). Keep it on-demand; freshclam stays.
   if systemctl is-enabled clamav-daemon.service >/dev/null 2>&1 || \
@@ -885,6 +1116,11 @@ if command -v snap >/dev/null 2>&1; then
   echo "--- snap refresh ---"
   snap refresh || true
 fi
+if command -v fwupdmgr >/dev/null 2>&1; then
+  echo "--- firmware (fwupd) ---"
+  fwupdmgr refresh --force 2>/dev/null || true
+  fwupdmgr update --no-reboot-check 2>/dev/null || true
+fi
 # Perf drift guard: package updates have re-enabled the resident ClamAV
 # daemon before (~1 GB RSS). Keep it on-demand; freshclam stays.
 if systemctl is-enabled clamav-daemon.service >/dev/null 2>&1 || \
@@ -917,6 +1153,7 @@ EOS
   rm -f "$tmp"
   if [[ "$(id -u)" -ne 0 ]]; then
     _update_claude_and_vscode_ext
+    _update_user_toolchains
   fi
   _status_set last_apply "$(date -Is)"
   _status_set reboot_required "$([[ -f /var/run/reboot-required ]] && echo 1 || echo 0)"

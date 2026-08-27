@@ -19,21 +19,19 @@ module_settings() {
   install -m 0644 "$X47_ROOT/lib/settings.sh" "$share/lib/settings.sh"
   install -m 0644 "$X47_ROOT/lib/desktop-mode.sh" "$share/lib/desktop-mode.sh"
   install -m 0755 "$X47_ROOT/scripts/x47-settings" "$share/bin/x47-settings"
-  install -m 0755 "$X47_ROOT/scripts/x47-desktop-mode" "$share/bin/x47-desktop-mode"
   install -m 0755 "$X47_ROOT/scripts/x47-display" "$share/bin/x47-display"
-  install -m 0755 "$X47_ROOT/scripts/x47-display-adaptive" "$share/bin/x47-display-adaptive"
   install -m 0755 "$X47_ROOT/scripts/x47-nerovia-widgets" "$share/bin/x47-nerovia-widgets"
-  install -m 0755 "$X47_ROOT/scripts/x47-power-desktop-sync" "$share/bin/x47-power-desktop-sync"
   if [[ -f "$X47_ROOT/scripts/x47-clean-launchers" ]]; then
     install -m 0755 "$X47_ROOT/scripts/x47-clean-launchers" "$share/bin/x47-clean-launchers"
     ln -sfn "$share/bin/x47-clean-launchers" "$HOME/.local/bin/x47-clean-launchers"
   fi
   ln -sfn "$share/bin/x47-settings" "$HOME/.local/bin/x47-settings"
-  ln -sfn "$share/bin/x47-desktop-mode" "$HOME/.local/bin/x47-desktop-mode"
   ln -sfn "$share/bin/x47-display" "$HOME/.local/bin/x47-display"
-  ln -sfn "$share/bin/x47-display-adaptive" "$HOME/.local/bin/x47-display-adaptive"
   ln -sfn "$share/bin/x47-nerovia-widgets" "$HOME/.local/bin/x47-nerovia-widgets"
-  ln -sfn "$share/bin/x47-power-desktop-sync" "$HOME/.local/bin/x47-power-desktop-sync"
+  # Retired mode switcher — remove any older install.
+  rm -f "$HOME/.local/bin/x47-desktop-mode" "$HOME/.local/bin/x47-power-desktop-sync" \
+        "$share/bin/x47-desktop-mode" "$share/bin/x47-power-desktop-sync" \
+        "$share/bin/x47-display-adaptive" "$HOME/.local/bin/x47-display-adaptive"
 
   # Stage Nerovia Firefox widget assets for the helper (Visual stack).
   if [[ -d "$X47_ROOT/assets/firefox/nerovia" ]]; then
@@ -54,21 +52,16 @@ module_settings() {
   x47_settings_set putty_clipboard "${X47_PUTTY_CLIPBOARD:-1}"
   x47_settings_set win_screenshot "${X47_WIN_SCREENSHOT:-1}"
 
-  local installed active
-  installed="$(x47_normalize_desktop_mode "${X47_DESKTOP_MODE:-both}" || echo both)"
-  case "$installed" in
-    both) active=performance ;;
-    visual) active=visual ;;
-    performance) active=performance ;;
-  esac
-  x47_seed_desktop_mode_settings "$installed" "$active"
+  # Performance-only desktop — the Visual mode switcher is retired.
+  x47_settings_set_str desktop_mode performance
+  x47_settings_set_str desktop_modes_installed performance
 
-  # Do not autostart Power↔desktop sync (panel chip is the primary toggle).
+  # Do not autostart Power↔desktop sync (retired with the mode switcher).
   rm -f "$HOME/.config/autostart/x47-power-desktop-sync.desktop"
 
   x47_settings_apply
 
-  ok "X47 Settings -> x47-settings (putty=$(x47_settings_get putty_clipboard) shot=$(x47_settings_get win_screenshot) desktop=$(x47_settings_get_str desktop_mode)/$(x47_settings_get_str desktop_modes_installed))"
+  ok "X47 Settings -> x47-settings (putty=$(x47_settings_get putty_clipboard) shot=$(x47_settings_get win_screenshot))"
 }
 
 module_settings "$@"

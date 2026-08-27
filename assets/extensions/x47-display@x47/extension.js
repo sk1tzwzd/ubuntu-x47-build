@@ -59,9 +59,11 @@ function _readConf() {
 }
 
 function _visualStackAvailable() {
+    // Visual stack is retired (Performance-only build) — adaptive stays hidden
+    // unless an old settings file still says a visual-capable stack exists.
     const raw = _readKvFile(
         `${GLib.get_home_dir()}/.config/x47/settings.conf`, {});
-    const installed = (raw.desktop_modes_installed || 'both').toLowerCase();
+    const installed = (raw.desktop_modes_installed || 'performance').toLowerCase();
     return installed === 'visual' || installed === 'both' ||
         installed === 'full' || installed === 'fx' || installed === 'all';
 }
@@ -183,7 +185,7 @@ export default class X47DisplayExtension extends Extension {
         const tip = new PopupMenu.PopupMenuItem(
             this._visualOk
                 ? 'Adaptive: time/light. Blue-light off sticks; Adaptive on clears that lock'
-                : 'Adaptive is Visual-stack only (reinstall with both|visual)');
+                : 'Adaptive display retired with the Visual stack');
         tip.setSensitive(false);
         this._indicator.menu.addMenuItem(tip);
 

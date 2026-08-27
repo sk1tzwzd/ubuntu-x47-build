@@ -5,12 +5,14 @@ X47_SETTINGS_DIR="${X47_SETTINGS_DIR:-$HOME/.config/x47}"
 X47_SETTINGS_FILE="${X47_SETTINGS_FILE:-$X47_SETTINGS_DIR/settings.conf}"
 
 # Defaults (1 = on). Keep in sync with scripts/x47-settings and wezterm.lua.
+# desktop_mode* keys are pinned: the Visual mode switcher is retired and the
+# x47-display extension reads desktop_modes_installed to gate adaptive mode.
 X47_FEATURE_DEFAULTS=(
   "putty_clipboard=1"
   "win_screenshot=1"
   "tiling=1"
   "desktop_mode=performance"
-  "desktop_modes_installed=both"
+  "desktop_modes_installed=performance"
 )
 
 x47_settings_ensure() {

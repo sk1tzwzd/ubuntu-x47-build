@@ -44,7 +44,6 @@ You will be prompted for sudo for apt repos/packages and hardening restore.
 | `--skip-debloat` | Keep language packs and default desktop apps (no trimming) |
 | `--skip-perf` | Skip boot/service perf tweaks and the Firefox snap→deb swap |
 | `--skip-desktop-fx` | Skip tiling / wallpapers / desktop FX |
-| `--desktop-mode both\|visual\|performance` | Install both stacks (default/recommended), Visual only, or Performance only |
 | `--skip-putty-clipboard` | Disable PuTTY-style WezTerm clipboard (select copy / right-click paste / Ctrl+C·V) |
 | `--skip-win-screenshot` | Do not bind Super+Shift+S (Print still works) |
 | `--with-amnesia` | Also create the amnesiac, Tor-forced `anon` user (opt-in) |
@@ -128,17 +127,10 @@ Typical dual-boot (Windows first) cannot move a mounted Ubuntu root. Ark writes 
 
 ## Desktop looks
 
-Two modes for the main user (opt out with `--skip-desktop-fx`). Installer default is **both** stacks, starting in **Performance**; switch anytime from the **PERF / VISUAL** chip on the right of the top bar (or `x47-desktop-mode`):
+**Performance-only** (opt out with `--skip-desktop-fx`). The old Visual mode (Desktop Cube, Coverflow, Blur My Shell, per-workspace walls) and the PERF/VISUAL top-bar switcher are retired — once the window animations were pulled, the switch bought nothing but RAM and shell crashes. Lean GNOME: animations off, **no dock** (Super / the lime Show Apps button is the launcher), CTRL+drag tiling, notification click-to-focus, display comfort panel.
 
-| Mode | What you get |
-|------|----------------|
-| **Performance** (default) | Lean GNOME: animations off, no cube/blur/wobbly/Coverflow/ws-walls, **no dock** (both modes), lime Show Apps in the top bar |
-| **Visual** | Desktop Cube, Coverflow Alt-Tab, Blur My Shell, multi-colour `x47-ws-walls`, animations on (**no dock**). No wobbly windows, no window open/close FX |
-
-Shared in both modes: CTRL+drag tiling, notification click-to-focus, Show Apps, mode toggle chip, display comfort panel, **no bottom dock**.
-
-- **Display comfort** — top-bar brightness / blue-light / glare; Adaptive (Visual stack) follows time of day. Turning blue-light / Night Light off sticks until you turn Adaptive back on.
-- **X47 wallpapers** — ASCII knuckle-duster circuit colourways (regen with `scripts/make-wallpaper.py --all`). Visual switches them per workspace.
+- **Display comfort** — top-bar brightness / blue-light / glare sliders.
+- **X47 wallpapers** — ASCII knuckle-duster circuit colourways (regen with `scripts/make-wallpaper.py --all`); teal circuit is the default.
 - **Login screen** — GDM Ubuntu wordmark replaced with the teal ASCII duster (`scripts/make-login-logo.py` → `/usr/share/pixmaps/x47-login-duster.png`).
 - **Notifications** — click a top banner once to jump to the app.
 - **Anon** stays Performance-only (no heavy FX in the amnesia session).
@@ -146,7 +138,7 @@ Shared in both modes: CTRL+drag tiling, notification click-to-focus, Show Apps, 
 - **Screenshot** — `Super+Shift+S` or `Print` (optional via X47 Settings).
 - **WezTerm (PuTTY-style)** — select copy / right-click paste / `Ctrl+C`·`V` (optional via X47 Settings).
 - **Syncthing (X47 Sync)** — optional hardened LAN sync (`x47-syncthing`); default share `~/X47Share`. Top-bar **SYNC** chip (right) + app icon opens the localhost GUI.
-- **X47 Updates & Clean** — apt + snap + Cursor updates, plus trash/caches/leftover-package tidy (preview first).
+- **X47 Updates & Clean** — checks everything: apt, snap, firmware (fwupd), Cursor, VS Code, Claude Code extension, pipx, cargo, go tools, gems, GitHub release binaries, ~/tools git clones, and whether a newer Ubuntu release exists. Plus trash/caches/leftover-package tidy (preview first) and a weekly automatic system-side tidy.
 - **Claude Code** — VS Code extension only (no standalone CLI).
 - **X47 PDF** — one app to edit / arrange / annotate PDFs (ONLYOFFICE + PDF Arranger + Xournal++) with an offline guide.
 - **X47-Win** (separate repo) — Windows 11 privacy kit. Encryption is optional. If you used BitLocker, import the USB key here with `x47-windows-import-key`.

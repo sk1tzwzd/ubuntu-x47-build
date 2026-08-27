@@ -13,6 +13,13 @@ _install_updates_bin() {
   install -m 0755 "$src" "$dest_dir/x47-updates"
   ln -sfn "$dest_dir/x47-updates" "$link"
   ln -sfn "$dest_dir/x47-updates" "$HOME/.local/bin/x47-clean"
+  # Toolchain manifests — x47-updates uses them to keep pipx/cargo/go/gem/
+  # release-bin/git-clone tools current on Apply.
+  if [[ -d "$X47_ROOT/assets/manifests" ]]; then
+    mkdir -p "$HOME/.local/share/ubuntu-x47-build/manifests"
+    install -m 0644 "$X47_ROOT/assets/manifests/"*.txt \
+      "$HOME/.local/share/ubuntu-x47-build/manifests/" 2>/dev/null || true
+  fi
   ok "x47-updates → $link (alias: x47-clean)"
 }
 

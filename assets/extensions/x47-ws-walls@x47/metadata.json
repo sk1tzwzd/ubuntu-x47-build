@@ -1,7 +1,0 @@
-{
-  "uuid": "x47-ws-walls@x47",
-  "name": "X47 Workspace Walls",
-  "description": "Per-desktop X47 wallpapers (teal / pink / carbon / green + random circuit colourways). Selector bar \"+\" adds a desktop. Cube faces, overview previews and tabs always show each workspace's own colour.",
-  "shell-version": ["48", "49", "50"],
-  "url": "https://github.com/sk1tzwzd/ubuntu-x47-build"
-}

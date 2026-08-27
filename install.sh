@@ -14,12 +14,9 @@
 #   ./install.sh --skip-perf      # skip boot/service perf tweaks + Firefox deb swap
 #   ./install.sh --skip-desktop-fx # skip tiling / wallpapers / desktop FX
 #   ./install.sh --skip-syncthing  # skip hardened Android↔PC Syncthing share
-#   ./install.sh --skip-claude     # skip official Claude Code CLI + launcher
+#   ./install.sh --skip-claude     # skip Claude Code VS Code extension
 #   ./install.sh --skip-pdf        # skip X47 PDF (ONLYOFFICE / Arranger / Xournal++)
 #   ./install.sh --skip-ark        # skip X47 Ark (Windows backup + disk reclaim)
-#   ./install.sh --desktop-mode both|visual|performance
-#       both (default/recommended): install Visual + Performance; start Performance;
-#       toggle anytime from the top-bar chip. visual / performance = that stack only.
 #   ./install.sh --skip-putty-clipboard  # classic terminal clipboard (no PuTTY mouse/Ctrl+C/V)
 #   ./install.sh --skip-win-screenshot   # no Super+Shift+S (Print still works)
 #   ./install.sh --with-amnesia   # also create the amnesiac Tor-forced 'anon' user
@@ -47,8 +44,6 @@ X47_USER_ONLY=0
 X47_WITH_AMNESIA=0
 X47_PUTTY_CLIPBOARD=1
 X47_WIN_SCREENSHOT=1
-# Empty = interactive chooser (defaults to both). Or pass --desktop-mode …
-X47_DESKTOP_MODE="${X47_DESKTOP_MODE:-}"
 X47_ONLY=""
 
 usage() {
@@ -67,11 +62,6 @@ while [[ $# -gt 0 ]]; do
     --skip-claude) X47_SKIP_CLAUDE=1; shift ;;
     --skip-pdf) X47_SKIP_PDF=1; shift ;;
     --skip-ark) X47_SKIP_ARK=1; shift ;;
-    --desktop-mode)
-      X47_DESKTOP_MODE="${2:-}"
-      [[ -n "$X47_DESKTOP_MODE" ]] || die "--desktop-mode needs both|visual|performance"
-      shift 2
-      ;;
     --skip-putty-clipboard) X47_PUTTY_CLIPBOARD=0; shift ;;
     --with-putty-clipboard) X47_PUTTY_CLIPBOARD=1; shift ;;
     --skip-win-screenshot) X47_WIN_SCREENSHOT=0; shift ;;
@@ -85,18 +75,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Resolve desktop mode early so modules see a concrete value.
-# shellcheck disable=SC1091
-. "$X47_ROOT/lib/desktop-mode.sh"
-if [[ "${X47_SKIP_DESKTOP_FX:-0}" != "1" ]]; then
-  X47_DESKTOP_MODE="$(x47_choose_desktop_mode)"
-else
-  X47_DESKTOP_MODE="$(x47_normalize_desktop_mode "${X47_DESKTOP_MODE:-performance}" || echo performance)"
-fi
+# Desktop is Performance-only — the Visual mode chooser/switcher is retired.
 
 export X47_SKIP_APT X47_SKIP_HARDENING X47_SKIP_DEBLOAT X47_SKIP_PERF X47_SKIP_DESKTOP_FX \
   X47_SKIP_SYNCTHING X47_SKIP_CLAUDE X47_SKIP_PDF X47_SKIP_ARK \
-  X47_USER_ONLY X47_WITH_AMNESIA X47_PUTTY_CLIPBOARD X47_WIN_SCREENSHOT X47_DESKTOP_MODE
+  X47_USER_ONLY X47_WITH_AMNESIA X47_PUTTY_CLIPBOARD X47_WIN_SCREENSHOT
 
 MODULES=(
   00-apt.sh
@@ -145,7 +128,7 @@ should_run() {
 log "X47 Ubuntu Custom Build installer"
 log "repo: $X47_ROOT"
 log "home: $HOME"
-log "desktop mode: ${X47_DESKTOP_MODE} (toggle via top-bar chip when both installed)"
+log "desktop: Performance-only (Visual mode retired)"
 bootstrap_path
 ensure_bashrc_path
 

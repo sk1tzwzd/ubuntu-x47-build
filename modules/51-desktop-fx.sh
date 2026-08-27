@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Desktop looks: Performance (lean) and optional Visual (cube/FX). Dock off in both.
-# CTRL-only tiling, X47 wallpapers, notification click-to-focus, Show Apps,
-# and a top-bar Visual↔Performance toggle. User-level only.
+# Desktop looks: Performance-only (lean). The old Visual mode (cube, Coverflow,
+# blur, per-workspace walls) and the top-bar mode switcher are retired — window
+# animations were already pulled from Visual, so the switch bought nothing.
+# Dock stays hidden in favour of Super / the top-bar Show Apps button.
+# CTRL-only tiling, X47 wallpapers, notification click-to-focus. User-level only.
 set -euo pipefail
 # shellcheck disable=SC1091
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/common.sh"
@@ -10,20 +12,13 @@ set -euo pipefail
 
 AM_DESKTOP="$X47_ROOT/assets/desktop"
 
-# Ego-install list for Visual / both (heavy FX from extensions.gnome.org).
-X47_VISUAL_EGO_UUIDS=(
-  "CoverflowAltTab@palatis.blogspot.com"
-  "desktop-cube@schneegans.github.com"
-  "blur-my-shell@aunetx"
-)
-
 # Always ego-install tiling.
 X47_FX_UUIDS=(
   "tilingshell@ferrarodomenico.com"
 )
 
 hide_dock() {
-  log "hiding Ubuntu Dock (Performance) — session keeps the extension; UI via manualhide"
+  log "hiding Ubuntu Dock — session keeps the extension; UI via manualhide"
   # Do not gnome-extensions disable ubuntu-dock: Ubuntu session mode lists it in
   # enabledExtensions and fighting that leaves ERROR + the dock often reappears.
   enable_uuid ubuntu-dock@ubuntu.com
@@ -34,11 +29,6 @@ hide_dock() {
   gnome-extensions disable dash-to-dock@micxgx.gmail.com 2>/dev/null || true
   gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
   ok "dock hidden — Super opens Activities; Super+1…9 launches favorites"
-}
-
-show_dock() {
-  # Dock is off in Visual too — keep helper name for call sites.
-  hide_dock
 }
 
 # Enable a uuid both via the CLI and by appending to the enabled-extensions
@@ -100,73 +90,6 @@ ego_install() {
   rm -f "$tmp"
   warn "failed to install $uuid"
   return 1
-}
-
-cube_workspaces() {
-  # Fixed floor of 4 desktops (teal/pink/carbon/green). Dynamic mode culls
-  # empty faces so carbon/green vanish — keep static and let x47-ws-walls'
-  # "+" button raise num-workspaces when you want more.
-  log "configuring workspaces for the desktop cube / swap bar (4 + add)"
-  gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
-  gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
-  local cdir="$HOME/.local/share/gnome-shell/extensions/desktop-cube@schneegans.github.com/schemas"
-  if [[ -d "$cdir" ]]; then
-    local c="org.gnome.shell.extensions.desktop-cube"
-    # Snappier cube: lower edge pressure, tighter gap, brighter neighbour faces.
-    gsettings --schemadir "$cdir" set $c edge-switch-pressure 120 2>/dev/null || true
-    gsettings --schemadir "$cdir" set $c mouse-rotation-speed 2.5 2>/dev/null || true
-    gsettings --schemadir "$cdir" set $c workpace-separation 60 2>/dev/null || true
-    gsettings --schemadir "$cdir" set $c horizontal-stretch 70 2>/dev/null || true
-    gsettings --schemadir "$cdir" set $c inactive-workpace-opacity 220 2>/dev/null || true
-    gsettings --schemadir "$cdir" set $c do-explode true 2>/dev/null || true
-    gsettings --schemadir "$cdir" set $c enable-desktop-dragging true 2>/dev/null || true
-    gsettings --schemadir "$cdir" set $c enable-desktop-edge-switch true 2>/dev/null || true
-  fi
-}
-
-bmw_fx_profile() {
-  # Burn My Windows v48 reads per-profile keyfiles. Ship two: TV Glitch for
-  # window open, Broken Glass for window close. Drop stale x47 profiles and
-  # empty auto-created ones.
-  local src_open="$AM_DESKTOP/burn-my-windows-x47-open.conf"
-  local src_close="$AM_DESKTOP/burn-my-windows-x47-close.conf"
-  local dir="$HOME/.config/burn-my-windows/profiles"
-  [[ -f "$src_open" && -f "$src_close" ]] || { warn "missing BMW profile assets — skipping"; return 0; }
-  log "installing Burn My Windows profiles (open: TV Glitch, close: Broken Glass)"
-  mkdir -p "$dir"
-  rm -f "$dir/x47.conf"
-  local f
-  for f in "$dir"/*.conf; do
-    [[ -e "$f" ]] || continue
-    [[ "$(basename "$f")" == x47-*.conf ]] && continue
-    # Only remove profiles that don't enable any effect (the empty default).
-    if ! grep -qE '^[a-z0-9-]+-enable-effect=true' "$f" 2>/dev/null; then
-      rm -f "$f"
-    fi
-  done
-  install -m 0644 "$src_open" "$dir/x47-open.conf"
-  install -m 0644 "$src_close" "$dir/x47-close.conf"
-  ok "BMW profiles -> $dir/x47-{open,close}.conf"
-}
-
-coverflow_tune() {
-  # The extension ships its own compiled schema, so gsettings needs
-  # --schemadir to find org.gnome.shell.extensions.coverflowalttab.
-  local sdir="$HOME/.local/share/gnome-shell/extensions/CoverflowAltTab@palatis.blogspot.com/schemas"
-  local edir="$HOME/.local/share/gnome-shell/extensions/CoverflowAltTab@palatis.blogspot.com"
-  [[ -f "$sdir/gschemas.compiled" ]] || { warn "Coverflow schema not found — skipping tuning"; return 0; }
-  log "tuning Coverflow Alt-Tab (3D switcher bound to window/app switching)"
-  gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab switcher-style 'Coverflow' 2>/dev/null || true
-  gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab bind-to-switch-windows true 2>/dev/null || true
-  gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab bind-to-switch-applications true 2>/dev/null || true
-  gsettings --schemadir "$sdir" set org.gnome.shell.extensions.coverflowalttab hide-panel true 2>/dev/null || true
-  # Windows-like: Alt+Tab one step past the last window → Desktop.
-  if [[ -d "$edir" && -f "$AM_DESKTOP/patch-coverflow-alttab-desktop.py" ]]; then
-    log "patching Coverflow Alt-Tab so you can Alt+Tab to the desktop"
-    python3 "$AM_DESKTOP/patch-coverflow-alttab-desktop.py" "$edir" \
-      && ok "Alt+Tab past last window selects Desktop (log out/in once on Wayland)" \
-      || warn "Coverflow desktop patch failed (extension API may have changed)"
-  fi
 }
 
 # Strip a marked CSS block from gtk.css (used to remove the old hover-only
@@ -313,30 +236,6 @@ set_wallpaper() {
   fi
 }
 
-install_power_desktop_sync() {
-  # Autostart watcher: GNOME Power Mode Performance ↔ High Performance desktop.
-  mkdir -p "$HOME/.config/autostart"
-  if [[ -f "$AM_DESKTOP/x47-power-desktop-sync.desktop" ]]; then
-    install -m 0644 "$AM_DESKTOP/x47-power-desktop-sync.desktop" \
-      "$HOME/.config/autostart/x47-power-desktop-sync.desktop"
-    # Point Exec at the installed binary (PATH may not include ~/.local/bin in autostart).
-    sed -i "s|^Exec=.*|Exec=$HOME/.local/bin/x47-power-desktop-sync|" \
-      "$HOME/.config/autostart/x47-power-desktop-sync.desktop"
-    ok "Power desktop sync autostart installed"
-  fi
-}
-
-apply_desktop_mode_helper() {
-  local mode="$1"
-  if [[ -x "$HOME/.local/bin/x47-desktop-mode" ]]; then
-    "$HOME/.local/bin/x47-desktop-mode" "$mode" || true
-  elif [[ -x "$X47_ROOT/scripts/x47-desktop-mode" ]]; then
-    "$X47_ROOT/scripts/x47-desktop-mode" "$mode" || true
-  else
-    warn "x47-desktop-mode not installed yet — lean/visual apply skipped"
-  fi
-}
-
 show_apps_duster_icon() {
   # Original Ubuntu Show Apps mark in lime green via a thin theme that inherits
   # Yaru-blue-dark for everything else.
@@ -440,10 +339,6 @@ install_local_extension() {
   ok "$label enabled (log out/in on Wayland)"
 }
 
-install_ws_walls_extension() {
-  install_local_extension "x47-ws-walls@x47" "workspace wallpaper switcher"
-}
-
 # One click on a top banner focuses/opens the notifying app.
 # Free drag by default; hold CTRL while dragging to show tile zones.
 # New windows open floating (never auto-tile on spawn).
@@ -525,47 +420,33 @@ show_apps_top_bar() {
   install_local_extension "x47-show-apps@x47" "top-bar Show Apps (green Ubuntu circle)"
 }
 
-desktop_mode_panel() {
-  install_local_extension "x47-desktop-mode@x47" "top-bar Visual ↔ Performance toggle"
-}
-
-install_display_adaptive_autostart() {
-  # Visual / both only — Performance-only stays manual comfort.
-  mkdir -p "$HOME/.config/autostart"
-  local src="$X47_ROOT/assets/desktop/x47-display-adaptive.desktop"
-  local dest="$HOME/.config/autostart/x47-display-adaptive.desktop"
-  if [[ ! -f "$src" ]]; then
-    warn "missing $src — adaptive autostart skipped"
-    return 0
-  fi
-  install -m 0644 "$src" "$dest"
-  sed -i "s|^Exec=.*|Exec=$HOME/.local/bin/x47-display-adaptive|" "$dest"
-  ok "Adaptive display autostart (Visual stack)"
-}
-
-remove_display_adaptive_autostart() {
+retire_visual_stack() {
+  # Visual mode is gone: uninstall its extensions (cube, Coverflow, blur,
+  # per-workspace walls) and the old top-bar mode toggle, then strip the
+  # adaptive-display autostart (a Visual-stack feature).
+  local uuid
+  for uuid in "${X47_HEAVY_FX_UUIDS[@]}" "${X47_RETIRED_UUIDS[@]}"; do
+    x47_uninstall_extension "$uuid"
+  done
   rm -f "$HOME/.config/autostart/x47-display-adaptive.desktop"
+  rm -f "$HOME/.config/autostart/x47-power-desktop-sync.desktop"
   if [[ -x "$HOME/.local/bin/x47-display" ]]; then
     "$HOME/.local/bin/x47-display" adaptive off >/dev/null 2>&1 || true
   fi
+  # Retired mode-switcher binaries.
+  rm -f "$HOME/.local/bin/x47-desktop-mode" "$HOME/.local/bin/x47-power-desktop-sync"
+  rm -f "$HOME/.local/share/ubuntu-x47-build/bin/x47-desktop-mode" \
+        "$HOME/.local/share/ubuntu-x47-build/bin/x47-power-desktop-sync"
 }
 
 display_comfort_panel() {
   # Brightness / blue-light / glare sliders (right status area).
-  # Adaptive (time/ambient) only when Visual stack is installed.
-  local installed="${1:-both}"
   if [[ -x "$HOME/.local/bin/x47-display" ]]; then
     "$HOME/.local/bin/x47-display" apply >/dev/null 2>&1 || true
   elif [[ -x "$X47_ROOT/scripts/x47-display" ]]; then
     "$X47_ROOT/scripts/x47-display" apply >/dev/null 2>&1 || true
   fi
   install_local_extension "x47-display@x47" "top-bar display comfort (brightness / blue-light / glare)"
-  if [[ "$installed" == "visual" || "$installed" == "both" ]]; then
-    install_display_adaptive_autostart
-  else
-    remove_display_adaptive_autostart
-    log "Adaptive display skipped (Performance-only install)"
-  fi
 }
 
 install_nerovia_widgets() {
@@ -594,21 +475,6 @@ EOF
   fi
 }
 
-disable_heavy_fx() {
-  local uuid cur cleaned
-  for uuid in "${X47_HEAVY_FX_UUIDS[@]}" "${X47_WINDOW_FX_UUIDS[@]}"; do
-    gnome-extensions disable "$uuid" 2>/dev/null || true
-  done
-  cur="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
-  cleaned="$cur"
-  for uuid in "${X47_HEAVY_FX_UUIDS[@]}" "${X47_WINDOW_FX_UUIDS[@]}"; do
-    cleaned="$(printf '%s' "$cleaned" | sed -E "s/'$uuid',? ?//g; s/, ]/]/g; s/\[,/[/g")"
-  done
-  gsettings set org.gnome.shell enabled-extensions "$cleaned" 2>/dev/null || true
-  rm -f "$HOME/.config/autostart/x47-power-desktop-sync.desktop"
-  gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
-}
-
 module_desktop_fx() {
   # shellcheck disable=SC1091
   . "$X47_ROOT/lib/desktop-mode.sh"
@@ -628,15 +494,10 @@ module_desktop_fx() {
     return 0
   fi
 
-  local installed active
-  installed="$(x47_normalize_desktop_mode "${X47_DESKTOP_MODE:-both}" || echo both)"
-  case "$installed" in
-    both) active=performance ;;
-    visual) active=visual ;;
-    performance) active=performance ;;
-  esac
-  x47_seed_desktop_mode_settings "$installed" "$active"
-  log "desktop-fx: install=$installed active=$active"
+  log "desktop-fx: Performance-only (Visual mode and the switcher are retired)"
+  x47_settings_ensure
+  x47_settings_set_str desktop_mode performance
+  x47_settings_set_str desktop_modes_installed performance
   x47_purge_window_fx
 
   set_wallpaper
@@ -647,9 +508,7 @@ module_desktop_fx() {
   gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['F11']" 2>/dev/null || true
   gsettings set org.gnome.mutter dynamic-workspaces false 2>/dev/null || true
   gsettings set org.gnome.desktop.wm.preferences num-workspaces 4 2>/dev/null || true
-
-  # Never autostart Power sync — panel chip is the switcher.
-  rm -f "$HOME/.config/autostart/x47-power-desktop-sync.desktop"
+  gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null || true
 
   if ! have gnome-extensions; then
     warn "gnome-extensions CLI missing — wallpaper only"
@@ -662,29 +521,18 @@ module_desktop_fx() {
     ego_install "$uuid" && ok_any=1 || true
   done
 
-  if [[ "$installed" == "visual" || "$installed" == "both" ]]; then
-    for uuid in "${X47_VISUAL_EGO_UUIDS[@]}"; do
-      ego_install "$uuid" && ok_any=1 || true
-    done
-    install_ws_walls_extension
-    cube_workspaces
-    coverflow_tune
-    # Burn My Windows + wobbly windows are no longer part of Visual.
-  else
-    disable_heavy_fx
-  fi
+  # Visual stack + mode toggle: uninstalled, not just disabled.
+  retire_visual_stack
   # Nerovia Firefox widgets retired — always strip autostart/app entries.
   remove_nerovia_widgets
 
   tiling_shell_tune
   notification_click_activate
   show_apps_top_bar
-  desktop_mode_panel
-  display_comfort_panel "$installed"
+  display_comfort_panel
+  hide_dock
 
-  apply_desktop_mode_helper "$active"
-
-  ok "desktop-fx module done (install=$installed active=$active)"
+  ok "desktop-fx module done (Performance-only)"
   if [[ "$ok_any" == "1" ]]; then
     log "Log out and back in so GNOME picks up extensions (Wayland)."
   fi

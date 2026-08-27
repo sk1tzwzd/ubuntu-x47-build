@@ -6,7 +6,6 @@
 #   x47-settings list
 #   x47-settings get KEY
 #   x47-settings set KEY on|off
-#   x47-settings set desktop_mode visual|performance
 #   x47-settings gui
 #   x47-settings apply        # re-apply gsettings from the conf file
 set -euo pipefail
@@ -26,8 +25,6 @@ fi
 . "$X47_LIB/common.sh"
 # shellcheck disable=SC1091
 . "$X47_LIB/settings.sh"
-# shellcheck disable=SC1091
-. "$X47_LIB/desktop-mode.sh"
 
 FEATURES=(
   "putty_clipboard|PuTTY-style terminal clipboard (select copy, right-click paste, Ctrl+C/V)"
@@ -43,26 +40,16 @@ X47 Settings — toggle optional features
   x47-settings list         Show current values
   x47-settings get KEY      Print value
   x47-settings set KEY on|off
-  x47-settings set desktop_mode visual|performance
   x47-settings gui          Force Zenity checklist
-  x47-settings apply        Apply bindings / desktop mode from config
+  x47-settings apply        Apply bindings from config
 
 Keys:
   putty_clipboard   PuTTY mouse/keyboard clipboard in WezTerm (restart terminal after change)
   win_screenshot    Super+Shift+S opens the GNOME screenshot UI
   tiling            CTRL+drag to tile (plain drag free; off = disabled; applies instantly)
-  desktop_mode      visual | performance (also: x47-desktop-mode / top-bar chip when both installed)
-EOF
-}
 
-_desktop_mode_bin() {
-  if [[ -x "$HOME/.local/bin/x47-desktop-mode" ]]; then
-    echo "$HOME/.local/bin/x47-desktop-mode"
-  elif [[ -x "$HERE/x47-desktop-mode" ]]; then
-    echo "$HERE/x47-desktop-mode"
-  else
-    echo ""
-  fi
+The desktop is Performance-only — the old Visual mode switcher is retired.
+EOF
 }
 
 cmd_list() {
@@ -78,53 +65,23 @@ cmd_list() {
     [[ "$val" == "1" ]] && mark="on"
     printf '%-22s %-12s %s\n' "$key" "$mark" "$desc"
   done
-  printf '%-22s %-12s %s\n' 'desktop_mode' \
-    "$(x47_settings_get_str desktop_mode visual)" \
-    'Active desktop experience'
-  printf '%-22s %-12s %s\n' 'desktop_modes_installed' \
-    "$(x47_settings_get_str desktop_modes_installed both)" \
-    'What the installer provisioned'
   echo
   echo "Config: $X47_SETTINGS_FILE"
-  echo "CLI:    x47-desktop-mode status"
+  echo "Desktop: performance (Visual mode retired)"
 }
 
 cmd_get() {
   local key="${1:-}"
   [[ -n "$key" ]] || { echo "usage: x47-settings get KEY" >&2; exit 2; }
-  case "$key" in
-    desktop_mode|desktop_modes_installed) x47_settings_get_str "$key" "" ;;
-    *) x47_settings_get "$key" 0 ;;
-  esac
+  x47_settings_get "$key" 0
 }
 
 cmd_set() {
   local key="${1:-}" raw="${2:-}"
   [[ -n "$key" && -n "$raw" ]] || {
-    echo "usage: x47-settings set KEY on|off   OR   set desktop_mode visual|performance" >&2
+    echo "usage: x47-settings set KEY on|off" >&2
     exit 2
   }
-
-  if [[ "$key" == "desktop_mode" ]]; then
-    local mode bin installed
-    mode="$(x47_normalize_desktop_mode "$raw" || true)"
-    [[ "$mode" == "visual" || "$mode" == "performance" ]] \
-      || { echo "desktop_mode must be visual or performance" >&2; exit 2; }
-    installed="$(x47_settings_get_str desktop_modes_installed both)"
-    if [[ "$mode" == "visual" && "$installed" == "performance" ]]; then
-      echo "Visual was not installed (desktop_modes_installed=performance)" >&2
-      exit 2
-    fi
-    bin="$(_desktop_mode_bin)"
-    if [[ -n "$bin" ]]; then
-      "$bin" "$mode"
-    else
-      x47_settings_set_str desktop_mode "$mode"
-      warn "x47-desktop-mode missing — saved preference only"
-    fi
-    ok "desktop_mode=$(x47_settings_get_str desktop_mode)"
-    return 0
-  fi
 
   local known=0 entry
   for entry in "${FEATURES[@]}"; do
@@ -174,26 +131,8 @@ cmd_gui() {
   done
   x47_settings_apply
 
-  local installed mode pick_mode
-  installed="$(x47_settings_get_str desktop_modes_installed both)"
-  mode="$(x47_settings_get_str desktop_mode visual)"
-  if [[ "$installed" == "both" || "$installed" == "visual" || "$installed" == "performance" ]]; then
-    if [[ "$installed" == "both" ]]; then
-      pick_mode="$(zenity --list --radiolist \
-        --title='X47 Desktop Mode' \
-        --text='Active desktop (also synced from Settings → Power when both are installed):' \
-        --column='Pick' --column='Mode' \
-        "$([[ "$mode" == "visual" ]] && echo TRUE || echo FALSE)" visual \
-        "$([[ "$mode" == "performance" ]] && echo TRUE || echo FALSE)" performance \
-        --width=480 --height=220 2>/dev/null)" || pick_mode=""
-      if [[ -n "$pick_mode" ]]; then
-        cmd_set desktop_mode "$pick_mode"
-      fi
-    fi
-  fi
-
   zenity --info --title='X47 Settings' \
-    --text='Saved.\n\nIf you changed the terminal clipboard, open a new WezTerm window.\nDesktop mode changes may need log out/in on Wayland.' 2>/dev/null || true
+    --text='Saved.\n\nIf you changed the terminal clipboard, open a new WezTerm window.' 2>/dev/null || true
   cmd_list
 }
 
@@ -209,10 +148,6 @@ cmd_menu() {
     printf '  %d) [%s] %s (%s)\n' "$i" "$([[ "$val" == "1" ]] && echo ON || echo off)" "$desc" "$key"
     i=$((i + 1))
   done
-  printf '  %d) desktop_mode [%s] (installed: %s)\n' "$i" \
-    "$(x47_settings_get_str desktop_mode visual)" \
-    "$(x47_settings_get_str desktop_modes_installed both)"
-  local dm_choice=$i
   echo "  q) quit"
   echo
   local choice
@@ -221,13 +156,6 @@ cmd_menu() {
   if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
     echo "invalid choice" >&2
     exit 2
-  fi
-  if (( choice == dm_choice )); then
-    local cur next
-    cur="$(x47_settings_get_str desktop_mode visual)"
-    if [[ "$cur" == "visual" ]]; then next=performance; else next=visual; fi
-    cmd_set desktop_mode "$next"
-    return 0
   fi
   if (( choice < 1 || choice > ${#FEATURES[@]} )); then
     echo "invalid choice" >&2
@@ -254,12 +182,6 @@ main() {
     apply)
       x47_settings_ensure
       x47_settings_apply
-      local bin mode
-      bin="$(_desktop_mode_bin)"
-      mode="$(x47_settings_get_str desktop_mode visual)"
-      if [[ -n "$bin" ]]; then
-        "$bin" "$mode" || true
-      fi
       ok "applied"
       cmd_list
       ;;
