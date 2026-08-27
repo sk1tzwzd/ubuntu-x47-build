@@ -68,7 +68,9 @@ PY
 _install_claude_bin() {
   bootstrap_path
   if have claude; then
-    ok "Claude Code already on PATH: $(claude --version 2>/dev/null || echo claude)"
+    log "updating Claude Code CLI"
+    claude update >/dev/null 2>&1 || true
+    ok "Claude Code CLI: $(claude --version 2>/dev/null || echo claude)"
     return 0
   fi
   log "installing official Claude Code CLI"
@@ -93,6 +95,39 @@ _install_claude_bin() {
   fi
 }
 
+_install_vscode_claude() {
+  have code || { warn "VS Code (code) not on PATH — skip Claude Code extension"; return 0; }
+  log "installing Claude Code extension in VS Code"
+  if code --install-extension anthropic.claude-code --force >/dev/null 2>&1; then
+    ok "VS Code extension anthropic.claude-code"
+  else
+    warn "could not install anthropic.claude-code — in VS Code: Extensions → Claude Code"
+  fi
+}
+
+_harden_code_desktop() {
+  # Wayland + AMD: Electron GPU flakes. Same ozone hint as Mullvad.
+  # Keep ~/.local/bin on PATH so the Claude Code extension finds `claude`.
+  local sys dest prefix
+  prefix="env PATH=${HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin ELECTRON_OZONE_PLATFORM_HINT=x11 "
+  mkdir -p "$HOME/.local/share/applications"
+  local name
+  for name in code.desktop code-url-handler.desktop; do
+    sys="/usr/share/applications/${name}"
+    dest="$HOME/.local/share/applications/${name}"
+    [[ -f "$sys" ]] || continue
+    install -m 0644 "$sys" "$dest"
+    sed -i "s|^Exec=|Exec=${prefix}|" "$dest"
+  done
+  if have update-desktop-database; then
+    update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || true
+  fi
+  if have xdg-mime && [[ -f "$HOME/.local/share/applications/code-url-handler.desktop" ]]; then
+    xdg-mime default code-url-handler.desktop x-scheme-handler/vscode 2>/dev/null || true
+  fi
+  ok "VS Code launcher uses PATH + ELECTRON_OZONE_PLATFORM_HINT=x11"
+}
+
 module_claude_code() {
   if [[ "${X47_SKIP_CLAUDE:-0}" == "1" ]]; then
     warn "skipping Claude Code (X47_SKIP_CLAUDE=1)"
@@ -103,6 +138,8 @@ module_claude_code() {
   _install_claude_icon
   _install_claude_desktop
   _add_claude_to_devtools
+  _harden_code_desktop
+  _install_vscode_claude
 }
 
 module_claude_code

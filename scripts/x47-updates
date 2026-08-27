@@ -28,13 +28,14 @@ X47 Updates & Clean — updates plus a tidy pass (CCleaner-style)
   x47-updates                 Open GUI hub
   x47-updates gui             Force Zenity hub
   x47-updates check           Refresh indexes and list pending updates
-  x47-updates apply           Apply apt + snap + Cursor updates
+  x47-updates apply           Apply apt + snap + Cursor + VS Code + Claude Code
   x47-updates status          Show last check / clean summary
   x47-updates repair-sources  Restore missing third-party apt sources (Mullvad)
   x47-updates clean-scan      Preview reclaimable junk (nothing deleted)
   x47-updates clean           Apply default tidy set (or named categories)
   x47-updates tidy            Scan, then clean the default set
 
+Updates: apt, snap, Cursor, VS Code, Claude Code CLI + VS Code extension.
 Default clean (safe): trash, thumbnails, apt cache, leftover packages,
 old snap revisions, journals (keep 7 days), crash reports, pip/npm caches.
 
@@ -183,8 +184,8 @@ _snap_refresh_list() {
 }
 
 _write_report() {
-  local apt_n="$1" snap_n="$2" cursor_note="$3" mullvad_note="$4" reboot_note="$5"
-  local apt_list="$6" snap_list="$7"
+  local apt_n="$1" snap_n="$2" cursor_note="$3" vscode_note="$4" claude_note="$5" mullvad_note="$6" reboot_note="$7"
+  local apt_list="$8" snap_list="$9"
   _ensure_dirs
   {
     echo "X47 Updates report — $(date -Is)"
@@ -206,6 +207,12 @@ _write_report() {
     echo "=== Cursor ==="
     echo "$cursor_note"
     echo
+    echo "=== VS Code ==="
+    echo "$vscode_note"
+    echo
+    echo "=== Claude Code ==="
+    echo "$claude_note"
+    echo
     echo "=== Mullvad apt source ==="
     echo "$mullvad_note"
     echo
@@ -214,8 +221,66 @@ _write_report() {
   } >"$REPORT_FILE"
 }
 
+_claude_cli_ver() {
+  claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true
+}
+
+_claude_ext_ver() {
+  local d
+  d="$(ls -d "$HOME/.vscode/extensions"/anthropic.claude-code-* 2>/dev/null | sort -V | tail -1 || true)"
+  [[ -n "$d" ]] || return 0
+  basename "$d" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true
+}
+
+_apt_candidate() {
+  local pkg="$1"
+  apt-cache policy "$pkg" 2>/dev/null | awk '/Candidate:/{print $2; exit}'
+}
+
+_apt_installed_ver() {
+  dpkg-query -W -f='${Version}' "$1" 2>/dev/null || true
+}
+
+_harden_code_desktop() {
+  local sys dest prefix
+  prefix="env PATH=${HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin ELECTRON_OZONE_PLATFORM_HINT=x11 "
+  mkdir -p "$HOME/.local/share/applications"
+  for name in code.desktop code-url-handler.desktop; do
+    sys="/usr/share/applications/${name}"
+    dest="$HOME/.local/share/applications/${name}"
+    [[ -f "$sys" ]] || continue
+    install -m 0644 "$sys" "$dest"
+    sed -i "s|^Exec=|Exec=${prefix}|" "$dest"
+  done
+  if _have update-desktop-database; then
+    update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || true
+  fi
+  if _have xdg-mime && [[ -f "$HOME/.local/share/applications/code-url-handler.desktop" ]]; then
+    xdg-mime default code-url-handler.desktop x-scheme-handler/vscode 2>/dev/null || true
+  fi
+}
+
+_update_claude_and_vscode_ext() {
+  echo "--- Claude Code CLI ---"
+  if [[ -x "$HOME/.local/bin/claude" ]]; then
+    "$HOME/.local/bin/claude" update || echo "warn: claude update failed" >&2
+  elif _have claude; then
+    claude update || echo "warn: claude update failed" >&2
+  else
+    echo "Claude Code CLI not installed"
+  fi
+  echo "--- VS Code Claude Code extension ---"
+  if _have code; then
+    code --install-extension anthropic.claude-code --force || echo "warn: extension install failed" >&2
+  else
+    echo "VS Code (code) not installed — skip extension"
+  fi
+  _harden_code_desktop
+}
+
 cmd_check() {
-  local apt_list snap_list apt_n snap_n cursor_note mullvad_note reboot_note
+  local apt_list snap_list apt_n snap_n cursor_note vscode_note claude_note mullvad_note reboot_note
+  local claude_pending=0 vscode_pending=0
   echo "Checking for updates…"
 
   if _mullvad_source_missing; then
@@ -250,6 +315,39 @@ cmd_check() {
     cursor_note="not installed"
   fi
 
+  if dpkg -s code >/dev/null 2>&1; then
+    local code_have code_cand
+    code_have="$(_apt_installed_ver code)"
+    code_cand="$(_apt_candidate code)"
+    if [[ -n "$code_cand" && "$code_cand" != "$code_have" && "$code_cand" != "(none)" ]]; then
+      vscode_note="installed ${code_have} → ${code_cand} available — will only-upgrade on Apply"
+      vscode_pending=1
+    else
+      vscode_note="installed ${code_have} (up to date)"
+    fi
+  else
+    vscode_note="not installed"
+  fi
+
+  local cli_v ext_v
+  cli_v="$(_claude_cli_ver)"
+  ext_v="$(_claude_ext_ver)"
+  if [[ -n "$cli_v" ]]; then
+    claude_note="CLI ${cli_v}"
+    if [[ -n "$ext_v" ]]; then
+      claude_note="${claude_note}; VS Code extension ${ext_v}"
+      if [[ "$cli_v" != "$ext_v" ]]; then
+        claude_note="${claude_note} — mismatch; Apply will update CLI + extension"
+        claude_pending=1
+      fi
+    else
+      claude_note="${claude_note}; VS Code extension missing — Apply will install it"
+      claude_pending=1
+    fi
+  else
+    claude_note="CLI not installed"
+  fi
+
   if dpkg -s mullvad-vpn >/dev/null 2>&1; then
     if [[ -f /etc/apt/sources.list.d/mullvad.list ]]; then
       mullvad_note="ok ($(dpkg-query -W -f='${Version}' mullvad-vpn 2>/dev/null))"
@@ -266,16 +364,18 @@ cmd_check() {
     reboot_note="no"
   fi
 
-  _write_report "$apt_n" "$snap_n" "$cursor_note" "$mullvad_note" "$reboot_note" "$apt_list" "$snap_list"
+  _write_report "$apt_n" "$snap_n" "$cursor_note" "$vscode_note" "$claude_note" "$mullvad_note" "$reboot_note" "$apt_list" "$snap_list"
   _status_set last_check "$(date -Is)"
   _status_set apt_count "$apt_n"
   _status_set snap_count "$snap_n"
+  _status_set claude_pending "$claude_pending"
+  _status_set vscode_pending "$vscode_pending"
   _status_set reboot_required "$([[ -f /var/run/reboot-required ]] && echo 1 || echo 0)"
 
   cat "$REPORT_FILE"
   echo
   echo "report=$REPORT_FILE"
-  local total=$((apt_n + snap_n))
+  local total=$((apt_n + snap_n + claude_pending))
   echo "pending_total=${total}"
 }
 
@@ -732,6 +832,10 @@ _apply_in_foreground() {
     echo "--- Cursor only-upgrade ---"
     apt-get install --only-upgrade -y cursor || true
   fi
+  if dpkg -s code >/dev/null 2>&1; then
+    echo "--- VS Code only-upgrade ---"
+    apt-get install --only-upgrade -y code || true
+  fi
   if command -v snap >/dev/null 2>&1; then
     echo "--- snap refresh ---"
     snap refresh || true
@@ -778,6 +882,10 @@ if dpkg -s cursor >/dev/null 2>&1; then
   echo "--- Cursor only-upgrade ---"
   apt-get install --only-upgrade -y cursor || true
 fi
+if dpkg -s code >/dev/null 2>&1; then
+  echo "--- VS Code only-upgrade ---"
+  apt-get install --only-upgrade -y code || true
+fi
 if command -v snap >/dev/null 2>&1; then
   echo "--- snap refresh ---"
   snap refresh || true
@@ -804,6 +912,9 @@ EOS
     return 1
   fi
   rm -f "$tmp"
+  if [[ "$(id -u)" -ne 0 ]]; then
+    _update_claude_and_vscode_ext
+  fi
   _status_set last_apply "$(date -Is)"
   _status_set reboot_required "$([[ -f /var/run/reboot-required ]] && echo 1 || echo 0)"
   return "$rc"
@@ -846,8 +957,8 @@ cmd_updates_gui() {
     return 0
   fi
 
-  zenity --info --title='X47 Updates' --width=420 \
-    --text='Click OK to check for apt, snap, and Cursor updates.\nYou may be asked for your password to refresh package lists.' \
+    zenity --info --title='X47 Updates' --width=420 \
+    --text='Click OK to check for apt, snap, Cursor, VS Code, and Claude Code updates.\nYou may be asked for your password to refresh package lists.' \
     2>/dev/null || true
 
   local check_out
@@ -916,7 +1027,7 @@ cmd_gui() {
     --text='Keep this distro updated and tidy. Clean never deletes Documents, Pictures, Desktop, or Downloads.' \
     --column=Pick --column=Id --column=Action \
     --hide-column=2 --print-column=2 \
-    TRUE updates 'Check &amp; install updates (apt / snap / Cursor)' \
+    TRUE updates 'Check &amp; install updates (apt / snap / Cursor / VS Code / Claude)' \
     FALSE clean 'Clean &amp; tidy — empty trash, caches, leftovers (preview first)' \
     FALSE both 'Updates, then clean' \
     FALSE repair 'Repair Mullvad apt source' \

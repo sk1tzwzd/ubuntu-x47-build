@@ -89,7 +89,7 @@ Firefox is left as the hardened snap (the earlier snap→deb swap was removed). 
 
 ## X47 Updates & Clean
 
-Use the **X47 Updates & Clean** app (app menu / desktop) or CLI. Updates still cover apt, snap, and Cursor. Clean is a CCleaner-style tidy pass: preview sizes, then empty the recycle bin, drop caches and leftover packages. It never deletes Documents, Pictures, Desktop, Downloads, passwords, or cookies. Unattended security upgrades stay on.
+Use the **X47 Updates & Clean** app (app menu / desktop) or CLI. Updates cover apt, snap, Cursor, VS Code, and Claude Code (CLI + VS Code extension). Clean is a CCleaner-style tidy pass: preview sizes, then empty the recycle bin, drop caches and leftover packages. It never deletes Documents, Pictures, Desktop, Downloads, passwords, or cookies. Unattended security upgrades stay on.
 
 ```bash
 x47-updates              # GUI hub: updates / clean / both
