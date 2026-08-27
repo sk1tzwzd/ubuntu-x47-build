@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Mullvad VPN
+Comment=Mullvad VPN client
+Exec=env ELECTRON_OZONE_PLATFORM_HINT=x11 /opt/Mullvad\ VPN/mullvad-vpn %u
+Icon=mullvad-vpn
+Terminal=false
+Type=Application
+Categories=Network;Security;

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Mullvad VPN
+Exec=env ELECTRON_OZONE_PLATFORM_HINT=x11 /opt/Mullvad\ VPN/mullvad-vpn --start-minimized
+Type=Application
+Icon=mullvad-vpn
+Terminal=false
+X-GNOME-Autostart-enabled=true

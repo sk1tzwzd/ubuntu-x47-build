@@ -20,16 +20,13 @@ Apps
   * Kleopatra — PGP keys
   * KeePassXC — password manager (same family as Tails)
   * VulnScape — guided pentest / bug-bounty toolkit (shared install, always latest from GitHub on reinstall)
-  * NymVPN — mixnet / VPN layer (log in and connect after unlock; Tor still wraps your apps)
+  * Mullvad VPN — VPN layer (auto-starts minimized in tray, same as normal profile)
 
 Extra privacy (automatic)
 -------------------------
   * Random MAC address on every anon login (Tails-style). Restored when you
     log out of anon (or on reboot). Your normal user is unaffected after restore.
-  * Open **NymVPN**, sign in, and connect (prefer Anonymous / mixnet mode).
-    Traffic path becomes: apps → Tor (transparent) → Nym → Internet.
-    Disconnect Nym when you leave the anon session so your main account is not
-    left on the mixnet.
+  * Mullvad VPN starts automatically and connects to protect your baseline IP.
 
 PERSISTENT STORAGE (optional, Tails-style)
 -----------------------------------------

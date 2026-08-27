@@ -1,5 +1,5 @@
 // X47 Anon Status — desktop card for the amnesia session.
-// Shows only privacy layers (link up/down without SSID/Wi‑Fi name, Nym mixnet,
+// Shows only privacy layers (link up/down without SSID/Wi‑Fi name,
 // Tor/bridges) plus a one-line security verdict. Never surfaces the network
 // name you are on.
 //
@@ -21,16 +21,13 @@ const REFRESH_SECONDS = 10;
 // Probe never prints SSIDs / interface names / VPN connection names.
 const PROBE = `
 c=$(nmcli -t -f CONNECTIVITY g 2>/dev/null | head -n1)
-nd=$(systemctl is-active nym-vpnd 2>/dev/null)
-nt=$(ip -brief link 2>/dev/null | awk '{print $1}' | grep -m1 -E '^(nym|tun|wg)' || true)
-nv=$(pgrep -u "$(id -u)" -x nymvpn-amnesia >/dev/null 2>&1 && echo 1 || echo 0)
 t=$(systemctl is-active tor 2>/dev/null)
 ts=$(ss -ltn 2>/dev/null | grep -c ':9050' || true)
 b=0; grep -qsE '^[[:space:]]*UseBridges[[:space:]]+1' /etc/tor/torrc /etc/tor/torrc.d/*.conf 2>/dev/null && b=1
 # Kill-switch table present for this UID?
 ks=0; nft list table inet x47_anon >/dev/null 2>&1 && ks=1
-printf 'CONN=%s\\nNYMD=%s\\nNYMTUN=%s\\nNYMUI=%s\\nTOR=%s\\nTORSOCK=%s\\nBRIDGE=%s\\nKILLSW=%s\\n' \\
-  "$c" "$nd" "$nt" "$nv" "$t" "$ts" "$b" "$ks"
+printf 'CONN=%s\\nTOR=%s\\nTORSOCK=%s\\nBRIDGE=%s\\nKILLSW=%s\\n' \\
+  "$c" "$t" "$ts" "$b" "$ks"
 `;
 
 export default class X47AnonStatusExtension extends Extension {
@@ -108,7 +105,7 @@ export default class X47AnonStatusExtension extends Extension {
         this._card.add_child(titleRow);
 
         this._rows = {};
-        for (const key of ['LINK', 'NYM', 'TOR']) {
+        for (const key of ['LINK', 'TOR']) {
             const row = new St.BoxLayout({style_class: 'x47-anon-row'});
             row.add_child(new St.Label({text: key, style_class: 'x47-anon-key'}));
             const val = new St.Label({text: 'checking…', style_class: 'x47-anon-val', x_expand: true});
@@ -230,17 +227,6 @@ export default class X47AnonStatusExtension extends Extension {
             link = 'unknown';
         }
 
-        // NYM mixnet
-        const nymUp = kv.NYMD === 'active' && !!kv.NYMTUN;
-        const nymUi = kv.NYMUI === '1';
-        let nym;
-        if (nymUp)
-            nym = 'Nym mixnet — connected';
-        else if (nymUi || kv.NYMD === 'active')
-            nym = 'Nym — starting…';
-        else
-            nym = 'Nym mixnet — off';
-
         // TOR
         const torActive = kv.TOR === 'active';
         const torSock = parseInt(kv.TORSOCK || '0', 10) > 0;
@@ -255,7 +241,6 @@ export default class X47AnonStatusExtension extends Extension {
             tor = bridge ? 'Tor — connected (bridge)' : 'Tor — connected';
 
         this._rows.LINK.set_text(link);
-        this._rows.NYM.set_text(nym);
         this._rows.TOR.set_text(tor);
 
         const torUp = torActive && torSock;
@@ -263,9 +248,6 @@ export default class X47AnonStatusExtension extends Extension {
         if (!online) {
             verdict = 'REPORT: offline — kill-switch idle';
             cls = 'x47-anon-warn';
-        } else if (nymUp && torUp && bridge && killsw) {
-            verdict = 'REPORT: SECURE — Nym + Tor bridge + kill-switch';
-            cls = 'x47-anon-good';
         } else if (torUp && bridge && killsw) {
             verdict = 'REPORT: SECURE — Tor bridge + kill-switch';
             cls = 'x47-anon-good';
@@ -275,11 +257,8 @@ export default class X47AnonStatusExtension extends Extension {
         } else if (torUp) {
             verdict = 'REPORT: OK — Tor up (check kill-switch)';
             cls = 'x47-anon-warn';
-        } else if (nymUp) {
-            verdict = 'REPORT: OK — Nym up, Tor not confirmed';
-            cls = 'x47-anon-warn';
         } else {
-            verdict = 'REPORT: EXPOSED — no Tor / Nym layer';
+            verdict = 'REPORT: EXPOSED — no Tor layer';
             cls = 'x47-anon-bad';
         }
         this._verdict.set_text(verdict);

@@ -6,7 +6,7 @@ Copy/paste ready. Suggested subs: r/linux, r/Ubuntu, r/privacy, r/netsec, r/Kali
 
 ## Title
 
-**Ubuntu X47: lean Ubuntu 26.04 build — debloated for speed, with a Tor/Nym amnesia session for anonymity + pentest tooling**
+**Ubuntu X47: lean Ubuntu 26.04 build — debloated for speed, with a Tor amnesia session for anonymity + pentest tooling**
 
 ---
 
@@ -36,7 +36,7 @@ Opt-in with `--with-amnesia`. Creates a separate **`anon`** user inspired by Tai
 - **RAM-only home** (`tmpfs`) — wiped on reboot; skeleton restored from skel
 - **Forced Tor + kill-switch** (UID-scoped nftables; IPv6 dropped for anon)
 - **obfs4 bridges** in the Tor path
-- **NymVPN / mixnet** on the stack; status panel shows **LINK / NYM / TOR** only — **no Wi‑Fi SSID or network name** leaking from the UI
+- **Mullvad VPN** configured to auto-connect minimized in tray (same as normal profile); status panel shows **LINK / TOR** only — **no Wi‑Fi SSID or network name** leaking from the UI
 - Firefox hardened toward Safer/Safest-style use (verify via check.torproject.org); stock chrome like the main session
 - Random MAC on anon login
 - Optional LUKS **persistent vault** for wallets / GPG / KeePass when you need secrets to survive reboot
@@ -49,7 +49,7 @@ This is **host-level amnesia**, not a full amnesiac OS. Base packages and system
 Same machine, different hats:
 
 - Main session: fast desktop for writing, building, browsing
-- Anon session: Tor-forced traffic, mixnet status, crypto/PGP tools, and room to run lab / assessment work without painting your daily profile onto every packet
+- Anon session: Tor-forced traffic, status widget, crypto/PGP tools, and room to run lab / assessment work without painting your daily profile onto every packet
 
 Toolchain stays installable/reversible through the build modules (dev + security tooling are first-class; the installer doesn’t strip the useful stuff to “look minimal”).
 
@@ -82,12 +82,12 @@ ISO remaster / GitHub Actions path is in the README if you want a bootable insta
 
 ### Why I built it
 
-I wanted Ubuntu that **boots into work fast**, doesn’t waste GPU on eye candy I never asked for, and still has a **one-click lane** into Tor + mixnet + amnesia when I’m testing, researching, or just don’t want the session glued to my real identity.
+I wanted Ubuntu that **boots into work fast**, doesn’t waste GPU on eye candy I never asked for, and still has a **one-click lane** into Tor + amnesia when I’m testing, researching, or just don’t want the session glued to my real identity.
 
-Feedback welcome — especially from people who live in Tor/Nym daily or who care about lean GNOME on Ubuntu 26.04.
+Feedback welcome — especially from people who live in Tor daily or who care about lean GNOME on Ubuntu 26.04.
 
 ---
 
 ## Short comment / TL;DR (optional sticky reply)
 
-**TL;DR:** Ubuntu 26.04 custom build. Debloated GNOME (no cube/blur/dock tax) for speed. Stock Firefox chrome. Optional `anon` user: tmpfs home, Tor kill-switch, Nym status, no SSID in the panel, pentest-friendly tooling. https://github.com/sk1tzwzd/ubuntu-x47-build
+**TL;DR:** Ubuntu 26.04 custom build. Debloated GNOME (no cube/blur/dock tax) for speed. Stock Firefox chrome. Optional `anon` user: tmpfs home, Tor kill-switch, Mullvad VPN, status widget, no SSID in the panel, pentest-friendly tooling. https://github.com/sk1tzwzd/ubuntu-x47-build

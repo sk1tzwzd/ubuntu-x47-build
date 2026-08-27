@@ -1,5 +1,5 @@
 [Unit]
-Description=X47 amnesia privacy session (MAC spoof + Nym daemon ready)
+Description=X47 amnesia privacy session (MAC spoof)
 After=graphical-session-pre.target network-online.target
 Wants=network-online.target
 
@@ -9,8 +9,6 @@ RemainAfterExit=yes
 # Randomize NIC MACs for this session (Tails-style). Restored on logout/stop.
 ExecStart=/usr/bin/sudo -n /usr/local/sbin/anon-mac-spoof apply
 ExecStop=/usr/bin/sudo -n /usr/local/sbin/anon-mac-spoof restore
-# Ensure Nym VPN daemon is up so the GUI can connect (does not auto-login).
-ExecStartPost=-/usr/bin/sudo -n /bin/systemctl start nym-vpnd.service
 
 [Install]
 WantedBy=default.target

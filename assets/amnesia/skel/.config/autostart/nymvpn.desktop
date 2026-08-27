@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=NymVPN
-Comment=Mixnet VPN — opens on every anon login
-Exec=/usr/local/bin/nymvpn-amnesia
-Icon=network-vpn
-Terminal=false
-X-GNOME-Autostart-enabled=true
-X-GNOME-Autostart-Delay=8

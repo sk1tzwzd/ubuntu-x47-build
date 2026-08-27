@@ -8,12 +8,6 @@ Cmnd_Alias X47_MAC = /usr/local/sbin/anon-mac-spoof apply, \
                      /usr/local/sbin/anon-mac-spoof restore, \
                      /usr/local/sbin/anon-mac-spoof boot-cleanup, \
                      /usr/local/sbin/anon-mac-spoof status
-Cmnd_Alias X47_NYM = /bin/systemctl start nym-vpnd.service, \
-                     /bin/systemctl stop nym-vpnd.service, \
-                     /bin/systemctl is-active nym-vpnd.service, \
-                     /usr/bin/systemctl start nym-vpnd.service, \
-                     /usr/bin/systemctl stop nym-vpnd.service, \
-                     /usr/bin/systemctl is-active nym-vpnd.service
 
-anon ALL=(root) NOPASSWD:SETENV: X47_PERSISTENT, X47_MAC, X47_NYM
+anon ALL=(root) NOPASSWD:SETENV: X47_PERSISTENT, X47_MAC
 Defaults!X47_PERSISTENT env_keep += "DISPLAY WAYLAND_DISPLAY XAUTHORITY X47_PERSISTENT_PASSPHRASE"

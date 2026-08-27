@@ -208,12 +208,12 @@ Files under `config/` are copied back to `/etc` (UFW rules, fail2ban jails, sysc
 
 - **RAM-only home** — `/home/anon` is a `tmpfs` mount. Wiped every reboot; skeleton re-copied from `/var/lib/anon-skel`.
 - **Forced Tor + kill-switch** — UID-scoped nftables; IPv6 dropped for `anon`. Tor config is inlined in `/etc/tor/torrc` (AppArmor blocks `torrc.d`).
-- **Desktop** — same lean looks as the main user (CTRL tiling, top-bar Show Apps with lime **X47** icon, no dock / cube / blur / heavy FX): teal circuit wallpaper (matches main; shroud kept as fallback), **Anon Status** panel (**LINK / NYM / TOR** only — no Wi‑Fi SSID), **NymVPN on login**, dark `Yaru-prussiangreen-dark`, green accent, location off.
+- **Desktop** — same lean looks as the main user (CTRL tiling, top-bar Show Apps with lime **X47** icon, no dock / cube / blur / heavy FX): teal circuit wallpaper (matches main; shroud kept as fallback), **Anon Status** panel (**LINK / TOR** only — no Wi‑Fi SSID), **Mullvad VPN on login** (same as normal profile), dark `Yaru-prussiangreen-dark`, green accent, location off.
 - **Tor** — UID kill-switch + SOCKS/`TransPort`; **direct Tor by default** (hardcoded public obfs4 bridges are often unreachable behind VPNs). Optional bridges via `torrc-anon.conf` / bridges.torproject.org.
 - **Terminal** — WezTerm (`/usr/local/bin/wezterm`) as default; GNOME Terminal removed.
-- **Apps** — Firefox (Safest / JS off), Electrum (BTC), Feather (XMR), Kleopatra (PGP), KeePassXC, VulnScape, **NymVPN** (daemon + GUI; connect after login).
+- **Apps** — Firefox (Safest / JS off), Electrum (BTC), Feather (XMR), Kleopatra (PGP), KeePassXC, VulnScape, **Mullvad VPN** (same tray auto-connect as normal profile).
 - **Random MAC** — Tails-style spoof on anon login, restored on logout (`anon-mac-spoof`).
-- **Unprivileged** — `anon` is not in `sudo`/`adm` (except narrow sudoers for persistent vault, MAC spoof, and starting `nym-vpnd`).
+- **Unprivileged** — `anon` is not in `sudo`/`adm` (except narrow sudoers for persistent vault and MAC spoof).
 
 ### Persistent Storage (optional)
 

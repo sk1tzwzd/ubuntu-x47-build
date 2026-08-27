@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Amnesia mode — Ubuntu X47 Build</title>
-  <meta name="description" content="Tails-inspired anon session: RAM home, Tor kill-switch, random MAC, NymVPN, persistent vault." />
+  <meta name="description" content="Tails-inspired anon session: RAM home, Tor kill-switch, random MAC, Mullvad VPN, persistent vault." />
   <link rel="icon" href="images/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="images/favicon-32.png" sizes="32x32" />
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png" />
@@ -38,12 +38,12 @@
         <ul class="clean">
           <li><strong>RAM-only home</strong> — <code>/home/anon</code> is tmpfs; wiped on reboot; skeleton from <code>/var/lib/anon-skel</code></li>
           <li><strong>Forced Tor + kill-switch</strong> — UID-scoped nftables; IPv6 dropped for anon; Tor config inlined in <code>/etc/tor/torrc</code></li>
-          <li><strong>Desktop</strong> — same lean look as main (Show Apps top bar, CTRL tiling, no dock/cube/blur, stock Firefox chrome); Anon Status shows LINK / NYM / TOR only; dark Yaru Prussian green</li>
+          <li><strong>Desktop</strong> — same lean look as main (Show Apps top bar, CTRL tiling, no dock/cube/blur, stock Firefox chrome); Anon Status shows LINK / TOR only; dark Yaru Prussian green</li>
           <li><strong>Terminal</strong> — WezTerm as default (<code>/usr/local/bin/wezterm</code>); GNOME Terminal removed</li>
-          <li><strong>Apps</strong> — Firefox Safest (JS off), Electrum, Feather, Kleopatra, KeePassXC, VulnScape, NymVPN</li>
+          <li><strong>Apps</strong> — Firefox Safest (JS off), Electrum, Feather, Kleopatra, KeePassXC, VulnScape, Mullvad VPN</li>
           <li><strong>Anon Firefox</strong> — Safest / JS off, SOCKS to local Tor (<code>127.0.0.1:9050</code>), DoH hard-off so DNS stays on Tor</li>
           <li><strong>Random MAC</strong> — spoofed on anon login (Tails-style), restored on logout; boot cleanup clears leftover NM cloned-MAC</li>
-          <li><strong>NymVPN</strong> — daemon + GUI installed; sign in and connect in the app (no auto-login). Path while connected: apps → Tor → Nym → Internet</li>
+          <li><strong>Mullvad VPN</strong> — auto-starts minimized in the tray with auto-connect, matching the normal user profile</li>
         </ul>
         <figure class="shot" style="margin-top:1.5rem">
           <img src="images/anon-desktop.png" alt="Anon desktop with Tor check and Create Persistent Storage" width="1600" height="1000" />

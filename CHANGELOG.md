@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Anon Profile: Mullvad VPN** — removed NymVPN daemon and GUI; anon profile now configures Mullvad VPN to auto-start minimized to tray with auto-connect, matching the normal profile.
+- **Anon Status widget** — updated `x47-anon-status@x47` desktop connection card to remove NYM status, monitoring `LINK` and `TOR` layers cleanly.
 - **X47 Updates & Clean** — the updates app is also a CCleaner-style tidy tool: empty recycle bin, thumbnails, apt/snap leftovers, journals, crash reports, pip/npm caches. Preview first. Documents / passwords / cookies stay. Alias: `x47-clean`.
 - **Visual mode** — no wobbly windows and no Burn My Windows open/close animations. Cube, Coverflow, blur, and per-workspace walls stay. Those two extensions are uninstalled (not just disabled) so they cannot reload after login.
 - **X47-Win 1.1.0** — companion site notes the Windows setup wizard (theme + feature checkboxes).

@@ -46,15 +46,6 @@ for dead in ("YaST", "Pardus"):
     )
 PY
 
-# Handler with no icon — keep but ensure NoDisplay (scheme handler only).
-if [[ -f "$APPDIR/nym-vpn-app-handler.desktop" ]]; then
-  if ! grep -q '^NoDisplay=true' "$APPDIR/nym-vpn-app-handler.desktop"; then
-    echo 'NoDisplay=true' >>"$APPDIR/nym-vpn-app-handler.desktop"
-  fi
-  if ! grep -q '^Icon=' "$APPDIR/nym-vpn-app-handler.desktop"; then
-    sed -i '/^Name=/a Icon=network-vpn' "$APPDIR/nym-vpn-app-handler.desktop" || true
-  fi
-fi
 
 # Ensure X47 Sync icon is visible to the icon theme.
 if [[ -f "$ICON_SVG" ]]; then
