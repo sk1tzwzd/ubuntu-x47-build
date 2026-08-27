@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Shell crash fixed (ws-walls)** — `x47-ws-walls` connected a `'changed'` handler to every transient background manager and never disconnected it; the dead handlers piled up until a GC sweep segfaulted GNOME Shell ("callback into JSAPI during the sweeping phase of GC"). Handlers are now tracked and disconnected, the removed `raise_top()` API is replaced with `set_child_above_sibling`, and the global wallpaper GSettings write is skipped when already correct (it was forcing every background + blur-my-shell to reload on each workspace switch).
+- **notif-activate cleanup** — notification handlers now live in an iterable `Map` and are disconnected on disable; wrapped `Source.open`/`openApp` methods are restored on disable.
+- **ClamAV stays on-demand** — the perf module now disables and masks `clamav-daemon.socket` too (the service `Requires=` it, so socket activation restarted the daemon) and masks both units; a package update had silently re-enabled the resident daemon (~1 GB RSS). `x47-updates apply` re-asserts this after upgrades.
+- **crashkernel RAM actually freed** — disabling `kdump-tools.service` was not enough: `/etc/default/grub.d/kdump-tools.cfg` still reserved 512 MB via `crashkernel=`. A later-sorting GRUB drop-in strips it and survives kdump-tools package updates.
+- **Journal capped for real** — the one-shot 200 MB vacuum did not hold (observed back at 800 MB); `/etc/systemd/journald.conf.d/x47-journal.conf` now pins `SystemMaxUse=200M`.
+- **Weekly tidy timer** — `x47-tidy.timer` (root, self-contained `/usr/local/sbin/x47-tidy`) vacuums journals, clears `/var/crash`, removes disabled snap revisions, and cleans apt caches weekly. Never touches user files. The fuller interactive clean stays in `x47-clean`.
 - **Claude Code: VS Code only** — standalone CLI and WezTerm launcher removed. The `anthropic.claude-code` extension stays; `x47-updates` keeps VS Code and that extension current.
 - **VS Code** — `x47-updates` only-upgrades `code`. Launcher uses the Wayland ozone hint.
 - **Anon Profile: Mullvad VPN** — removed NymVPN daemon and GUI; anon profile now configures Mullvad VPN to auto-start minimized to tray with auto-connect, matching the normal profile.

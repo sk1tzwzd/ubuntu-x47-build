@@ -29,6 +29,62 @@ _install_updates_desktop() {
   ok "desktop entry → $dest"
 }
 
+# Weekly system-side tidy: journal vacuum, crash dumps, disabled snap
+# revisions, apt caches. Self-contained root script + system timer — it must
+# not depend on (or execute) anything user-writable. Never touches user files;
+# the fuller interactive clean stays in `x47-clean`.
+_install_tidy_timer() {
+  if [[ "${X47_SKIP_APT:-0}" == "1" ]] || [[ "${X47_USER_ONLY:-0}" == "1" ]]; then
+    return 0
+  fi
+  if ! need_sudo; then
+    warn "x47-tidy timer needs sudo — skipped"
+    return 0
+  fi
+  log "installing weekly x47-tidy timer (journals, crash dumps, old snaps, apt cache)"
+  run_sudo tee /usr/local/sbin/x47-tidy >/dev/null <<'EOF'
+#!/usr/bin/env bash
+# X47 weekly tidy — system-side junk only. User files are never touched.
+set -u
+journalctl --vacuum-size=200M 2>/dev/null || true
+rm -f /var/crash/*.crash /var/crash/*.upload* 2>/dev/null || true
+if command -v snap >/dev/null 2>&1; then
+  snap list --all 2>/dev/null | awk '/disabled/{print $1, $3}' | \
+  while read -r name rev; do
+    snap remove "$name" --revision="$rev" 2>/dev/null || true
+  done
+fi
+apt-get -y autoremove --purge >/dev/null 2>&1 || true
+apt-get clean >/dev/null 2>&1 || true
+EOF
+  run_sudo chmod 0755 /usr/local/sbin/x47-tidy
+  run_sudo tee /etc/systemd/system/x47-tidy.service >/dev/null <<'EOF'
+[Unit]
+Description=X47 weekly tidy (journals, crash dumps, old snaps, apt cache)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/x47-tidy
+Nice=19
+IOSchedulingClass=idle
+EOF
+  run_sudo tee /etc/systemd/system/x47-tidy.timer >/dev/null <<'EOF'
+[Unit]
+Description=Run X47 tidy weekly
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target
+EOF
+  run_sudo systemctl daemon-reload
+  run_sudo systemctl enable --now x47-tidy.timer >/dev/null 2>&1 || true
+  ok "x47-tidy.timer weekly (undo: sudo systemctl disable --now x47-tidy.timer)"
+}
+
 # Restore Mullvad apt source when the package is present but the list was dropped.
 _repair_mullvad_apt_source() {
   if [[ "${X47_SKIP_APT:-0}" == "1" ]] || [[ "${X47_USER_ONLY:-0}" == "1" ]]; then
@@ -139,6 +195,7 @@ module_updates() {
   log "installing X47 Updates"
   _install_updates_bin
   _install_updates_desktop
+  _install_tidy_timer
   _repair_mullvad_apt_source
   _harden_mullvad_desktop
 }

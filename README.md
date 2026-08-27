@@ -63,7 +63,7 @@ By default the installer trims the fat (opt out with `--skip-debloat`):
 - **Language packs** — removes every non-English `language-pack-*`, LibreOffice l10n, and non-`en` spell dictionaries.
 - **Default desktop apps** — removes GNOME Terminal, GNOME games, Rhythmbox, Cheese, Thunderbird, LibreOffice, Transmission, Remmina, Shotwell, Maps/Weather/Contacts/Todo, Simple Scan, Totem, GNOME Music/Photos, Ubuntu Help (`yelp`).
 - **Snap bloat** — removes the App Centre (`snap-store`) and Desktop Security Centre snaps (keeps firmware-updater).
-- **Cleanup** — `apt-get autoremove --purge`, cache clean, `journalctl` vacuum to 200M, thumbnail cache.
+- **Cleanup** — `apt-get autoremove --purge`, cache clean, journal capped at 200M (`journald.conf.d` drop-in, not a one-shot vacuum), thumbnail cache. A weekly `x47-tidy.timer` keeps journals, crash dumps, old snap revisions, and apt caches from creeping back.
 - **Tweaks** — `fstrim.timer`, `zram-config` compressed swap, `vm.swappiness=10`, and the desktop file indexer (tracker/localsearch) masked.
 
 Everything is reversible: `sudo apt-get install <pkg>`. Core desktop/session packages and the pentest/dev toolchain are never touched. Note: zram adds compressed swap; if you want *true* amnesia in the anon session, still disable swap (see below).
@@ -75,8 +75,8 @@ The `06-perf.sh` module trims boot time and idle resource use (opt out with `--s
 - **Pentest tools off the boot path** — `chkrootkit` and `bettercap` are kept but no longer run as boot services (they were adding ~60s of boot I/O). Run them on demand.
 - **Faster GRUB** — menu timeout cut to 1s and hidden.
 - **ModemManager masked** — no cellular modem means no serial-port probe stalls at boot.
-- **ClamAV on-demand** — the resident daemon is stopped (frees ~1 GB RAM); `freshclam` still updates signatures, scan with `clamscan -r <dir>`.
-- **kdump-tools disabled** — frees the reserved crash-kernel RAM.
+- **ClamAV on-demand** — the resident daemon **and its socket** are disabled and masked (frees ~1 GB RAM; package updates cannot re-enable them, and `x47-updates` re-asserts after upgrades); `freshclam` still updates signatures, scan with `clamscan -r <dir>`.
+- **kdump-tools disabled** — service off **and** the `crashkernel=` GRUB reservation stripped via a drop-in (frees the reserved RAM for real, ~512 MB).
 - **cloud-init disabled** on the installed system (it is only needed at install time).
 - **Printing/discovery off** — `cups`, `cups-browsed`, and `avahi` disabled (re-enable if you print).
 

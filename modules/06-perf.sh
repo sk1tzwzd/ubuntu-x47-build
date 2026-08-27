@@ -60,15 +60,48 @@ clamav_ondemand() {
   fi
   log "switching ClamAV to on-demand (stopping the resident daemon)"
   # Keep freshclam so signatures stay current for manual clamscan runs.
-  run_sudo systemctl disable --now clamav-daemon.service >/dev/null 2>&1 || true
-  ok "clamav-daemon off, freshclam kept (scan on demand: clamscan -r <dir>; undo: sudo systemctl enable --now clamav-daemon)"
+  # Disable the socket too (the service Requires= it, so socket activation
+  # restarts the daemon) and mask both so package updates cannot re-enable
+  # them — an update did exactly that and the daemon crept back to ~1 GB RSS.
+  run_sudo systemctl disable --now clamav-daemon.service clamav-daemon.socket >/dev/null 2>&1 || true
+  run_sudo systemctl mask clamav-daemon.service clamav-daemon.socket >/dev/null 2>&1 || true
+  ok "clamav-daemon+socket off and masked, freshclam kept (scan: clamscan -r <dir>; undo: sudo systemctl unmask --now clamav-daemon.service clamav-daemon.socket && sudo systemctl enable --now clamav-daemon)"
 }
 
 # --- 5. kdump ---------------------------------------------------------------
 disable_kdump() {
   log "disabling kdump-tools (frees reserved crash-kernel RAM)"
   run_sudo systemctl disable --now kdump-tools.service >/dev/null 2>&1 || true
-  ok "kdump-tools disabled (undo: sudo systemctl enable --now kdump-tools)"
+  # Disabling the service is not enough: /etc/default/grub.d/kdump-tools.cfg
+  # keeps injecting crashkernel= into the kernel cmdline, permanently
+  # reserving RAM (512 MB on a 16 GB machine). Ship a later-sorting drop-in
+  # that strips it — this survives kdump-tools package updates too.
+  local dropin=/etc/default/grub.d/zz-x47-no-crashkernel.cfg
+  if [[ -d /etc/default/grub.d ]] && [[ ! -f "$dropin" ]]; then
+    run_sudo tee "$dropin" >/dev/null <<'EOF'
+# X47: kdump-tools is disabled — do not reserve crash-kernel RAM.
+# Remove this file and run update-grub to get kdump reservations back.
+GRUB_CMDLINE_LINUX_DEFAULT="$(echo "$GRUB_CMDLINE_LINUX_DEFAULT" | sed -E 's/\bcrashkernel=[^ ]*//g;s/  +/ /g')"
+EOF
+    run_sudo update-grub >/dev/null 2>&1 || run_sudo grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1 || warn "update-grub failed"
+  fi
+  ok "kdump-tools disabled, crashkernel reservation dropped from GRUB (takes effect next reboot; undo: sudo rm $dropin && sudo systemctl enable --now kdump-tools && sudo update-grub)"
+}
+
+# --- 5b. journald size cap ---------------------------------------------------
+journald_cap() {
+  # A one-shot vacuum does not hold — without SystemMaxUse the journal grows
+  # back (observed at 800 MB). Persist the cap.
+  local dropin=/etc/systemd/journald.conf.d/x47-journal.conf
+  log "capping systemd journal at 200M ($dropin)"
+  run_sudo mkdir -p /etc/systemd/journald.conf.d
+  run_sudo tee "$dropin" >/dev/null <<'EOF'
+# X47: keep the persistent journal bounded.
+[Journal]
+SystemMaxUse=200M
+EOF
+  run_sudo systemctl try-restart systemd-journald >/dev/null 2>&1 || true
+  ok "journal capped at 200M (undo: sudo rm $dropin && sudo systemctl restart systemd-journald)"
 }
 
 # --- 6. cloud-init ----------------------------------------------------------
@@ -106,6 +139,7 @@ module_perf() {
   mask_modemmanager
   clamav_ondemand
   disable_kdump
+  journald_cap
   disable_cloudinit
   disable_printing
 

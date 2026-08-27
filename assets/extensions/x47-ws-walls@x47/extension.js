@@ -55,6 +55,7 @@ export default class X47WsWallsExtension extends Extension {
         this._addBtn = null;
         this._posIdle = 0;
         this._overviewSignals = [];
+        this._retargets = [];
 
         this._ensureFloor();
 
@@ -175,6 +176,7 @@ export default class X47WsWallsExtension extends Extension {
         for (const id of this._overviewSignals)
             Main.overview.disconnect(id);
         this._overviewSignals = [];
+        this._dropRetargets();
         this._destroyAddButton();
         if (this._origAnimCreateBg) {
             WorkspaceAnimation.WorkspaceBackground.prototype._createBackground =
@@ -284,7 +286,8 @@ export default class X47WsWallsExtension extends Extension {
                 Math.round(bx + bw + gap),
                 Math.round(by + (bh - size) / 2));
             this._addBtn.show();
-            this._addBtn.raise_top();
+            // raise_top() was removed from Clutter.Actor in modern GNOME.
+            Main.layoutManager.overviewGroup.set_child_above_sibling(this._addBtn, null);
         } catch (e) {
             console.warn(`x47-ws-walls: position + failed: ${e}`);
             this._addBtn.hide();
@@ -374,12 +377,34 @@ export default class X47WsWallsExtension extends Extension {
         if (!mgr || idx === undefined || idx === null || idx < 0)
             return;
         const apply = () => {
+            // The manager may already be gone: BackgroundManagers are created
+            // and destroyed on every workspace switch / overview open.
+            if (!this._settings)
+                return;
             const actor = mgr.backgroundActor;
             if (actor?.content)
                 actor.content.background = this._makeBackground(idx);
         };
         apply();
-        mgr.connect('changed', apply);
+        // One handler per manager, tracked and disconnected in disable().
+        // Leaking these was crashing the shell: dead handlers piled up on
+        // destroyed managers until a GC sweep hit them (SIGSEGV).
+        if (mgr._x47WallsChangedId)
+            return;
+        mgr._x47WallsChangedId = mgr.connect('changed', apply);
+        this._retargets.push(mgr);
+    }
+
+    _dropRetargets() {
+        for (const mgr of this._retargets) {
+            try {
+                if (mgr._x47WallsChangedId) {
+                    mgr.disconnect(mgr._x47WallsChangedId);
+                    delete mgr._x47WallsChangedId;
+                }
+            } catch (_e) { /* manager already destroyed */ }
+        }
+        this._retargets = [];
     }
 
     _applyGlobal() {
@@ -387,8 +412,12 @@ export default class X47WsWallsExtension extends Extension {
             return;
         const idx = global.workspace_manager.get_active_workspace_index();
         const uri = `file://${this._pathFor(Math.max(idx, 0))}`;
-        console.log(`x47-ws-walls: workspace ${idx + 1} -> ${uri}`);
         try {
+            // Skip redundant writes: every picture-uri change makes all
+            // background actors (and blur-my-shell) reload their textures.
+            if (this._settings.get_string('picture-uri') === uri &&
+                this._settings.get_string('picture-uri-dark') === uri)
+                return;
             this._settings.set_string('picture-uri', uri);
             this._settings.set_string('picture-uri-dark', uri);
             this._settings.set_string('picture-options', 'zoom');

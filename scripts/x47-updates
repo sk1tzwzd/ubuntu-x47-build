@@ -827,6 +827,14 @@ _apply_in_foreground() {
     echo "--- snap refresh ---"
     snap refresh || true
   fi
+  # Perf drift guard: package updates have re-enabled the resident ClamAV
+  # daemon before (~1 GB RSS). Keep it on-demand; freshclam stays.
+  if systemctl is-enabled clamav-daemon.service >/dev/null 2>&1 || \
+     systemctl is-active clamav-daemon.service >/dev/null 2>&1; then
+    echo "--- perf guard: ClamAV back to on-demand ---"
+    systemctl disable --now clamav-daemon.service clamav-daemon.socket 2>/dev/null || true
+    systemctl mask clamav-daemon.service clamav-daemon.socket 2>/dev/null || true
+  fi
   echo
   if [[ -f /var/run/reboot-required ]]; then
     echo "DONE — reboot recommended."
@@ -876,6 +884,14 @@ fi
 if command -v snap >/dev/null 2>&1; then
   echo "--- snap refresh ---"
   snap refresh || true
+fi
+# Perf drift guard: package updates have re-enabled the resident ClamAV
+# daemon before (~1 GB RSS). Keep it on-demand; freshclam stays.
+if systemctl is-enabled clamav-daemon.service >/dev/null 2>&1 || \
+   systemctl is-active clamav-daemon.service >/dev/null 2>&1; then
+  echo "--- perf guard: ClamAV back to on-demand ---"
+  systemctl disable --now clamav-daemon.service clamav-daemon.socket 2>/dev/null || true
+  systemctl mask clamav-daemon.service clamav-daemon.socket 2>/dev/null || true
 fi
 echo
 if [[ -f /var/run/reboot-required ]]; then

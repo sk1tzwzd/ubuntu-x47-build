@@ -11,7 +11,10 @@ export default class X47NotifActivateExtension extends Extension {
     enable() {
         this._tray = Main.messageTray;
         this._sourceHandlers = new Map(); // source -> [signal ids]
-        this._notifHandlers = new WeakMap(); // notification -> signal id
+        // Map, not WeakMap: disable() must be able to walk and disconnect
+        // these, otherwise stale handlers fire into a disabled extension.
+        this._notifHandlers = new Map(); // notification -> signal id
+        this._wrappedSources = [];
         this._trayHandlers = [];
 
         this._trayHandlers.push(
@@ -34,6 +37,29 @@ export default class X47NotifActivateExtension extends Extension {
             }
         }
         this._sourceHandlers.clear();
+
+        for (const [notification, id] of this._notifHandlers) {
+            try {
+                notification.disconnect(id);
+            } catch (_e) { /* destroyed */ }
+        }
+        this._notifHandlers.clear();
+
+        for (const source of this._wrappedSources) {
+            try {
+                if (source._x47OrigOpenApp) {
+                    source.openApp = source._x47OrigOpenApp;
+                    delete source._x47OrigOpenApp;
+                    delete source._x47OpenAppWrapped;
+                }
+                if (source._x47OrigOpen) {
+                    source.open = source._x47OrigOpen;
+                    delete source._x47OrigOpen;
+                    delete source._x47OpenWrapped;
+                }
+            } catch (_e) { /* destroyed */ }
+        }
+        this._wrappedSources = [];
         this._tray = null;
     }
 
@@ -54,19 +80,25 @@ export default class X47NotifActivateExtension extends Extension {
 
         // Reinforce Source.open / openApp when the shell leaves app unset.
         if (typeof source.openApp === 'function' && !source._x47OpenAppWrapped) {
-            const orig = source.openApp.bind(source);
+            const orig = source.openApp;
+            const bound = orig.bind(source);
             source.openApp = () => {
-                orig();
+                bound();
                 this._forceActivate(source);
             };
+            source._x47OrigOpenApp = orig;
             source._x47OpenAppWrapped = true;
+            this._wrappedSources.push(source);
         } else if (typeof source.open === 'function' && !source._x47OpenWrapped) {
-            const orig = source.open.bind(source);
+            const orig = source.open;
+            const bound = orig.bind(source);
             source.open = () => {
-                orig();
+                bound();
                 this._forceActivate(source);
             };
+            source._x47OrigOpen = orig;
             source._x47OpenWrapped = true;
+            this._wrappedSources.push(source);
         }
 
         this._sourceHandlers.set(source, ids);
@@ -84,6 +116,11 @@ export default class X47NotifActivateExtension extends Extension {
             });
         });
         this._notifHandlers.set(notification, id);
+        try {
+            notification.connect('destroy', () => {
+                this._notifHandlers.delete(notification);
+            });
+        } catch (_e) { /* no destroy signal on this shell version */ }
     }
 
     _forceActivate(source) {
