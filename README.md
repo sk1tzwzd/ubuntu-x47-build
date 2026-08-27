@@ -8,7 +8,7 @@ Idempotent installer that reproduces a custom Ubuntu 24.04 / 26 desktop:
 - **X47 Ark** — backup Windows user files to USB, then reclaim the disk for Ubuntu
 - **Claude Code** — VS Code extension (no standalone CLI)
 - Pentest + developer toolchain (apt, Go, pipx, cargo, GitHub release binaries, gems)
-- Custom **app-grid launchers** and icons (`kali-*` pack, custom `kali-cool-*`, `x47duster` fallback — no Kali dragon)
+- Custom **app-grid launchers** and icons (`kali-*` pack, custom `kali-cool-*`, `x47duster` fallback — no Kali dragon). The grid is fully foldered — X47, Internet, Office, Media, Utilities, System, Dev Tools, Pentesting — with leftover cruft (NymVPN, TeX doc viewers, lstopo, duplicate firmware updater) hidden via user-level `NoDisplay` overrides.
 - Hardened services snapshotted from the reference machine (UFW, fail2ban, AppArmor, auditd, unattended-upgrades, sysctl)
 
 Part of the [VulnScape](https://vulnscape.net) cybersecurity suite.

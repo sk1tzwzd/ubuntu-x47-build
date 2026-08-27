@@ -25,6 +25,26 @@ module_launchers() {
   fi
   ok "launchers installed ($(ls "$dest"/launcher-*.desktop 2>/dev/null | wc -l))"
 
+  # Hide grid cruft via user-level NoDisplay overrides (shadows the system
+  # entry without touching the package): leftover NymVPN (anon uses Mullvad),
+  # TeX doc viewers, lstopo, and the duplicate firmware-updater snap entry.
+  local hide
+  for hide in NymVPN.desktop texdoctk.desktop info.desktop lstopo.desktop \
+              firmware-updater_firmware-updater.desktop; do
+    local sys=""
+    for sys in "/usr/share/applications/$hide" \
+               "/var/lib/snapd/desktop/applications/$hide"; do
+      [[ -f "$sys" ]] && break
+    done
+    [[ -f "$sys" ]] || continue
+    if [[ ! -f "$dest/$hide" ]] || ! grep -q '^NoDisplay=true' "$dest/$hide" 2>/dev/null; then
+      cp "$sys" "$dest/$hide"
+      sed -i '/^NoDisplay=/d' "$dest/$hide"
+      sed -i '0,/^\[Desktop Entry\]/s//[Desktop Entry]\nNoDisplay=true/' "$dest/$hide"
+      log "hidden from grid: $hide"
+    fi
+  done
+
   # Restore app-folder membership from dconf dump if available
   local dconf_dump="$X47_ROOT/assets/manifests/app-folders.dconf"
   if [[ -f "$dconf_dump" ]] && have dconf; then

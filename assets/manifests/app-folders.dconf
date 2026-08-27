@@ -1,35 +1,37 @@
 [/]
-folder-children=['System', 'Utilities', 'Office', 'YaST', 'Pardus', 'DevTools', 'PentestTools']
+folder-children=['X47', 'Internet', 'Office', 'Media', 'Utilities', 'System', 'DevTools', 'PentestTools']
 
 [folders/DevTools]
-apps=['code.desktop', 'cursor.desktop', 'launcher-bat.desktop', 'launcher-eza.desktop', 'launcher-fd.desktop', 'launcher-zoxide.desktop', 'launcher-lazygit.desktop', 'launcher-delta.desktop', 'launcher-uv.desktop', 'launcher-yq.desktop', 'launcher-http.desktop']
+apps=['code.desktop', 'cursor.desktop', 'antigravity-ide.desktop', 'launcher-bat.desktop', 'launcher-eza.desktop', 'launcher-fd.desktop', 'launcher-zoxide.desktop', 'launcher-lazygit.desktop', 'launcher-delta.desktop', 'launcher-uv.desktop', 'launcher-yq.desktop', 'launcher-http.desktop', 'powershell_powershell.desktop']
 name='Dev Tools'
+
+[folders/Internet]
+apps=['google-chrome.desktop', 'firefox_firefox.desktop', 'start-tor-browser.desktop', 'telegram-desktop_telegram-desktop.desktop', 'mullvad-vpn.desktop', 'wraithvpn.desktop', 'org.qbittorrent.qBittorrent.desktop']
+name='Internet'
+
+[folders/Media]
+apps=['com.obsproject.Studio.desktop', 'org.openshot.OpenShot.desktop', 'vlc.desktop']
+name='Media'
 
 [folders/Office]
 apps=['x47-pdf.desktop', 'onlyoffice-desktopeditors.desktop', 'com.github.jeromerobert.pdfarranger.desktop', 'com.github.xournalpp.xournalpp.desktop']
 name='Office'
 
-[folders/Pardus]
-categories=['X-Pardus-Apps']
-name='X-Pardus-Apps.directory'
-translate=true
-
 [folders/PentestTools]
-apps=['launcher-aircrack-ng.desktop', 'launcher-assetfinder.desktop', 'launcher-bettercap.desktop', 'launcher-binwalk.desktop', 'launcher-dirb.desktop', 'launcher-exiftool.desktop', 'launcher-feroxbuster.desktop', 'launcher-ffuf.desktop', 'launcher-gobuster.desktop', 'launcher-hashcat.desktop', 'launcher-httpx.desktop', 'launcher-hydra.desktop', 'launcher-john.desktop', 'launcher-katana.desktop', 'launcher-masscan.desktop', 'launcher-msfconsole.desktop', 'launcher-naabu.desktop', 'launcher-nikto.desktop', 'launcher-nmap.desktop', 'launcher-nuclei.desktop', 'launcher-sqlmap.desktop', 'launcher-subfinder.desktop', 'launcher-vulnscape.desktop', 'launcher-waybackurls.desktop', 'install4j_i8akt-BurpSuite.desktop', 'org.wireshark.Wireshark.desktop', 'launcher-amass.desktop', 'launcher-dnsx.desktop', 'launcher-tlsx.desktop', 'launcher-gau.desktop', 'launcher-dalfox.desktop', 'launcher-arjun.desktop', 'launcher-gowitness.desktop', 'launcher-whatweb.desktop', 'launcher-wafw00f.desktop', 'launcher-gitleaks.desktop', 'launcher-trufflehog.desktop', 'launcher-rustscan.desktop', 'launcher-interactsh-client.desktop', 'launcher-kerbrute.desktop', 'launcher-responder.desktop', 'launcher-bloodhound-python.desktop', 'launcher-smbmap.desktop', 'launcher-enum4linux-ng.desktop', 'launcher-chisel.desktop', 'launcher-ligolo-proxy.desktop', 'launcher-smbserver.py.desktop', 'launcher-nxc.desktop']
+apps=['launcher-aircrack-ng.desktop', 'launcher-assetfinder.desktop', 'launcher-bettercap.desktop', 'launcher-binwalk.desktop', 'launcher-dirb.desktop', 'launcher-exiftool.desktop', 'launcher-feroxbuster.desktop', 'launcher-ffuf.desktop', 'launcher-gobuster.desktop', 'launcher-hashcat.desktop', 'launcher-httpx.desktop', 'launcher-hydra.desktop', 'launcher-john.desktop', 'launcher-katana.desktop', 'launcher-masscan.desktop', 'launcher-msfconsole.desktop', 'launcher-naabu.desktop', 'launcher-nikto.desktop', 'launcher-nmap.desktop', 'launcher-nuclei.desktop', 'launcher-sqlmap.desktop', 'launcher-subfinder.desktop', 'launcher-vulnscape.desktop', 'launcher-waybackurls.desktop', 'install4j_i8akt-BurpSuite.desktop', 'org.wireshark.Wireshark.desktop', 'launcher-amass.desktop', 'launcher-dnsx.desktop', 'launcher-tlsx.desktop', 'launcher-gau.desktop', 'launcher-dalfox.desktop', 'launcher-arjun.desktop', 'launcher-gowitness.desktop', 'launcher-whatweb.desktop', 'launcher-wafw00f.desktop', 'launcher-gitleaks.desktop', 'launcher-trufflehog.desktop', 'launcher-rustscan.desktop', 'launcher-interactsh-client.desktop', 'launcher-kerbrute.desktop', 'launcher-responder.desktop', 'launcher-bloodhound-python.desktop', 'launcher-smbmap.desktop', 'launcher-enum4linux-ng.desktop', 'launcher-chisel.desktop', 'launcher-ligolo-proxy.desktop', 'launcher-smbserver.py.desktop', 'launcher-nxc.desktop', 'sherlock4win.desktop', 'lynis.desktop']
 name='Pentesting'
 translate=false
 
 [folders/System]
-apps=['nm-connection-editor.desktop', 'org.gnome.baobab.desktop', 'org.gnome.DiskUtility.desktop', 'im-config.desktop', 'org.gnome.Logs.desktop', 'org.gnome.Sysprof.desktop']
-name='X-GNOME-Shell-System.directory'
+apps=['org.gnome.Settings.desktop', 'update-manager.desktop', 'firmware-updater_firmware-updater-app.desktop', 'nm-connection-editor.desktop', 'org.gnome.baobab.desktop', 'org.gnome.DiskUtility.desktop', 'im-config.desktop', 'org.gnome.Logs.desktop', 'org.gnome.Sysprof.desktop', 'org.freedesktop.IBus.Setup.desktop', 'gnome-language-selector.desktop']
+name='System'
 translate=true
 
 [folders/Utilities]
-apps=['org.gnome.Papers.desktop', 'x47-pdf.desktop', 'x47-ark.desktop', 'onlyoffice-desktopeditors.desktop', 'com.github.jeromerobert.pdfarranger.desktop', 'com.github.xournalpp.xournalpp.desktop', 'org.gnome.font-viewer.desktop', 'org.gnome.Loupe.desktop', 'org.gnome.seahorse.Application.desktop']
-name='X-GNOME-Shell-Utilities.directory'
+apps=['org.gnome.Papers.desktop', 'org.gnome.font-viewer.desktop', 'org.gnome.Loupe.desktop', 'org.gnome.seahorse.Application.desktop', 'org.gnome.Calculator.desktop', 'org.gnome.Characters.desktop', 'org.gnome.clocks.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.TextEditor.desktop', 'net.nokyan.Resources.desktop', 'htop.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop', 'org.kde.kwatchgnupg.desktop', 'feather.desktop', 'vim.desktop', 'org.wezfurlong.wezterm.desktop', 'org.gnome.Ptyxis.desktop', 'notepad-plus-plus_notepad-plus-plus.desktop']
+name='Utilities'
 translate=true
 
-[folders/YaST]
-categories=['X-SuSE-YaST']
-name='suse-yast.directory'
-translate=true
+[folders/X47]
+apps=['x47-settings.desktop', 'x47-updates.desktop', 'x47-syncthing.desktop', 'x47-ark.desktop']
+name='X47'
